@@ -27,6 +27,7 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<UserProfile | undefined>(undefined)
   const [letter, setLetter] = useState("")
+  const [mode, setMode] = useState<"generada" | "personalizada">("generada")
 
   useEffect(() => {
     try {
@@ -36,8 +37,10 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
   }, [])
 
   useEffect(() => {
-    setLetter(generateDeletionLetter(email, breach, profile))
-  }, [email, breach, profile])
+    if (mode === "generada") {
+      setLetter(generateDeletionLetter(email, breach, profile))
+    }
+  }, [email, breach, profile, mode])
 
   const handleCopy = async () => {
     if (!user) {
@@ -78,14 +81,27 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
         className="bg-white dark:bg-zinc-900 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Carta de baja - {breach.name}
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Completá los datos entre corchetes y envialo</p>
-          </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+          <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Carta de baja - {breach.name}
+              </h2>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => { setMode("generada"); setLetter(generateDeletionLetter(email, breach, profile)) }}
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${mode === "generada" ? "bg-amber-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"}`}
+                >
+                  Generada
+                </button>
+                <button
+                  onClick={() => { setMode("personalizada"); setLetter("") }}
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${mode === "personalizada" ? "bg-amber-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"}`}
+                >
+                  Personalizada
+                </button>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -101,14 +117,22 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
         )}
 
         <div className="overflow-y-auto p-6 flex-1">
-          <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-            <strong>Importante:</strong> tus datos personales (nombre{profile?.address ? ", dirección" : ""}{profile?.dni ? ", DNI" : ""}) se completaron automáticamente con la información de tu perfil.
-            Revisá que todo esté correcto antes de enviar la carta. Podés actualizar tus datos en{" "}
-            <a href="/configuracion" className="underline font-medium">Configuración</a>.
-          </div>
+          {mode === "generada" && (
+            <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+              <strong>Importante:</strong> tus datos personales (nombre{profile?.address ? ", dirección" : ""}{profile?.dni ? ", DNI" : ""}) se completaron automáticamente con la información de tu perfil.
+              Revisá que todo esté correcto antes de enviar la carta. Podés actualizar tus datos en{" "}
+              <a href="/configuracion" className="underline font-medium">Configuración</a>.
+            </div>
+          )}
+          {mode === "personalizada" && (
+            <div className="mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+              Redactá tu propia carta de baja desde cero. El texto que escribas se copiará tal cual al portapapeles.
+            </div>
+          )}
           <textarea
             value={letter}
             onChange={(e) => setLetter(e.target.value)}
+            placeholder={mode === "personalizada" ? "Escribí tu carta personalizada aquí..." : ""}
             className="w-full h-96 text-sm text-zinc-700 dark:text-zinc-300 bg-transparent font-sans leading-relaxed resize-none focus:outline-none"
           />
         </div>
