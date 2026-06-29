@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
 
   const result = searchEmail(query)
 
-  // Save search to history
   try {
     await supabaseAdmin.from("searches").insert({
       user_id: userId,
@@ -38,25 +37,26 @@ export async function GET(request: NextRequest) {
     })
   } catch {}
 
-  // Attach letter status for each breach
-  const { data: letters } = await supabaseAdmin
-    .from("letters")
-    .select("breach_id, created_at")
-    .eq("user_id", userId)
-    .eq("email", query)
+  try {
+    const { data: letters } = await supabaseAdmin
+      .from("letters")
+      .select("breach_id, created_at")
+      .eq("user_id", userId)
+      .eq("email", query)
 
-  const letterMap = new Map<string, string>()
-  if (letters) {
-    for (const l of letters) {
-      letterMap.set(l.breach_id, l.created_at)
+    const letterMap = new Map<string, string>()
+    if (letters) {
+      for (const l of letters) {
+        letterMap.set(l.breach_id, l.created_at)
+      }
     }
-  }
 
-  result.breaches = result.breaches.map((b) => ({
-    ...b,
-    hasLetter: letterMap.has(b.id),
-    letterCreatedAt: letterMap.get(b.id) || undefined,
-  }))
+    result.breaches = result.breaches.map((b) => ({
+      ...b,
+      hasLetter: letterMap.has(b.id),
+      letterCreatedAt: letterMap.get(b.id) || undefined,
+    }))
+  } catch {}
 
   return NextResponse.json(result)
 }

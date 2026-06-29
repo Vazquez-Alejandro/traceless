@@ -2,21 +2,25 @@ import { supabaseAdmin } from "./supabase-admin"
 import { PLANS, type PlanType } from "./stripe"
 
 export async function ensureUser(userId: string, email: string, name?: string) {
-  const { data } = await supabaseAdmin
-    .from("users")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle()
+  try {
+    const { data } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle()
 
-  if (!data) {
-    await supabaseAdmin.from("users").insert({
-      id: userId,
-      email,
-      name: name || email.split("@")[0],
-      plan: "free",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    if (!data) {
+      await supabaseAdmin.from("users").insert({
+        id: userId,
+        email,
+        name: name || email.split("@")[0],
+        plan: "free",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+  } catch {
+    // DB not available — app works with free defaults
   }
 }
 

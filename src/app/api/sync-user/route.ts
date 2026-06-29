@@ -11,28 +11,28 @@ export async function POST(req: Request) {
 
   const { email, name } = await req.json()
 
-  const { data: existing, error: lookupError } = await supabaseAdmin
-    .from("users")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle()
-
-  if (lookupError) {
-    console.error("Error looking up user:", lookupError)
-  }
-
-  if (existing) {
-    await supabaseAdmin
+  try {
+    const { data: existing } = await supabaseAdmin
       .from("users")
-      .update({ email, name, updated_at: new Date().toISOString() })
+      .select("id")
       .eq("id", userId)
-  } else if (email) {
-    await supabaseAdmin.from("users").insert({
-      id: userId,
-      email,
-      name: name || email.split("@")[0] || "Usuario",
-      plan: "free",
-    })
+      .maybeSingle()
+
+    if (existing) {
+      await supabaseAdmin
+        .from("users")
+        .update({ email, name, updated_at: new Date().toISOString() })
+        .eq("id", userId)
+    } else if (email) {
+      await supabaseAdmin.from("users").insert({
+        id: userId,
+        email,
+        name: name || email.split("@")[0] || "Usuario",
+        plan: "free",
+      })
+    }
+  } catch {
+    console.error("DB unavailable, skipping sync")
   }
 
   return NextResponse.json({ success: true })

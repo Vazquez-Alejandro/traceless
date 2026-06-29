@@ -11,18 +11,18 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const { data: userRecord, error: lookupError } = await supabaseAdmin
-    .from("users")
-    .select("email")
-    .eq("id", userId)
-    .maybeSingle()
+  try {
+    const { data: userRecord } = await supabaseAdmin
+      .from("users")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle()
 
-  if (lookupError) {
-    console.error("Error looking up user:", lookupError)
-  }
-
-  if (!userRecord) {
-    await ensureUser(userId, "usuario@email.com")
+    if (!userRecord) {
+      await ensureUser(userId, "usuario@email.com")
+    }
+  } catch {
+    console.error("DB unavailable, defaulting to free")
   }
 
   const plan = await getUserPlan(userId)
