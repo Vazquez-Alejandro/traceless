@@ -26,6 +26,7 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<UserProfile | undefined>(undefined)
+  const [letter, setLetter] = useState("")
 
   useEffect(() => {
     try {
@@ -34,7 +35,9 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
     } catch {}
   }, [])
 
-  const letter = generateDeletionLetter(email, breach, profile)
+  useEffect(() => {
+    setLetter(generateDeletionLetter(email, breach, profile))
+  }, [email, breach, profile])
 
   const handleCopy = async () => {
     if (!user) {
@@ -103,9 +106,11 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
             Revisá que todo esté correcto antes de enviar la carta. Podés actualizar tus datos en{" "}
             <a href="/configuracion" className="underline font-medium">Configuración</a>.
           </div>
-          <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">
-            {letter}
-          </pre>
+          <textarea
+            value={letter}
+            onChange={(e) => setLetter(e.target.value)}
+            className="w-full h-96 text-sm text-zinc-700 dark:text-zinc-300 bg-transparent font-sans leading-relaxed resize-none focus:outline-none"
+          />
         </div>
 
         <div className="flex items-center justify-between p-6 border-t border-zinc-200 dark:border-zinc-700">
