@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { KNOWN_BREACHES } from "@/data/breaches"
 import { canUseBatchDeletion } from "@/lib/limits"
 
@@ -13,15 +14,7 @@ function hashInput(input: string): number {
 }
 
 export async function GET(request: Request) {
-  let userId: string | null = null
-
-  try {
-    const { auth } = await import("@clerk/nextjs/server")
-    const session = await auth()
-    userId = session.userId
-  } catch {
-    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
-  }
+  const { userId } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })

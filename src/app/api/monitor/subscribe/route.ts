@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { canUseMonitoring } from "@/lib/limits"
 
 export async function GET() {
-  let userId: string | null = null
-
-  try {
-    const { auth } = await import("@clerk/nextjs/server")
-    const session = await auth()
-    userId = session.userId
-  } catch {
-    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
-  }
+  const { userId } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
@@ -32,15 +25,7 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
-  let userId: string | null = null
-
-  try {
-    const { auth } = await import("@clerk/nextjs/server")
-    const session = await auth()
-    userId = session.userId
-  } catch {
-    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
-  }
+  const { userId } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
@@ -66,15 +51,7 @@ export async function DELETE(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let userId: string | null = null
-
-  try {
-    const { auth } = await import("@clerk/nextjs/server")
-    const session = await auth()
-    userId = session.userId
-  } catch {
-    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
-  }
+  const { userId } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })

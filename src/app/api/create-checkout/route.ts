@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { PLANS } from "@/lib/stripe"
 
 export async function POST(req: Request) {
-  let userId: string | null = null
-
-  try {
-    const mod = await import("@clerk/nextjs/server")
-    const session = await mod.auth()
-    userId = session.userId
-  } catch {
-    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
-  }
+  const { userId } = await auth()
 
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
