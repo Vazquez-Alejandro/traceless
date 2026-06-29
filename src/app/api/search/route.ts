@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuth } from "@clerk/nextjs/server"
 import { searchEmail } from "@/lib/search"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
+import { canSearch } from "@/lib/limits"
 
 export async function GET(request: NextRequest) {
-  const { userId } = getAuth(request)
+  let userId: string | null = null
+
+  try {
+    const { auth } = await import("@clerk/nextjs/server")
+    const session = await auth()
+    userId = session.userId
+  } catch {
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
+  }
+
   if (!userId) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
@@ -20,30 +29,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Email inválido" }, { status: 400 })
   }
 
-  // Check plan limits
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan, searches_used, searches_limit, letters_used, letters_limit, batch_deletion, monitoring")
-    .eq("id", userId)
-    .single()
-
-  if (profile) {
-    const limit = profile.searches_limit === -1 ? Infinity : profile.searches_limit
-    if (profile.searches_used >= limit) {
-      return NextResponse.json({ error: `Alcanzaste el límite de ${profile.searches_used} búsquedas de este mes. Actualizá a Premium para búsquedas ilimitadas.` }, { status: 403 })
-    }
-
-    await supabase.from("profiles").update({ searches_used: profile.searches_used + 1 }).eq("id", userId)
+  const allowed = await canSearch(userId)
+  if (!allowed) {
+    return NextResponse.json({ error: "Alcanzaste el límite de búsquedas de este mes. Actualizá a Premium para búsquedas ilimitadas." }, { status: 403 })
   }
 
   const result = searchEmail(query)
 
+  // Save search to history
+  try {
+    await supabaseAdmin.from("searches").insert({
+      user_id: userId,
+      email: query,
+      result,
+    })
+  } catch {}
+
   // Attach letter status for each breach
-  const { data: letters } = await supabase
+  const { data: letters } = await supabaseAdmin
     .from("letters")
     .select("breach_id, created_at")
     .eq("user_id", userId)
-    .eq("target_email", query)
+    .eq("email", query)
 
   const letterMap = new Map<string, string>()
   if (letters) {

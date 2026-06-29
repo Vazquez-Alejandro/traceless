@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import type { Breach } from "@/data/breaches"
+import { generateDeletionLetterHTML } from "@/lib/letters"
 
 interface Letter {
   id: string
@@ -11,64 +12,6 @@ interface Letter {
   email: string
   created_at: string
   breach: Breach | null
-}
-
-function generateLetterHTML(query: string, breach: Breach, date: string): string {
-  const d = new Date(date)
-  const dateStr = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
-
-  return `<div style="font-family: 'Georgia', serif; max-width: 700px; margin: 0 auto; padding: 60px 40px; color: #111;">
-    <p style="text-align: right; color: #666; font-size: 14px; margin-bottom: 40px;">${dateStr}</p>
-
-    <p style="margin-bottom: 30px;">
-      <strong>${breach.name}</strong><br />
-      Att: Departamento de Privacidad / Protección de Datos<br />
-      ${breach.domain}
-    </p>
-
-    <p style="margin-bottom: 20px;"><strong>Ref: Solicitud de eliminación de datos personales</strong></p>
-
-    <p style="margin-bottom: 15px;">Estimados,</p>
-
-    <p style="margin-bottom: 15px; line-height: 1.6;">
-      Por medio de la presente, y en ejercicio de los derechos reconocidos en el
-      <strong>Reglamento General de Protección de Datos (RGPD) de la Unión Europea</strong>
-      y la <strong>Ley de Protección de Datos Personales (LOPDGDD) de España</strong>,
-      solicito formalmente la <strong>eliminación inmediata</strong> de todos mis datos personales
-      asociados a la dirección de correo electrónico <strong>${query}</strong>
-      de sus sistemas y bases de datos.
-    </p>
-
-    <p style="margin-bottom: 15px; line-height: 1.6;">
-      Esta solicitud se realiza en el contexto de la filtración de datos ocurrida en
-      <strong>${breach.name}</strong> en fecha <strong>${breach.date}</strong>,
-      en la que se vieron comprometidos los siguientes datos:
-      <strong>${breach.compromisedData.join(", ")}</strong>.
-    </p>
-
-    <p style="margin-bottom: 15px; line-height: 1.6;">
-      De acuerdo con el Artículo 17 del RGPD (derecho al olvido) y el Artículo 16 de la LOPDGDD,
-      solicito que:
-    </p>
-
-    <ol style="margin-bottom: 20px; line-height: 1.6;">
-      <li>Se eliminen todos mis datos personales de sus sistemas.</li>
-      <li>Se interrumpa cualquier tratamiento de mis datos.</li>
-      <li>Se notifique a terceros que hayan recibido mis datos sobre mi solicitud de eliminación.</li>
-    </ol>
-
-    <p style="margin-bottom: 15px; line-height: 1.6;">
-      Agradeceré confirmación por escrito de que mis datos han sido eliminados en un plazo máximo
-      de 30 días, según lo establecido por la normativa vigente.
-    </p>
-
-    <p style="margin-bottom: 40px; line-height: 1.6;">
-      Quedo a la espera de su pronta respuesta.
-    </p>
-
-    <p style="margin-bottom: 5px;">Atentamente,</p>
-    <p style="color: #666;">${query}</p>
-  </div>`
 }
 
 export default function CartasPage() {
@@ -97,7 +40,7 @@ export default function CartasPage() {
 
   const handlePrint = (letter: Letter) => {
     if (!letter.breach) return
-    const html = generateLetterHTML(letter.email, letter.breach, letter.created_at)
+    const html = generateDeletionLetterHTML(letter.email, letter.breach, letter.created_at)
     const win = window.open("", "_blank")
     if (!win) return
     win.document.write(`<!DOCTYPE html><html><head><title>Carta de baja - ${letter.breach.name}</title></head><body>${html}</body></html>`)
@@ -170,7 +113,7 @@ export default function CartasPage() {
                       ref={printRef}
                       className="p-6"
                       dangerouslySetInnerHTML={{
-                        __html: generateLetterHTML(letter.email, letter.breach, letter.created_at),
+                        __html: generateDeletionLetterHTML(letter.email, letter.breach, letter.created_at),
                       }}
                     />
                     <div className="px-6 pb-6 flex gap-3">

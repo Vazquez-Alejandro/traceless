@@ -129,12 +129,15 @@ export default function EmpresaPage() {
               </div>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5 mb-8">
-              <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
-                ⚡ Versión demo
-              </h3>
+            <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-5 mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded">Demo</span>
+                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  Escaneo simulado
+                </h3>
+              </div>
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Este es un escaneo simulado. En la versión completa, TraceLess escanea cada email del dominio contra filtraciones reales y genera un reporte consolidado con cartas de baja para todo el equipo. Contactanos para acceder.
+                Este es un escaneo simulado con datos de ejemplo. En la versión completa, TraceLess escanea cada email del dominio contra filtraciones reales y genera un reporte consolidado con cartas de baja para todo el equipo. Contactanos para acceder.
               </p>
             </div>
 

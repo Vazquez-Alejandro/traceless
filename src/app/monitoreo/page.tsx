@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/Toast"
 
 interface MonitoredEmail {
   id: string
@@ -21,6 +22,7 @@ export default function MonitoreoPage() {
   const [newEmail, setNewEmail] = useState("")
   const [adding, setAdding] = useState(false)
   const [planLoading, setPlanLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!isLoaded) return
@@ -58,7 +60,7 @@ export default function MonitoreoPage() {
       })
       if (res.status === 403) {
         const d = await res.json()
-        alert(d.error)
+        toast(d.error, "error")
         return
       }
       setNewEmail("")

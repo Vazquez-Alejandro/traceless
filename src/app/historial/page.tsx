@@ -35,6 +35,8 @@ export default function HistorialPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [letterLoading, setLetterLoading] = useState<string | null>(null)
 
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     if (!isLoaded) return
     if (!user) {
@@ -42,13 +44,18 @@ export default function HistorialPage() {
       return
     }
 
+    setError(null)
     fetch("/api/history")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al cargar historial")
+        return res.json()
+      })
       .then((data) => {
         setHistory(Array.isArray(data) ? data : [])
         setLoading(false)
       })
       .catch(() => {
+        setError("No pudimos cargar tu historial. Intentalo de nuevo más tarde.")
         setLoading(false)
       })
   }, [user, isLoaded, router])
@@ -56,13 +63,14 @@ export default function HistorialPage() {
   const handleGenerateLetter = async (breachId: string, email: string) => {
     setLetterLoading(breachId)
     try {
-      await fetch("/api/letters", {
+      const res = await fetch("/api/letters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ breachId, email }),
       })
-      const res = await fetch("/api/history")
-      const data = await res.json()
+      if (!res.ok) throw new Error("Error al generar carta")
+      const histRes = await fetch("/api/history")
+      const data = await histRes.json()
       setHistory(Array.isArray(data) ? data : [])
     } catch {
       console.error("Error generando carta")
@@ -93,7 +101,13 @@ export default function HistorialPage() {
           {totalSearches} búsquedas · {totalBreachesFound} filtraciones encontradas · {totalLetters} cartas generadas
         </p>
 
-        {history.length === 0 ? (
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
+
+        {!error && history.length === 0 && (
           <div className="text-center py-16 border border-zinc-200 dark:border-zinc-800 rounded-xl">
             <p className="text-zinc-500 dark:text-zinc-400 mb-4">Todavía no hiciste ninguna búsqueda.</p>
             <button
@@ -103,7 +117,9 @@ export default function HistorialPage() {
               Buscar mi email
             </button>
           </div>
-        ) : (
+        )}
+
+        {!error && history.length > 0 && (
           <div className="space-y-3">
             {history.map((entry) => (
               <div

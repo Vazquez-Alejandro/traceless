@@ -18,22 +18,26 @@ export async function POST(req: Request) {
 
   const { email, name } = await req.json()
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: lookupError } = await supabaseAdmin
     .from("users")
     .select("id")
     .eq("id", userId)
-    .single()
+    .maybeSingle()
+
+  if (lookupError) {
+    console.error("Error looking up user:", lookupError)
+  }
 
   if (existing) {
     await supabaseAdmin
       .from("users")
       .update({ email, name, updated_at: new Date().toISOString() })
       .eq("id", userId)
-  } else {
+  } else if (email) {
     await supabaseAdmin.from("users").insert({
       id: userId,
-      email: email || "usuario@email.com",
-      name: name || email?.split("@")[0] || "Usuario",
+      email,
+      name: name || email.split("@")[0] || "Usuario",
       plan: "free",
     })
   }

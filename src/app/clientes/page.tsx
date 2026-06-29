@@ -52,8 +52,15 @@ export default function ClientesPage() {
       prev.map((c) => (c.status === "pending" ? { ...c, status: "loading" as const } : c))
     )
 
-    for (let i = 0; i < clients.length; i++) {
-      const client = clients[i]
+    const currentClients = await new Promise<ClientResult[]>((resolve) => {
+      setClients((prev) => {
+        resolve(prev)
+        return prev
+      })
+    })
+
+    for (let i = 0; i < currentClients.length; i++) {
+      const client = currentClients[i]
       if (client.status !== "loading") continue
 
       try {

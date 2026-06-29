@@ -6,7 +6,7 @@ export async function ensureUser(userId: string, email: string, name?: string) {
     .from("users")
     .select("id")
     .eq("id", userId)
-    .single()
+    .maybeSingle()
 
   if (!data) {
     await supabaseAdmin.from("users").insert({

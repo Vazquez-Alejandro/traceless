@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import type { Breach } from "@/data/breaches"
 
 interface BatchDeletionModalProps {
@@ -8,28 +8,22 @@ interface BatchDeletionModalProps {
   onClose: () => void
 }
 
-const BATCH_SIZE = 5
-
 export default function BatchDeletionModal({ breaches, onClose }: BatchDeletionModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [opened, setOpened] = useState<Set<string>>(new Set())
 
   const total = breaches.length
-  const batch = breaches.slice(currentIndex, currentIndex + BATCH_SIZE)
+  const current = breaches[currentIndex]
   const remaining = total - currentIndex
   const progress = Math.round((currentIndex / total) * 100)
 
-  const openBatch = useCallback(() => {
-    const newOpened = new Set(opened)
-    for (const breach of batch) {
-      if (breach.deletionUrl) {
-        window.open(breach.deletionUrl, "_blank")
-        newOpened.add(breach.id)
-      }
+  const openCurrent = () => {
+    if (current?.deletionUrl) {
+      window.open(current.deletionUrl, "_blank")
+      setOpened((prev) => new Set(prev).add(current.id))
     }
-    setOpened(newOpened)
-    setCurrentIndex((prev) => Math.min(prev + BATCH_SIZE, total))
-  }, [batch, opened, total])
+    setCurrentIndex((prev) => prev + 1)
+  }
 
   const isDone = currentIndex >= total
 
@@ -67,38 +61,36 @@ export default function BatchDeletionModal({ breaches, onClose }: BatchDeletionM
               </div>
 
               <div className="space-y-2 mb-4">
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Siguientes sitios:</p>
-                {batch.map((breach) => (
-                  <div key={breach.id} className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    {breach.deletionUrl ? (
-                      <span className="text-indigo-500">↗</span>
-                    ) : breach.privacyEmail ? (
-                      <span className="text-amber-500">✉</span>
-                    ) : (
-                      <span className="text-zinc-400">·</span>
-                    )}
-                    <span>{breach.name}</span>
-                    {opened.has(breach.id) && (
-                      <span className="text-xs text-green-500 ml-auto">Completado</span>
+                {current && (
+                  <div className="flex items-center justify-between px-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      {current.deletionUrl ? (
+                        <span className="text-indigo-500">↗</span>
+                      ) : (
+                        <span className="text-zinc-400">·</span>
+                      )}
+                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{current.name}</span>
+                    </div>
+                    {opened.has(current.id) && (
+                      <span className="text-xs text-green-500 font-medium">Abierto</span>
                     )}
                   </div>
-                ))}
+                )}
+                {remaining > 1 && (
+                  <p className="text-xs text-zinc-400">
+                    +{remaining - 1} sitio{remaining - 1 !== 1 ? "s" : ""} restante{remaining - 1 !== 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
 
               <button
-                onClick={openBatch}
+                onClick={openCurrent}
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
               >
-                {currentIndex === 0
-                  ? `Abrir ${Math.min(BATCH_SIZE, total)} páginas de baja`
-                  : `Abrir siguientes ${Math.min(BATCH_SIZE, remaining)}`}
+                {current?.deletionUrl
+                  ? `Abrir página de ${current.name}`
+                  : `Marcar como completado (sin página de baja)`}
               </button>
-
-              {currentIndex > 0 && currentIndex < total && (
-                <p className="text-xs text-zinc-400 text-center mt-2">
-                  Se abrieron {currentIndex} páginas. El navegador puede pedirte permiso para abrir múltiples ventanas.
-                </p>
-              )}
             </>
           ) : (
             <div className="text-center py-6">
@@ -107,7 +99,7 @@ export default function BatchDeletionModal({ breaches, onClose }: BatchDeletionM
                 Plan de acción completado
               </h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                Se abrieron las páginas de baja de {total} sitios. Completá el proceso en cada una.
+                Procesaste {total} sitio{total !== 1 ? "s" : ""}. Completá el proceso de baja en cada página abierta.
               </p>
               <button
                 onClick={onClose}

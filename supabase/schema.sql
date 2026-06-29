@@ -3,7 +3,7 @@ create table if not exists users (
   id text primary key,
   email text not null,
   name text,
-  plan text not null default 'free' check (plan in ('free', 'premium')),
+  plan text not null default 'free' check (plan in ('free', 'premium', 'pro')),
   stripe_customer_id text,
   stripe_subscription_id text,
   subscription_status text check (subscription_status in ('active', 'canceled', 'past_due')),

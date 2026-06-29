@@ -9,6 +9,7 @@ import LetterModal from "./LetterModal"
 import BatchDeletionModal from "./BatchDeletionModal"
 import PasswordScanner from "./PasswordScanner"
 import SecurityChecklist from "./SecurityChecklist"
+import { useToast } from "./Toast"
 
 interface PlanInfo {
   plan: "free" | "premium"
@@ -32,6 +33,7 @@ const FREE_VISIBLE_BREACHES = 3
 export default function ResultsDashboard({ result, email, onReset, plan }: ResultsDashboardProps) {
   const { user } = useUser()
   const router = useRouter()
+  const { toast } = useToast()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedBreach, setSelectedBreach] = useState<Breach | null>(null)
   const [showBatchModal, setShowBatchModal] = useState(false)
@@ -116,7 +118,7 @@ ${email}
 Este mensaje fue generado automáticamente por TraceLess.`
 
     navigator.clipboard.writeText(letter)
-    alert("Carta maestra copiada al clipboard. Pegala en tu editor o email.")
+    toast("Carta maestra copiada al clipboard. Pegala en tu editor o email.")
   }
 
   const handleOpenBatchDeletion = () => {

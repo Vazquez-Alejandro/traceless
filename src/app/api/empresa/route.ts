@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { KNOWN_BREACHES } from "@/data/breaches"
+import { canUseBatchDeletion } from "@/lib/limits"
 
 function hashInput(input: string): number {
   let hash = 0
@@ -12,6 +13,25 @@ function hashInput(input: string): number {
 }
 
 export async function GET(request: Request) {
+  let userId: string | null = null
+
+  try {
+    const { auth } = await import("@clerk/nextjs/server")
+    const session = await auth()
+    userId = session.userId
+  } catch {
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 500 })
+  }
+
+  if (!userId) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  }
+
+  const allowed = await canUseBatchDeletion(userId)
+  if (!allowed) {
+    return NextResponse.json({ error: "Función disponible solo para planes Premium. Actualizá para acceder." }, { status: 403 })
+  }
+
   const { searchParams } = new URL(request.url)
   const domain = searchParams.get("domain") || ""
 

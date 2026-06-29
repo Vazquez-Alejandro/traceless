@@ -28,6 +28,9 @@ export default function HeaderAuth() {
         <Link href="/empresa" className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-medium transition-colors">
           Empresa
         </Link>
+        <Link href="/configuracion" className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-medium transition-colors">
+          Config
+        </Link>
         <UserButton
           appearance={{
             elements: {
