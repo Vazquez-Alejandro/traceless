@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import type { Breach } from "@/data/breaches"
-import { generateDeletionLetter } from "@/lib/letters"
+import { generateDeletionLetter, PROFILE_KEY } from "@/lib/letters"
+import type { UserProfile } from "@/lib/letters"
 
 interface PlanInfo {
   plan: "free" | "premium"
@@ -24,7 +25,16 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
-  const letter = generateDeletionLetter(email, breach)
+  const [profile, setProfile] = useState<UserProfile | undefined>(undefined)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PROFILE_KEY)
+      if (raw) setProfile(JSON.parse(raw))
+    } catch {}
+  }, [])
+
+  const letter = generateDeletionLetter(email, breach, profile)
 
   const handleCopy = async () => {
     if (!user) {
@@ -88,6 +98,11 @@ export default function LetterModal({ breach, email, onClose, plan }: LetterModa
         )}
 
         <div className="overflow-y-auto p-6 flex-1">
+          <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+            <strong>Importante:</strong> tus datos personales (nombre{profile?.address ? ", dirección" : ""}{profile?.dni ? ", DNI" : ""}) se completaron automáticamente con la información de tu perfil.
+            Revisá que todo esté correcto antes de enviar la carta. Podés actualizar tus datos en{" "}
+            <a href="/configuracion" className="underline font-medium">Configuración</a>.
+          </div>
           <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">
             {letter}
           </pre>

@@ -1,11 +1,22 @@
 import type { Breach } from "@/data/breaches"
 
-export function generateDeletionLetter(query: string, breach: Breach): string {
+export const PROFILE_KEY = "traceless_profile"
+
+export interface UserProfile {
+  name: string
+  address?: string
+  dni?: string
+}
+
+export function generateDeletionLetter(query: string, breach: Breach, profile?: UserProfile): string {
   const date = new Date().toLocaleDateString("es-AR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   })
+  const fullName = profile?.name || "[TU NOMBRE COMPLETO]"
+  const addressLine = profile?.address || "[Dirección (opcional)]"
+  const dniLine = profile?.dni || "[DNI/Pasaporte (opcional)]"
 
   return `Asunto: Solicitud de eliminación de datos personales - RGPD/LOPDGDD
 
@@ -15,7 +26,7 @@ A quien corresponda,
 ${breach.name}
 ${breach.domain}
 
-Por medio de la presente, yo [TU NOMBRE COMPLETO], usuario de ${breach.name} con el correo electrónico ${query}, ejerzo mi derecho de supresión (derecho al olvido) según lo establecido en:
+Por medio de la presente, yo ${fullName}, usuario de ${breach.name} con el correo electrónico ${query}, ejerzo mi derecho de supresión (derecho al olvido) según lo establecido en:
 
 - Artículo 17 del Reglamento General de Protección de Datos (RGPD) de la Unión Europea
 - Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD)
@@ -37,18 +48,21 @@ Quedo a la espera de su confirmación en un plazo máximo de 30 días hábiles, 
 
 Sin otro particular, saludo atte.
 
-[TU NOMBRE COMPLETO]
+${fullName}
 ${query}
-[Dirección (opcional)]
-[DNI/Pasaporte (opcional)]
+${addressLine}
+${dniLine}
 
 ---
 Este mensaje fue generado automáticamente por TraceLess.`
 }
 
-export function generateDeletionLetterHTML(query: string, breach: Breach, date: string): string {
+export function generateDeletionLetterHTML(query: string, breach: Breach, date: string, profile?: UserProfile): string {
   const d = new Date(date)
   const dateStr = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+  const fullName = profile?.name || "[TU NOMBRE COMPLETO]"
+  const addressLine = profile?.address ? `<br />${profile.address}` : ""
+  const dniLine = profile?.dni ? `<br />${profile.dni}` : ""
 
   return `<div style="font-family: 'Georgia', serif; max-width: 700px; margin: 0 auto; padding: 60px 40px; color: #111;">
     <p style="text-align: right; color: #666; font-size: 14px; margin-bottom: 40px;">${dateStr}</p>
@@ -64,7 +78,7 @@ export function generateDeletionLetterHTML(query: string, breach: Breach, date: 
     <p style="margin-bottom: 15px;">Estimados,</p>
 
     <p style="margin-bottom: 15px; line-height: 1.6;">
-      Por medio de la presente, y en ejercicio de los derechos reconocidos en el
+      Por medio de la presente, yo <strong>${fullName}</strong>, en ejercicio de los derechos reconocidos en el
       <strong>Reglamento General de Protección de Datos (RGPD) de la Unión Europea</strong>
       y la <strong>Ley de Protección de Datos Personales (LOPDGDD) de España</strong>,
       solicito formalmente la <strong>eliminación inmediata</strong> de todos mis datos personales
@@ -100,16 +114,22 @@ export function generateDeletionLetterHTML(query: string, breach: Breach, date: 
     </p>
 
     <p style="margin-bottom: 5px;">Atentamente,</p>
-    <p style="color: #666;">${query}</p>
+    <p>
+      <strong>${fullName}</strong><br />
+      ${query}${addressLine}${dniLine}
+    </p>
   </div>`
 }
 
-export function generateMasterDeletionLetter(emails: string[]): string {
+export function generateMasterDeletionLetter(emails: string[], profile?: UserProfile): string {
   const date = new Date().toLocaleDateString("es-AR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   })
+  const fullName = profile?.name || "[TU NOMBRE COMPLETO]"
+  const contactEmail = emails[0] || "[Correo de contacto]"
+  const addressLine = profile?.address ? `\n${profile.address}` : "\n[Dirección (opcional)]"
 
   const emailList = emails.map((e) => `  - ${e}`).join("\n")
 
@@ -119,7 +139,7 @@ ${date}
 
 Estimados señores:
 
-Por medio de la presente, solicito la eliminación completa de mis datos personales asociados a las siguientes direcciones de correo electrónico:
+Por medio de la presente, yo ${fullName}, solicito la eliminación completa de mis datos personales asociados a las siguientes direcciones de correo electrónico:
 
 ${emailList}
 
@@ -129,9 +149,8 @@ Agradeceré confirmación escrita de la eliminación en un plazo máximo de 30 d
 
 Sin otro particular, saludo atte.
 
-[TU NOMBRE COMPLETO]
-[Correo de contacto]
-[Dirección (opcional)]
+${fullName}
+${contactEmail}${addressLine}
 
 ---
 Este mensaje fue generado automáticamente por TraceLess.`

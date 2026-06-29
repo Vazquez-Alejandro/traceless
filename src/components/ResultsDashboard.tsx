@@ -10,6 +10,8 @@ import BatchDeletionModal from "./BatchDeletionModal"
 import PasswordScanner from "./PasswordScanner"
 import SecurityChecklist from "./SecurityChecklist"
 import { useToast } from "./Toast"
+import { generateMasterDeletionLetter, PROFILE_KEY } from "@/lib/letters"
+import type { UserProfile } from "@/lib/letters"
 
 interface PlanInfo {
   plan: "free" | "premium"
@@ -87,35 +89,17 @@ export default function ResultsDashboard({ result, email, onReset, plan }: Resul
       router.push("/premium")
       return
     }
-    const date = new Date().toLocaleDateString("es-AR", {
-      year: "numeric", month: "long", day: "numeric",
-    })
-    const sites = selectedBreaches.map((b) => `  - ${b.name} (${b.domain})`).join("\n")
-    const letter = `Asunto: Solicitud de eliminación de datos personales - RGPD/LOPDGDD
 
-${date}
+    let profile: UserProfile | undefined
+    try {
+      const raw = localStorage.getItem(PROFILE_KEY)
+      if (raw) profile = JSON.parse(raw)
+    } catch {}
 
-Estimados señores:
-
-Por medio de la presente, solicito la eliminación completa de mis datos personales asociados a mi correo electrónico ${email} de los siguientes servicios:
-
-${sites}
-
-Lista completa de sitios donde solicito la baja:
-${sites}
-
-Esta solicitud se realiza en virtud del derecho de supresión (derecho al olvido) establecido en el Artículo 17 del Reglamento General de Protección de Datos (RGPD) y la legislación aplicable local.
-
-Agradeceré confirmación escrita de la eliminación en cada caso.
-
-Sin otro particular, saludo atte.
-
-[TU NOMBRE COMPLETO]
-${email}
-[Dirección (opcional)]
-
----
-Este mensaje fue generado automáticamente por TraceLess.`
+    const letter = generateMasterDeletionLetter(
+      selectedBreaches.map((b) => `${b.name} (${b.domain})`),
+      profile
+    )
 
     navigator.clipboard.writeText(letter)
     toast("Carta maestra copiada al clipboard. Pegala en tu editor o email.")

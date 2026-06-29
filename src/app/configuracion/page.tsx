@@ -3,7 +3,30 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+
+const PROFILE_KEY = "traceless_profile"
+
+interface Profile {
+  name: string
+  address: string
+  dni: string
+}
+
+function loadProfile(): Profile {
+  if (typeof window === "undefined") return { name: "", address: "", dni: "" }
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY)
+    return raw ? JSON.parse(raw) : { name: "", address: "", dni: "" }
+  } catch {
+    return { name: "", address: "", dni: "" }
+  }
+}
+
+function saveProfile(p: Profile) {
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p))
+  } catch {}
+}
 
 export default function ConfiguracionPage() {
   const { user, isLoaded } = useUser()
@@ -18,11 +41,15 @@ export default function ConfiguracionPage() {
     if (!isLoaded) return
     if (!user) { router.push("/sign-in"); return }
 
-    setName(user.fullName || user.firstName || "")
+    const profile = loadProfile()
+    setName(profile.name || user.fullName || user.firstName || "")
+    setAddress(profile.address || "")
+    setDni(profile.dni || "")
   }, [user, isLoaded, router])
 
   const handleSave = async () => {
     setSaving(true)
+    saveProfile({ name, address, dni })
     try {
       await fetch("/api/sync-user", {
         method: "POST",
@@ -32,12 +59,12 @@ export default function ConfiguracionPage() {
           name,
         }),
       })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
     } catch {
       console.error("Error al guardar")
     } finally {
       setSaving(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
     }
   }
 
