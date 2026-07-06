@@ -1,43 +1,53 @@
 # TraceLess — Roadmap
 
-## 🟢 Completado
+## Completado
 
-- [x] Búsqueda simulada de breaches por email
-- [x] Generación de cartas de baja (RGPD/LOPDGDD)
-- [x] Autocompletado de datos del usuario en cartas (nombre, dirección, DNI)
-- [x] Edición de cartas (textarea editable) + modo carta personalizada
-- [x] Autenticación con Clerk (registro, inicio de sesión)
-- [x] Planes Free / Premium / Pro con límites
-- [x] Páginas: dashboard, historial, cartas, monitoreo, clientes, configuración
-- [x] Batch deletion (apertura masiva de páginas de baja)
-- [x] Carta maestra (varios breaches seleccionados)
-- [x] Despliegue en Vercel: https://traceless-gamma.vercel.app
-- [x] Middleware de Clerk configurado
-- [x] Env vars en Vercel: Clerk, Supabase, Stripe (price IDs + secret key)
+- Búsqueda simulada de breaches por email
+- Generación de cartas de baja (RGPD/LOPDGDD)
+- Autocompletado de datos del usuario en cartas (nombre, dirección, DNI)
+- Edición de cartas (textarea editable) + modo carta personalizada
+- Autenticación con Clerk (registro, inicio de sesión)
+- Planes Free ($0) / Premium ($9/mes) / Pro ($39/mes)
+- Páginas: dashboard, historial, cartas, monitoreo, clientes, configuración
+- Batch deletion (apertura masiva de páginas de baja)
+- Carta maestra (varios breaches seleccionados)
+- Despliegue en Vercel: https://traceless-gamma.vercel.app
+- Middleware de Clerk configurado
+- Env vars en Vercel: Clerk, Supabase, Stripe, Resend
+- Stripe webhook configurado
+- Clerk webhook configurado
+- CRON_SECRET configurado
+- RESEND_API_KEY configurado (reusada de Inmoxil)
+- Precios actualizados: Premium $9, Pro $39
 
-## 🟡 Pendiente — requiere acción del usuario
+## Pendiente — requiere acción del usuario
 
-### Supabase (base de datos)
+### Dominio (urgente)
+- [ ] Comprar dominio traceless.com.ar en Nic.ar o Cloudflare (~$4,000 ARS/año)
+- [ ] Conectar dominio a Vercel
+- [ ] Configurar DNS para email (Zoho Mail)
+
+### Supabase
 - [ ] Reactivar proyecto Supabase en https://supabase.com (actualmente pausado)
-- [ ] Ejecutar `supabase/schema.sql` en el SQL Editor para crear tablas
-- [ ] Verificar conexión: `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Verificar que las tablas existan (users, searches, letters, monitoring)
 
-### Stripe (pagos)
-- [ ] Configurar webhook en Stripe Dashboard → `https://traceless-gamma.vercel.app/api/webhooks/stripe`
-- [ ] Agregar `STRIPE_WEBHOOK_SECRET` a Vercel
-- [ ] Agregar `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` a Vercel
+### Email profesional
+- [ ] Crear cuenta en Zoho Mail (plan Free)
+- [ ] Crear contacto@traceless.app
+- [ ] Actualizar EMAIL_FROM en Vercel con el dominio real
 
-### Resend (emails)
-- [ ] Crear API key en https://resend.com
-- [ ] Agregar `RESEND_API_KEY` a Vercel
-- [ ] Agregar `EMAIL_FROM` a Vercel (ej: `noreply@tudominio.com`)
+### Stripe products
+- [ ] Verificar que los planes Premium ($9) y Pro ($39) estén creados en Stripe Dashboard
+- [ ] Probar flujo de pago completo
 
-### Clerk webhook (sincronización de usuarios)
-- [ ] Configurar webhook en Clerk Dashboard → `https://traceless-gamma.vercel.app/api/webhooks/clerk`
-- [ ] Agregar `CLERK_WEBHOOK_SECRET` a Vercel
-- [ ] Eventos a suscribir: `user.created`, `user.updated`
+### Marketing
+- [ ] Crear cuenta Instagram: @tracelessapp
+- [ ] Crear cuenta TikTok: @tracelessapp
+- [ ] Crear página LinkedIn: TraceLess
+- [ ] Definir estrategia de contenido (reels de privacidad, tips de seguridad)
+- [ ] Calendario de contenido: 3-5 posts por semana
 
-## 🔵 A futuro
+## A futuro
 
 ### Búsqueda real de breaches
 - [ ] Integrar API real (DeHashed, HaveIBeenPwned, o similar)
@@ -45,8 +55,8 @@
 - [ ] Agregar más fuentes de datos
 
 ### Monitoreo semanal
-- [ ] Programar tarea recurrente (Vercel Cron Jobs o similar)
-- [ ] Enviar email al usuario cuando se detecten nuevas filtraciones
+- [ ] Verificar que el cron job funcione (lunes 10:00 UTC)
+- [ ] Testear envío de reportes semanales por email
 
 ### Reporte PDF
 - [ ] Generar PDF descargable con resultados de búsqueda
@@ -56,4 +66,7 @@
 - [ ] Vista previa de la carta antes de copiar
 - [ ] Guardar cartas personalizadas del usuario
 - [ ] Carga de cartas propias (subir PDF/texto)
-- [ ] Notificar al usuario que revise sus datos antes de enviar (ya implementado)
+
+### Chrome Extension
+- [ ] Publicar extensión en Chrome Web Store
+- [ ] Agregar más features a la extensión
