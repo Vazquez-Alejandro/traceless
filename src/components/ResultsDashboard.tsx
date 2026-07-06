@@ -9,6 +9,8 @@ import LetterModal from "./LetterModal"
 import BatchDeletionModal from "./BatchDeletionModal"
 import PasswordScanner from "./PasswordScanner"
 import SecurityChecklist from "./SecurityChecklist"
+import ExposureSummary from "./ExposureSummary"
+import ActionRecommendations from "./ActionRecommendations"
 import { useToast } from "./Toast"
 import { generateMasterDeletionLetter, PROFILE_KEY } from "@/lib/letters"
 import type { UserProfile } from "@/lib/letters"
@@ -160,6 +162,13 @@ export default function ResultsDashboard({ result, email, onReset, plan }: Resul
               </p>
             </div>
           </div>
+
+        {result.breaches.length > 0 && (
+          <>
+            <ExposureSummary breaches={result.breaches} />
+            <ActionRecommendations breaches={result.breaches} email={email} />
+          </>
+        )}
 
         {result.breaches.length > 0 && (
           <div className="mb-6">
