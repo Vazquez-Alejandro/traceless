@@ -6,36 +6,80 @@ interface XposedOrNotResponse {
   status: string
 }
 
-interface XposedOrNotBreachDetails {
-  breach: string
-  domain: string
-  date: string
-  data: string[]
-  password_risk: string
-  xposed_data: string
-  xposed_records: string
-  logo: string
+interface XposedOrNotAnalyticsResponse {
+  ExposedEmail: {
+    breach_summary: {
+      breaches_count: number
+      records_count: number
+    }
+    breaches_details: Array<{
+      breach: string
+      domain: string
+      industry: string
+      logo: string
+      password_risk: string
+      searchable: string
+      verified: string
+      xposed_data: string
+      xposed_date: string
+      xposed_records: number
+    }>
+  }
 }
 
 const XON_API_BASE = "https://api.xposedornot.com/v1"
 
-function mapXonDataToBreach(xonBreach: string, details?: XposedOrNotBreachDetails): Breach {
+const industryToCategory: Record<string, string> = {
+  "Information Technology": "Tecnología",
+  "Retail": "Comercio",
+  "Entertainment": "Entretenimiento",
+  "Finance": "Finanzas",
+  "Social": "Redes Sociales",
+  "Education": "Educación",
+  "Health Care": "Salud",
+  "Transport": "Viajes",
+  "Music": "Música",
+  "Telecommunication": "Telecomunicaciones",
+  "Non-Profit/Charities": "Sin fines de lucro",
+  "Electronics": "Electrónica",
+  "Miscellaneous": "Otros",
+}
+
+function mapXonDataToBreach(xonBreach: string, analytics?: XposedOrNotAnalyticsResponse): Breach {
   const knownBreach = KNOWN_BREACHES.find(
-    (b) => b.name.toLowerCase() === xonBreach.toLowerCase() || b.domain.toLowerCase() === details?.domain?.toLowerCase()
+    (b) => b.name.toLowerCase() === xonBreach.toLowerCase()
   )
 
   if (knownBreach) {
     return knownBreach
   }
 
+  const details = analytics?.ExposedEmail?.breaches_details?.find(
+    (d) => d.breach.toLowerCase() === xonBreach.toLowerCase()
+  )
+
+  const compromisedData = details?.xposed_data
+    ? details.xposed_data.split(";").map((d) => d.trim())
+    : ["Emails"]
+
+  const category = details?.industry
+    ? industryToCategory[details.industry] || "Otros"
+    : "Otros"
+
   return {
     id: xonBreach.toLowerCase().replace(/\s+/g, "-"),
     name: xonBreach,
     domain: details?.domain || "unknown.com",
-    date: details?.date || new Date().toISOString().split("T")[0],
-    description: `Tu email fue expuesto en la filtración de ${xonBreach}.`,
-    compromisedData: details?.data?.length ? details.data : ["Emails"],
-    category: "Otros",
+    date: details?.xposed_date
+      ? `${details.xposed_date}-01-01`
+      : new Date().toISOString().split("T")[0],
+    description: `Tu email fue expuesto en la filtración de ${xonBreach}. ${
+      details?.xposed_records
+        ? `Afectó a ${details.xposed_records.toLocaleString("es-AR")} registros.`
+        : ""
+    }`,
+    compromisedData,
+    category,
   }
 }
 
@@ -108,7 +152,18 @@ export async function searchEmailXposedOrNot(email: string): Promise<SearchResul
     const breachNames = data.breaches.flat()
     const uniqueBreachNames = [...new Set(breachNames)]
 
-    const breaches: Breach[] = uniqueBreachNames.map((name) => mapXonDataToBreach(name))
+    let analytics: XposedOrNotAnalyticsResponse | undefined
+    try {
+      const analyticsResponse = await fetch(
+        `${XON_API_BASE}/breach-analytics?email=${encodeURIComponent(email)}`,
+        { headers: { Accept: "application/json" } }
+      )
+      if (analyticsResponse.ok) {
+        analytics = await analyticsResponse.json()
+      }
+    } catch {}
+
+    const breaches: Breach[] = uniqueBreachNames.map((name) => mapXonDataToBreach(name, analytics))
 
     const riskScore = calculateRiskScore(breaches)
 
