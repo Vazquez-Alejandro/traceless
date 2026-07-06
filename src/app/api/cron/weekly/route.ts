@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   let checked = 0
   for (const sub of subscriptions) {
     try {
-      const result = searchEmail(sub.email)
+      const result = await searchEmail(sub.email)
       const breachNames = result.breaches.map((b: { name: string }) => b.name)
 
       await sendWeeklyReport(

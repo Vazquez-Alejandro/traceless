@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Alcanzaste el límite de búsquedas de este mes. Actualizá a Premium para búsquedas ilimitadas." }, { status: 403 })
   }
 
-  const result = searchEmail(query)
+  const result = await searchEmail(query)
 
   try {
     await supabaseAdmin.from("searches").insert({
