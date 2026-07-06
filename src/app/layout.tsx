@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Link from "next/link"
 import { ClerkProvider } from "@clerk/nextjs"
+import { Analytics } from "@vercel/analytics/react"
 import HeaderAuth from "@/components/HeaderAuth"
 import Logo from "@/components/Logo"
 import { ToastProvider } from "@/components/Toast"
@@ -71,6 +72,7 @@ export default function RootLayout({
             </div>
           </footer>
           </ToastProvider>
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
