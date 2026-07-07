@@ -1,72 +1,126 @@
 # TraceLess — Roadmap
 
+## Pivote completado: Breach-Check → Data Broker Removal
+
+### Valor
+- **Antes**: "¿Dónde está expuesto tu email?" → breach-check (gratis en HIBP/XposedOrNot)
+- **Ahora**: "¿Quién está vendiendo tus datos?" → eliminación de datos de brokers argentinos
+
+### Público objetivo
+- Padres argentinos preocupados por la privacidad familiar
+- Personas que encuentran su DNI/domicilio en Dateas/Datacels
+- Usuarios que pagan $5-12 USD/mes por privacidad
+
+---
+
 ## Completado
 
-- Búsqueda simulada de breaches por email
-- Generación de cartas de baja (RGPD/LOPDGDD)
-- Autocompletado de datos del usuario en cartas (nombre, dirección, DNI)
-- Edición de cartas (textarea editable) + modo carta personalizada
-- Autenticación con Clerk (registro, inicio de sesión)
-- Planes Free ($0) / Premium ($9/mes) / Pro ($39/mes)
-- Páginas: dashboard, historial, cartas, monitoreo, clientes, configuración
-- Batch deletion (apertura masiva de páginas de baja)
-- Carta maestra (varios breaches seleccionados)
+### Infraestructura
 - Despliegue en Vercel: https://traceless-gamma.vercel.app
-- Middleware de Clerk configurado
-- Env vars en Vercel: Clerk, Supabase, Stripe, Resend
-- Stripe webhook configurado
-- Clerk webhook configurado
-- CRON_SECRET configurado
-- RESEND_API_KEY configurado (reusada de Inmoxil)
-- Precios actualizados: Premium $9, Pro $39
+- Clerk auth (registro, inicio de sesión)
+- Stripe billing (planes Básico y Pro)
+- Supabase (base de datos)
+- Dominio: traceless.com.ar (DNS delegado a Vercel)
+- Zoho Mail (contacto@traceless.com.ar, soporte@traceless.com.ar, etc.)
+- Vercel Analytics
+- Favicon y logo
+
+### Funcionalidades
+- Escaneo de brokers argentinos (Dateas, Datacels, Busca-datos, Buscadatos)
+- Búsqueda por DNI, nombre o email
+- Cartas de eliminación internacionales (GDPR/CCPA/Ley 25.326)
+- Cartas Habeas Data (Ley 25.326)
+- Planes Free ($0) / Básico ($5 USD) / Pro ($12 USD)
+- Dashboard con resultados de escaneo
+- Monitoreo mensual de brokers
+- Batch deletion (apertura masiva de páginas de baja)
+- Carta maestra (varios brokers seleccionados)
+- Páginas: dashboard, historial, cartas, monitoreo, configuración, premium
+- Landing page actualizada (nuevo hero, search por DNI)
+- FAQ actualizado
+
+### Marketing
+- Cuenta Instagram: @tracelessapp
+- Cuenta Twitter/X: @tracelessapp
+- Logo y branded images creados
+- SALES_PLAN.md (estrategia por red social)
+
+---
+
+## Pendiente — MVP Manual
+
+### Validación (Semana 1-2)
+- [ ] Crear landing page estática en traceless.com.ar
+- [ ] Formulario de "Quiero eliminar mis datos"
+- [ ] Primeros 5 clientes manuales (hacer eliminaciones vos)
+- [ ] Cobrar $5 USD por cliente (Stripe/Mercado Pago)
+- [ ] Validar: ¿alguien paga por esto?
+
+### Automatización (Semana 3-4)
+- [ ] Crear templates de email para cada broker
+- [ ] Enviar emails de eliminación via Zoho Mail
+- [ ] Tracking de respuestas en spreadsheet
+- [ ] Automatizar envío de emails si funciona
+
+### Escalamiento (Mes 2+)
+- [ ] Construir SaaS completo si hay demanda
+- [ ] Agregar más brokers (Uruguay, Chile, Colombia)
+- [ ] Monitoreo automático de reaparición de datos
+- [ ] App móvil
+
+---
 
 ## Pendiente — requiere acción del usuario
 
-### Dominio (urgente)
-- [ ] Comprar dominio traceless.com.ar en Nic.ar o Cloudflare (~$4,000 ARS/año)
-- [ ] Conectar dominio a Vercel
-- [ ] Configurar DNS para email (Zoho Mail)
-
-### Supabase
-- [ ] Reactivar proyecto Supabase en https://supabase.com (actualmente pausado)
-- [ ] Verificar que las tablas existan (users, searches, letters, monitoring)
-
-### Email profesional
-- [ ] Crear cuenta en Zoho Mail (plan Free)
-- [ ] Crear contacto@traceless.app
-- [ ] Actualizar EMAIL_FROM en Vercel con el dominio real
-
-### Stripe products
-- [ ] Verificar que los planes Premium ($9) y Pro ($39) estén creados en Stripe Dashboard
-- [ ] Probar flujo de pago completo
-
 ### Marketing
-- [ ] Crear cuenta Instagram: @tracelessapp
-- [ ] Crear cuenta TikTok: @tracelessapp
 - [ ] Crear página LinkedIn: TraceLess
-- [ ] Definir estrategia de contenido (reels de privacidad, tips de seguridad)
+- [ ] Crear cuenta TikTok: @tracelessapp
+- [ ] Definir estrategia de contenido (reels de privacidad)
 - [ ] Calendario de contenido: 3-5 posts por semana
+- [ ] Contactar influencers de privacidad en Argentina
 
-## A futuro
+### Legal
+- [ ] Registrar TraceLess como emprendimiento
+- [ ] Definir términos y condiciones
+- [ ] Política de privacidad completa
+- [ ] Aviso de cookies
 
-### Búsqueda real de breaches
-- [ ] Integrar API real (DeHashed, HaveIBeenPwned, o similar)
-- [ ] Remover búsqueda simulada
-- [ ] Agregar más fuentes de datos
+### Ops
+- [ ] Crear spreadsheet de tracking de eliminaciones
+- [ ] Definir SLA de respuesta a clientes
+- [ ] Crear templates de respuesta para cada broker
+- [ ] Documentar proceso de eliminación manual
 
-### Monitoreo semanal
-- [ ] Verificar que el cron job funcione (lunes 10:00 UTC)
-- [ ] Testear envío de reportes semanales por email
+---
 
-### Reporte PDF
-- [ ] Generar PDF descargable con resultados de búsqueda
-- [ ] Incluir cartas de baja en el reporte
+## Métricas de éxito (Mes 1)
 
-### Mejoras UX
-- [ ] Vista previa de la carta antes de copiar
-- [ ] Guardar cartas personalizadas del usuario
-- [ ] Carga de cartas propias (subir PDF/texto)
+| Métrica | Objetivo |
+|---------|----------|
+| Landing page visits | 100 |
+| Formularios enviados | 20 |
+| Clientes pagando | 5 |
+| Ingreso | $25 USD |
+| Costo dominio | $8,500 ARS (~$8.5 USD) |
+| ROI | +$16.5 USD |
 
-### Chrome Extension
-- [ ] Publicar extensión en Chrome Web Store
-- [ ] Agregar más features a la extensión
+---
+
+## Pricing
+
+| Plan | Precio | Incluye |
+|------|--------|---------|
+| Free | $0 | Escaneo de 2 brokers, 2 búsquedas/mes |
+| Básico | $5 USD/mes | Escaneo ilimitado, eliminación de 3 brokers, monitoreo mensual |
+| Pro | $12 USD/mes | Todo + eliminación de todos los brokers, monitoreo continuo, alertas |
+
+---
+
+## Referencia de competencia
+
+| Servicio | Precio | Cobertura |
+|----------|--------|-----------|
+| PrivacyOn | $8.33/mes | 100+ brokers, familia 5 |
+| Atlas Privacy | $10.50/mes | 150+ sitios |
+| TraceLess Básico | $5 USD/mes | 3 brokers argentinos |
+| TraceLess Pro | $12 USD/mes | Todos los brokers argentinos |

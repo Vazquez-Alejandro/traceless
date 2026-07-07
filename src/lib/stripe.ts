@@ -19,19 +19,21 @@ export const PLANS = {
   free: {
     name: "Free",
     priceId: null,
-    searchesPerMonth: 3,
-    lettersPerMonth: 2,
+    searchesPerMonth: 2,
+    lettersPerMonth: 0,
     batchDeletion: false,
     monitoring: false,
+    brokerRemovals: 0,
     maxClients: 1,
   },
-  premium: {
-    name: "Premium",
-    priceId: process.env.STRIPE_PREMIUM_PRICE_ID,
+  basico: {
+    name: "Básico",
+    priceId: process.env.STRIPE_BASICO_PRICE_ID,
     searchesPerMonth: Infinity,
     lettersPerMonth: Infinity,
     batchDeletion: true,
     monitoring: true,
+    brokerRemovals: 3,
     maxClients: 1,
   },
   pro: {
@@ -41,6 +43,7 @@ export const PLANS = {
     lettersPerMonth: Infinity,
     batchDeletion: true,
     monitoring: true,
+    brokerRemovals: Infinity,
     maxClients: Infinity,
   },
 } as const

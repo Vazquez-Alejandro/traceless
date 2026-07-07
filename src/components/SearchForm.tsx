@@ -17,6 +17,8 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     onSearch(query.trim())
   }
 
+  const isValid = query.trim().length > 0
+
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
       <div className={`relative p-1 rounded-2xl transition-all duration-300 ${focused ? "bg-gradient-to-r from-amber-500 via-slate-300 to-amber-500" : "bg-transparent"}`}>
@@ -24,12 +26,12 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <div className="flex flex-col sm:flex-row gap-3 p-2">
             <div className="flex-1 relative">
               <input
-                type="email"
+                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder="tu@email.com"
+                placeholder="Tu DNI, nombre o email"
                 className="w-full px-5 py-4 text-base rounded-xl bg-transparent text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none transition-all"
                 required
                 disabled={isLoading}
@@ -37,7 +39,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
             </div>
             <button
               type="submit"
-              disabled={isLoading || !query.includes("@")}
+              disabled={isLoading || !isValid}
               className="px-8 py-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white font-semibold rounded-xl transition-all text-base flex items-center justify-center gap-2 whitespace-nowrap shadow-lg shadow-amber-600/20 hover:shadow-amber-600/30 disabled:shadow-none"
             >
               {isLoading ? (
@@ -60,6 +62,9 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           </div>
         </div>
       </div>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center mt-3">
+        Ingresá tu DNI (ej: 12345678), nombre completo o email
+      </p>
     </form>
   )
 }
