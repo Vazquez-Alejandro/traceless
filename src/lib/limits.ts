@@ -33,7 +33,8 @@ export async function getUserPlan(userId: string): Promise<PlanType> {
 
   if (error || !data) return "free"
 
-  if ((data.plan === "premium" || data.plan === "pro") && data.subscription_status === "active") {
+  if ((data.plan === "basico" || data.plan === "premium" || data.plan === "pro") && data.subscription_status === "active") {
+    if (data.plan === "premium") return "basico"
     return data.plan as PlanType
   }
 
