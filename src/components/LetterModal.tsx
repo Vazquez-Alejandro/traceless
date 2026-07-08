@@ -8,7 +8,7 @@ import { generateDeletionLetter, PROFILE_KEY } from "@/lib/letters"
 import type { UserProfile } from "@/lib/letters"
 
 interface PlanInfo {
-  plan: "free" | "premium"
+  plan: "free" | "basico" | "pro" | "familia" | "corporativo"
   lettersUsed: number
   lettersLimit: number | "∞"
 }

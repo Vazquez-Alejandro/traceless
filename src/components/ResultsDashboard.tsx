@@ -16,7 +16,7 @@ import { generateMasterDeletionLetter, PROFILE_KEY } from "@/lib/letters"
 import type { UserProfile } from "@/lib/letters"
 
 interface PlanInfo {
-  plan: "free" | "premium"
+  plan: "free" | "basico" | "pro" | "familia" | "corporativo"
   searchesUsed: number
   searchesLimit: number | "∞"
   lettersUsed: number
@@ -134,7 +134,7 @@ export default function ResultsDashboard({ result, email, onReset, plan }: Resul
           <div className="flex items-center gap-4">
             {plan && (
               <span className="text-xs text-zinc-400">
-                {plan.plan === "premium" ? "⭐ Premium" : `Free · ${plan.searchesUsed}/${plan.searchesLimit}`}
+                {plan.plan !== "free" ? `⭐ ${plan.plan.charAt(0).toUpperCase() + plan.plan.slice(1)}` : `Free · ${plan.searchesUsed}/${plan.searchesLimit}`}
               </span>
             )}
             <button

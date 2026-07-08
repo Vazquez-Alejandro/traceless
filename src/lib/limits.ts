@@ -33,7 +33,8 @@ export async function getUserPlan(userId: string): Promise<PlanType> {
 
   if (error || !data) return "free"
 
-  if ((data.plan === "basico" || data.plan === "premium" || data.plan === "pro") && data.subscription_status === "active") {
+  const validPlans = ["basico", "pro", "familia", "corporativo", "premium"]
+  if (validPlans.includes(data.plan) && data.subscription_status === "active") {
     if (data.plan === "premium") return "basico"
     return data.plan as PlanType
   }
@@ -91,7 +92,62 @@ export async function canUseMonitoring(userId: string): Promise<boolean> {
   return PLANS[plan].monitoring
 }
 
+export async function canUseDarkWebMonitoring(userId: string): Promise<boolean> {
+  const plan = await getUserPlan(userId)
+  return PLANS[plan].darkWebMonitoring
+}
+
 export async function getMaxClients(userId: string): Promise<number> {
   const plan = await getUserPlan(userId)
   return PLANS[plan].maxClients
+}
+
+export async function getFamilyMembers(userId: string): Promise<number> {
+  const plan = await getUserPlan(userId)
+  return PLANS[plan].familyMembers
+}
+
+export async function getCorporateSeats(userId: string): Promise<number> {
+  const plan = await getUserPlan(userId)
+  return PLANS[plan].corporateSeats
+}
+
+export async function generateReferralCode(userId: string): Promise<string> {
+  const code = `TL-${userId.slice(0, 8).toUpperCase()}`
+  try {
+    await supabaseAdmin.from("users").update({ referral_code: code }).eq("id", userId)
+  } catch {}
+  return code
+}
+
+export async function getReferralCount(userId: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("referrals")
+    .select("*", { count: "exact", head: true })
+    .eq("referrer_id", userId)
+
+  if (error) return 0
+  return count ?? 0
+}
+
+export async function applyReferralCode(userId: string, code: string): Promise<boolean> {
+  const { data: referrer } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("referral_code", code)
+    .maybeSingle()
+
+  if (!referrer || referrer.id === userId) return false
+
+  try {
+    await supabaseAdmin.from("referrals").insert({
+      referrer_id: referrer.id,
+      referred_id: userId,
+      code,
+      created_at: new Date().toISOString(),
+    })
+    return true
+  } catch {
+    return false
+  }
 }

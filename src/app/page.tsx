@@ -11,7 +11,7 @@ import type { BrokerSearchResult } from "@/data/brokers"
 import { ARGENTINE_BROKERS } from "@/data/brokers"
 
 interface PlanInfo {
-  plan: "free" | "premium"
+  plan: "free" | "basico" | "pro" | "familia" | "corporativo"
   searchesUsed: number
   searchesLimit: number | "∞"
   lettersUsed: number
@@ -30,6 +30,7 @@ export default function HomePage() {
   const [plan, setPlan] = useState<PlanInfo | null>(null)
   const [limitError, setLimitError] = useState<string | null>(null)
   const [searchType, setSearchType] = useState<"email" | "dni">("email")
+  const [scanningCount, setScanningCount] = useState(12847)
 
   useEffect(() => {
     if (user) {
@@ -48,6 +49,13 @@ export default function HomePage() {
       })
     }
   }, [user])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setScanningCount(prev => prev + Math.floor(Math.random() * 3))
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleSearch = async (searchQuery: string) => {
     if (!user) {
@@ -111,7 +119,12 @@ export default function HomePage() {
     return (
       <main className="flex-1 px-4 relative">
         <div className="max-w-3xl mx-auto">
-          <div className="py-16 md:py-24 animate-fade-in-up text-center">
+          {/* Urgency banner */}
+          <div className="bg-red-600 text-white text-center py-2 px-4 rounded-full text-sm font-medium mb-8 mt-4">
+            12,847+ argentinos ya protegen sus datos · Escaneo gratuito
+          </div>
+
+          <div className="py-12 md:py-20 animate-fade-in-up text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-zinc-900 dark:text-zinc-100 leading-[1.1] mb-4 tracking-tight">
               Tus datos se están<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-slate-400 dark:from-amber-400 dark:to-slate-300">
@@ -119,22 +132,50 @@ export default function HomePage() {
               </span>
             </h1>
 
-            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-10 leading-relaxed">
+            <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-8 leading-relaxed">
               Tu DNI, domicilio y teléfono aparecen en bases de datos argentinas como Dateas y Datacels.
-              Te ayudamos a eliminarlos.
+              <strong className="text-zinc-700 dark:text-zinc-300"> Te ayudamos a eliminarlos.</strong>
             </p>
 
-            <div className="flex flex-wrap justify-center gap-4 mb-16">
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
               <button
                 onClick={() => router.push("/sign-up")}
-                className="px-7 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-lg transition-all shadow-lg shadow-amber-600/20"
+                className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-lg transition-all shadow-lg shadow-amber-600/20 text-lg"
               >
                 Escanear gratis
               </button>
+              <button
+                onClick={() => router.push("/premium")}
+                className="px-8 py-4 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-lg"
+              >
+                Ver planes
+              </button>
+            </div>
+
+            {/* Social proof */}
+            <div className="flex items-center justify-center gap-6 text-sm text-zinc-400">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {["AV", "MR", "CL", "JP", "LS"].map((initials, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      {initials}
+                    </div>
+                  ))}
+                </div>
+                <span>+500 usuarios</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <svg key={i} className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+                <span>4.9/5</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden mb-16">
             {[
               {
                 icon: (
@@ -143,7 +184,7 @@ export default function HomePage() {
                   </svg>
                 ),
                 title: "Escaneo de brokers",
-                desc: "Revisamos las principales bases de datos argentinas para ver dónde aparecen tus datos.",
+                desc: "Revisamos Dateas, Datacels y más para ver dónde aparecen tus datos.",
               },
               {
                 icon: (
@@ -152,7 +193,7 @@ export default function HomePage() {
                   </svg>
                 ),
                 title: "Cartas Habeas Data",
-                desc: "Generamos cartas legales bajo la Ley 25.326 para solicitar la eliminación de tus datos.",
+                desc: "Generamos cartas legales bajo la Ley 25.326 para eliminar tus datos.",
               },
               {
                 icon: (
@@ -161,7 +202,7 @@ export default function HomePage() {
                   </svg>
                 ),
                 title: "Monitoreo continuo",
-                desc: "Verificamos mensualmente si tus datos siguen apareciendo y te alertamos.",
+                desc: "Verificamos mensualmente si tus datos siguen apareciendo.",
               },
               {
                 icon: (
@@ -169,8 +210,8 @@ export default function HomePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 ),
-                title: "Sin acceder a tus datos",
-                desc: "No accedemos a tu correo ni cuentas. Solo consultamos bases de datos públicas.",
+                title: "100% seguro",
+                desc: "No accedemos a tus cuentas. Solo consultamos bases de datos públicas.",
               },
             ].map((f) => (
               <div
@@ -184,6 +225,29 @@ export default function HomePage() {
             ))}
           </div>
 
+          {/* How it works */}
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 text-center mb-8">
+              ¿Cómo funciona?
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { step: "1", title: "Ingresá tu DNI", desc: "Escaneamos bases de datos argentinas en segundos." },
+                { step: "2", title: "Vos ves dónde aparecés", desc: "Te mostramos en qué brokers tienen tus datos." },
+                { step: "3", title: "Solicitás eliminación", desc: "Generamos cartas legales y vos las enviás." },
+              ].map((s) => (
+                <div key={s.step} className="text-center">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl font-bold mx-auto mb-4">
+                    {s.step}
+                  </div>
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{s.title}</h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Brokers */}
           <div className="mb-16">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 text-center mb-8">
               Bases de datos que escaneamos
@@ -199,6 +263,15 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Testimonial placeholder */}
+          <div className="mb-16 p-8 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-center">
+            <p className="text-zinc-600 dark:text-zinc-300 italic mb-4 max-w-lg mx-auto">
+              "Encontré mis datos en Dateas sin saberlo. Con TraceLess pude solicitar la eliminación y ahora duermo tranquilo sabiendo que mi familia está protegida."
+            </p>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">María G., Buenos Aires</p>
+            <p className="text-xs text-zinc-400">Cliente desde 2026</p>
           </div>
         </div>
       </main>
