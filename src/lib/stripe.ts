@@ -57,7 +57,7 @@ export const PLANS = {
   },
   familia: {
     name: "Familia",
-    priceId: process.env.STRIPE_FAMILIA_PRICE_ID,
+    priceId: process.env.STRIPE_FAMILIAR_PRICE_ID,
     searchesPerMonth: Infinity,
     lettersPerMonth: Infinity,
     batchDeletion: true,
