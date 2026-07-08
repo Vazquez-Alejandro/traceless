@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "./supabase-admin"
-import { PLANS, type PlanType } from "./stripe"
+import { PLANS, type PlanType } from "./lemonsqueezy"
 
 export async function ensureUser(userId: string, email: string, name?: string) {
   try {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { getUserPlan, getSearchesCount, getLettersCount, ensureUser } from "@/lib/limits"
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { PLANS } from "@/lib/stripe"
+import { PLANS } from "@/lib/lemonsqueezy"
 
 export async function GET() {
   const { userId } = await auth()
