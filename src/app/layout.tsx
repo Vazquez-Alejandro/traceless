@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Link from "next/link"
-import { ClerkProvider } from "@clerk/nextjs"
+import { ClerkProvider, SignedIn } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/react"
 import HeaderAuth from "@/components/HeaderAuth"
 import Logo from "@/components/Logo"
@@ -46,6 +46,11 @@ export default function RootLayout({
             <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
               <a href="/" className="flex items-center"><Logo /></a>
               <div className="flex items-center gap-4">
+                <SignedIn>
+                  <Link href="/dashboard" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                    Dashboard
+                  </Link>
+                </SignedIn>
                 <HeaderAuth />
               </div>
             </div>

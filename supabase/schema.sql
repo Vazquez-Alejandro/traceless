@@ -49,3 +49,37 @@ create table if not exists monitoring (
 
 create index if not exists idx_monitoring_user_id on monitoring(user_id);
 create index if not exists idx_monitoring_next_check on monitoring(next_check_at) where active = true;
+
+-- Empresas
+create table if not exists companies (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null references users(id) on delete cascade unique,
+  name text not null,
+  cuit text not null,
+  industry text not null,
+  employee_count text,
+  data_types jsonb default '[]'::jsonb,
+  has_dpo boolean default false,
+  dpo_name text,
+  dpo_email text,
+  privacy_policy_url text,
+  website text,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);
+
+create index if not exists idx_companies_user_id on companies(user_id);
+
+-- Compliance checklist
+create table if not exists compliance (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null references users(id) on delete cascade unique,
+  score integer default 0,
+  answers jsonb default '{}'::jsonb,
+  company_name text,
+  industry text,
+  last_updated timestamp,
+  created_at timestamp default now()
+);
+
+create index if not exists idx_compliance_user_id on compliance(user_id);
