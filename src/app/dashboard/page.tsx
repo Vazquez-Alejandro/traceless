@@ -72,8 +72,21 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       fetchCompliance()
+      fetchCompany()
     }
   }, [user])
+
+  const fetchCompany = async () => {
+    try {
+      const res = await fetch("/api/company")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.exists && compliance) {
+          setCompliance(prev => prev ? { ...prev, companyName: data.name, industry: data.industry } : null)
+        }
+      }
+    } catch {}
+  }
 
   const fetchCompliance = async () => {
     try {

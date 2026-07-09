@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 
@@ -50,6 +50,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
 
   const [formData, setFormData] = useState<CompanyData>({
     name: "",
@@ -63,6 +64,21 @@ export default function OnboardingPage() {
     privacyPolicyUrl: "",
     website: "",
   })
+
+  useEffect(() => {
+    if (user) {
+      fetch("/api/company")
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            router.push("/dashboard")
+          } else {
+            setLoading(false)
+          }
+        })
+        .catch(() => setLoading(false))
+    }
+  }, [user, router])
 
   const handleChange = (field: keyof CompanyData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -104,6 +120,14 @@ export default function OnboardingPage() {
     if (step === 1) return formData.name && formData.cuit && formData.industry
     if (step === 2) return formData.dataTypes.length > 0
     return true
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    )
   }
 
   return (

@@ -2,6 +2,42 @@ import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 
+export async function GET() {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("companies")
+      .select("*")
+      .eq("user_id", userId)
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ exists: false })
+    }
+
+    return NextResponse.json({
+      exists: true,
+      name: data.name,
+      cuit: data.cuit,
+      industry: data.industry,
+      employeeCount: data.employee_count,
+      dataTypes: data.data_types,
+      hasDPO: data.has_dpo,
+      dpoName: data.dpo_name,
+      dpoEmail: data.dpo_email,
+      privacyPolicyUrl: data.privacy_policy_url,
+      website: data.website,
+    })
+  } catch (error) {
+    return NextResponse.json({ error: "Error al obtener empresa" }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   const { userId } = await auth()
 
