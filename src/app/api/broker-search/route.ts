@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { ARGENTINE_BROKERS, type BrokerSearchResult } from "@/data/brokers"
+import { searchBrokersReal } from "@/lib/broker-search"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { canSearch } from "@/lib/limits"
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Alcanzaste el límite de búsquedas de este mes. Actualizá al plan Básico para búsquedas ilimitadas." }, { status: 403 })
   }
 
-  const results = simulateBrokerSearch(query.trim())
+  const results = await searchBrokersReal(query.trim())
 
   try {
     await supabaseAdmin.from("searches").insert({
@@ -34,28 +34,4 @@ export async function GET(request: NextRequest) {
   } catch {}
 
   return NextResponse.json({ results })
-}
-
-function simulateBrokerSearch(query: string): BrokerSearchResult[] {
-  const results: BrokerSearchResult[] = []
-
-  for (const broker of ARGENTINE_BROKERS) {
-    const found = Math.random() > 0.3
-    const dataFound = found ? getRandomDataTypes(broker.dataTypes) : []
-
-    results.push({
-      broker,
-      found,
-      dataFound,
-      confidence: found ? Math.floor(Math.random() * 30) + 70 : 0,
-    })
-  }
-
-  return results
-}
-
-function getRandomDataTypes(types: string[]): string[] {
-  const count = Math.floor(Math.random() * types.length) + 1
-  const shuffled = [...types].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count)
 }
