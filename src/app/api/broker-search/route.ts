@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { searchBrokersReal } from "@/lib/broker-search"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { canSearch } from "@/lib/limits"
 
 export async function GET(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const results = await searchBrokersReal(query.trim())
 
   try {
-    await supabaseAdmin.from("searches").insert({
+    await db.from("searches").insert({
       user_id: userId,
       email: query.trim(),
       result: { brokerResults: results },

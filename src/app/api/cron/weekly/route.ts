@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { searchEmail } from "@/lib/search"
 import { sendWeeklyReport } from "@/lib/resend"
 
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString()
 
-  const { data: subscriptions } = await supabaseAdmin
+  const { data: subscriptions } = await db
     .from("monitoring")
     .select("*, users(email, name)")
     .eq("active", true)
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         result.safeSites,
       )
 
-      await supabaseAdmin
+      await db
         .from("monitoring")
         .update({
           last_checked_at: now,

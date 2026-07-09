@@ -8,6 +8,7 @@ import Logo from "@/components/Logo"
 import { ToastProvider } from "@/components/Toast"
 import "./globals.css"
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

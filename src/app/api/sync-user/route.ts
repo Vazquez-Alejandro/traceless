@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -12,19 +12,19 @@ export async function POST(req: Request) {
   const { email, name } = await req.json()
 
   try {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("users")
       .select("id")
       .eq("id", userId)
       .maybeSingle()
 
     if (existing) {
-      await supabaseAdmin
+      await db
         .from("users")
         .update({ email, name, updated_at: new Date().toISOString() })
         .eq("id", userId)
     } else if (email) {
-      await supabaseAdmin.from("users").insert({
+      await db.from("users").insert({
         id: userId,
         email,
         name: name || email.split("@")[0] || "Usuario",

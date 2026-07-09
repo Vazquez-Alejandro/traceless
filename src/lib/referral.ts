@@ -1,15 +1,15 @@
-import { supabaseAdmin } from "./supabase-admin"
+import { db } from "./db"
 
 export async function generateReferralCode(userId: string): Promise<string> {
   const code = `TL-${userId.slice(0, 8).toUpperCase()}`
   try {
-    await supabaseAdmin.from("users").update({ referral_code: code }).eq("id", userId)
+    await db.from("users").update({ referral_code: code }).eq("id", userId)
   } catch {}
   return code
 }
 
 export async function getReferralCount(userId: string): Promise<number> {
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from("referrals")
     .select("*", { count: "exact", head: true })
     .eq("referrer_id", userId)
@@ -19,7 +19,7 @@ export async function getReferralCount(userId: string): Promise<number> {
 }
 
 export async function applyReferralCode(userId: string, code: string): Promise<boolean> {
-  const { data: referrer } = await supabaseAdmin
+  const { data: referrer } = await db
     .from("users")
     .select("id")
     .eq("referral_code", code)
@@ -28,7 +28,7 @@ export async function applyReferralCode(userId: string, code: string): Promise<b
   if (!referrer || referrer.id === userId) return false
 
   try {
-    await supabaseAdmin.from("referrals").insert({
+    await db.from("referrals").insert({
       referrer_id: referrer.id,
       referred_id: userId,
       code,
@@ -47,7 +47,7 @@ export async function getReferralStats(userId: string): Promise<{
 }> {
   const total = await getReferralCount(userId)
 
-  const { data: active } = await supabaseAdmin
+  const { data: active } = await db
     .from("referrals")
     .select("id")
     .eq("referrer_id", userId)

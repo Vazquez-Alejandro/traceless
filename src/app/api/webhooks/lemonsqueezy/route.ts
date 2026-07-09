@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "node:crypto"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 function verifyWebhookSignature(
   body: string,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         const status = attrs.status
 
         if (userId) {
-          await supabaseAdmin
+          await db
             .from("users")
             .update({
               plan,
@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
       case "subscription_cancelled":
       case "subscription_expired": {
         const attrs = data.attributes
-        const { data: user } = await supabaseAdmin
+        const { data: user } = await db
           .from("users")
           .select("id")
           .eq("lemonsqueezy_subscription_id", attrs.id?.toString())
           .single()
 
         if (user) {
-          await supabaseAdmin
+          await db
             .from("users")
             .update({
               plan: "free",
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         const plan = attrs.custom_data?.plan || "basico"
 
         if (userId && attrs.status === "paid") {
-          await supabaseAdmin
+          await db
             .from("users")
             .update({
               plan,

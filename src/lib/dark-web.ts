@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 interface DarkWebResult {
   found: boolean
@@ -148,7 +148,7 @@ export async function searchDarkWeb(email: string): Promise<DarkWebResult> {
 
 export async function monitorUser(userId: string): Promise<DarkWebResult | null> {
   // Get user's email from Supabase
-  const { data: user } = await supabaseAdmin
+  const { data: user } = await db
     .from("users")
     .select("email")
     .eq("clerk_id", userId)

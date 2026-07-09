@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
 import { applyReferralCode } from "@/lib/referral"
 
 export async function POST(req: Request) {

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { searchBrokersReal } from "@/lib/broker-search"
 
 interface VerificationResult {
@@ -12,7 +12,7 @@ interface VerificationResult {
 
 export async function verifyElimination(userId: string, email: string): Promise<VerificationResult[]> {
   // Get letters sent by this user
-  const { data: letters } = await supabaseAdmin
+  const { data: letters } = await db
     .from("letters")
     .select("breach_id, created_at")
     .eq("user_id", userId)
@@ -27,7 +27,7 @@ export async function verifyElimination(userId: string, email: string): Promise<
   const results: VerificationResult[] = []
 
   for (const result of brokerResults) {
-    const letterSent = letters.some(l => l.breach_id === result.broker.id)
+    const letterSent = letters.some((l: any) => l.breach_id === result.broker.id)
 
     if (letterSent) {
       results.push({
@@ -44,7 +44,7 @@ export async function verifyElimination(userId: string, email: string): Promise<
   // Save verification results
   try {
     for (const r of results) {
-      await supabaseAdmin.from("elimination_verifications").upsert({
+      await db.from("elimination_verifications").upsert({
         user_id: userId,
         email,
         broker_id: r.brokerId,
@@ -60,7 +60,7 @@ export async function verifyElimination(userId: string, email: string): Promise<
 }
 
 export async function getVerificationHistory(userId: string, email: string): Promise<VerificationResult[]> {
-  const { data } = await supabaseAdmin
+  const { data } = await db
     .from("elimination_verifications")
     .select("*")
     .eq("user_id", userId)
@@ -69,7 +69,7 @@ export async function getVerificationHistory(userId: string, email: string): Pro
 
   if (!data) return []
 
-  return data.map(v => ({
+  return data.map((v: any) => ({
     brokerId: v.broker_id,
     brokerName: v.broker_id,
     stillFound: v.still_found,

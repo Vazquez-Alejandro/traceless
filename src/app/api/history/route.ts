@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function GET() {
   const { userId } = await auth()
@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const { data: searches, error: searchError } = await supabaseAdmin
+  const { data: searches, error: searchError } = await db
     .from("searches")
     .select("id, email, result, created_at")
     .eq("user_id", userId)
@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json({ error: "Error al cargar historial" }, { status: 500 })
   }
 
-  const { data: letters, error: letterError } = await supabaseAdmin
+  const { data: letters, error: letterError } = await db
     .from("letters")
     .select("id, breach_id, email, created_at")
     .eq("user_id", userId)
@@ -39,9 +39,9 @@ export async function GET() {
     lettersByEmail[key].push(letter)
   }
 
-  const history = (searches || []).map((search) => {
+  const history = (searches || []).map((search: any) => {
     const searchLetters = lettersByEmail[search.email] || []
-    const letteredBreachIds = new Set(searchLetters.map((l) => l.breach_id))
+    const letteredBreachIds = new Set(searchLetters.map((l: any) => l.breach_id))
     const breaches = (search.result as any)?.breaches || []
     const breachesWithLetters = breaches.map((b: any) => ({
       ...b,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization")
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const { Resend } = await import("resend")
   const resend = new Resend(apiKey)
 
-  const { data: users } = await supabaseAdmin
+  const { data: users } = await db
     .from("users")
     .select("id, email, name")
     .eq("subscription_status", "active")

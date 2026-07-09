@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { canGenerateLetter } from "@/lib/limits"
 import { KNOWN_BREACHES } from "@/data/breaches"
 
@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("letters")
     .select("*")
     .eq("user_id", userId)
@@ -22,7 +22,7 @@ export async function GET() {
     return NextResponse.json({ error: "Error al cargar cartas" }, { status: 500 })
   }
 
-  const lettersWithBreach = (data || []).map((letter) => {
+  const lettersWithBreach = (data || []).map((letter: any) => {
     const breach = KNOWN_BREACHES.find((b) => b.id === letter.breach_id) || null
     return { ...letter, breach }
   })
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin.from("letters").insert({
+  const { error } = await db.from("letters").insert({
     user_id: userId,
     breach_id: breachId,
     email,

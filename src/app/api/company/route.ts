@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function GET() {
   const { userId } = await auth()
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await db
       .from("companies")
       .select("*")
       .eq("user_id", userId)
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 })
     }
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("companies")
       .select("id")
       .eq("user_id", userId)
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
     let result
     if (existing) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("companies")
         .update({
           name,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
         .single()
       result = data
     } else {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("companies")
         .insert({
           user_id: userId,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { getUserPlan, getSearchesCount, getLettersCount, ensureUser } from "@/lib/limits"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { PLANS } from "@/lib/lemonsqueezy"
 
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   try {
-    const { data: userRecord } = await supabaseAdmin
+    const { data: userRecord } = await db
       .from("users")
       .select("email")
       .eq("id", userId)

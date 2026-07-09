@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { searchDarkWeb } from "@/lib/dark-web"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth()
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   // Save monitoring result
   try {
-    await supabaseAdmin.from("dark_web_monitors").upsert({
+    await db.from("dark_web_monitors").upsert({
       user_id: userId,
       email,
       found: result.found,

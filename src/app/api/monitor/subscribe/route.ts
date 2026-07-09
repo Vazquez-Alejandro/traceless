@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { canUseMonitoring } from "@/lib/limits"
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("monitoring")
     .select("*")
     .eq("user_id", userId)
@@ -36,7 +36,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Email requerido" }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from("monitoring")
     .update({ active: false })
     .eq("user_id", userId)
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Email requerido" }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin.from("monitoring").upsert({
+  const { error } = await db.from("monitoring").upsert({
     user_id: userId,
     email,
     active: true,

@@ -1,3 +1,4 @@
+/** @deprecated Use `db` from `@/lib/db` instead. */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 let client: SupabaseClient | null = null

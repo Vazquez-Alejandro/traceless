@@ -1,6 +1,6 @@
 import { Webhook } from "svix"
 import { headers } from "next/headers"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 type WebhookEvent = {
   type: string
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const email = email_addresses?.[0]?.email_address ?? ""
     const name = [first_name, last_name].filter(Boolean).join(" ")
 
-    const { error } = await supabaseAdmin.from("users").upsert({
+    const { error } = await db.from("users").upsert({
       id,
       email,
       name,
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const email = email_addresses?.[0]?.email_address ?? ""
     const name = [first_name, last_name].filter(Boolean).join(" ")
 
-    await supabaseAdmin
+    await db
       .from("users")
       .update({ email, name, updated_at: new Date().toISOString() })
       .eq("id", id)
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   if (event.type === "user.deleted") {
     const { id } = event.data
     if (id) {
-      await supabaseAdmin.from("users").delete().eq("id", id)
+      await db.from("users").delete().eq("id", id)
     }
   }
 

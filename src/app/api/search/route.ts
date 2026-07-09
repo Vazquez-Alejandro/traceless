@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { searchEmail } from "@/lib/search"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { canSearch } from "@/lib/limits"
 
 export async function GET(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const result = await searchEmail(query)
 
   try {
-    await supabaseAdmin.from("searches").insert({
+    await db.from("searches").insert({
       user_id: userId,
       email: query,
       result,
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   } catch {}
 
   try {
-    const { data: letters } = await supabaseAdmin
+    const { data: letters } = await db
       .from("letters")
       .select("breach_id, created_at")
       .eq("user_id", userId)

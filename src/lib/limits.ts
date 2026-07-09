@@ -1,16 +1,16 @@
-import { supabaseAdmin } from "./supabase-admin"
+import { db } from "./db"
 import { PLANS, type PlanType } from "./lemonsqueezy"
 
 export async function ensureUser(userId: string, email: string, name?: string) {
   try {
-    const { data } = await supabaseAdmin
+    const { data } = await db
       .from("users")
       .select("id")
       .eq("id", userId)
       .maybeSingle()
 
     if (!data) {
-      await supabaseAdmin.from("users").insert({
+      await db.from("users").insert({
         id: userId,
         email,
         name: name || email.split("@")[0],
@@ -25,7 +25,7 @@ export async function ensureUser(userId: string, email: string, name?: string) {
 }
 
 export async function getUserPlan(userId: string): Promise<PlanType> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("users")
     .select("plan, subscription_status")
     .eq("id", userId)
@@ -47,7 +47,7 @@ export async function getSearchesCount(userId: string): Promise<number> {
   firstOfMonth.setDate(1)
   firstOfMonth.setHours(0, 0, 0, 0)
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from("searches")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
@@ -62,7 +62,7 @@ export async function getLettersCount(userId: string): Promise<number> {
   firstOfMonth.setDate(1)
   firstOfMonth.setHours(0, 0, 0, 0)
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from("letters")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
@@ -115,13 +115,13 @@ export async function getCorporateSeats(userId: string): Promise<number> {
 export async function generateReferralCode(userId: string): Promise<string> {
   const code = `TL-${userId.slice(0, 8).toUpperCase()}`
   try {
-    await supabaseAdmin.from("users").update({ referral_code: code }).eq("id", userId)
+    await db.from("users").update({ referral_code: code }).eq("id", userId)
   } catch {}
   return code
 }
 
 export async function getReferralCount(userId: string): Promise<number> {
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from("referrals")
     .select("*", { count: "exact", head: true })
     .eq("referrer_id", userId)
@@ -131,7 +131,7 @@ export async function getReferralCount(userId: string): Promise<number> {
 }
 
 export async function applyReferralCode(userId: string, code: string): Promise<boolean> {
-  const { data: referrer } = await supabaseAdmin
+  const { data: referrer } = await db
     .from("users")
     .select("id")
     .eq("referral_code", code)
@@ -140,7 +140,7 @@ export async function applyReferralCode(userId: string, code: string): Promise<b
   if (!referrer || referrer.id === userId) return false
 
   try {
-    await supabaseAdmin.from("referrals").insert({
+    await db.from("referrals").insert({
       referrer_id: referrer.id,
       referred_id: userId,
       code,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 import { canUseMonitoring } from "@/lib/limits"
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("broker_monitoring")
     .select("*")
     .eq("user_id", userId)
@@ -36,7 +36,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "ID requerido" }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from("broker_monitoring")
     .update({ active: false })
     .eq("id", id)
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     next_check_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   }))
 
-  const { error } = await supabaseAdmin.from("broker_monitoring").insert(inserts)
+  const { error } = await db.from("broker_monitoring").insert(inserts)
 
   if (error) {
     console.error("Error subscribing to broker monitoring:", error)

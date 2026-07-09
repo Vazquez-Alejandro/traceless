@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { db } from "@/lib/db"
 
 export async function GET() {
   const { userId } = await auth()
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await db
       .from("compliance")
       .select("*")
       .eq("user_id", userId)
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { answers, score } = body
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("compliance")
       .select("id")
       .eq("user_id", userId)
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     let result
     if (existing) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("compliance")
         .update({
           answers,
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         .single()
       result = data
     } else {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("compliance")
         .insert({
           user_id: userId,
