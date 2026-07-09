@@ -264,15 +264,6 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-
-          {/* Testimonial placeholder */}
-          <div className="mb-16 p-8 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-center">
-            <p className="text-zinc-600 dark:text-zinc-300 italic mb-4 max-w-lg mx-auto">
-              "Encontré mis datos en Dateas sin saberlo. Con TraceLess pude solicitar la eliminación y ahora duermo tranquilo sabiendo que mi familia está protegida."
-            </p>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">María G., Buenos Aires</p>
-            <p className="text-xs text-zinc-400">Cliente desde 2026</p>
-          </div>
         </div>
       </main>
     )
