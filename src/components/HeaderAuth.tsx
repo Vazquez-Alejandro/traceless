@@ -13,6 +13,9 @@ export default function HeaderAuth() {
   if (isSignedIn) {
     return (
       <div className="flex items-center gap-5">
+        <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-medium transition-colors">
+          Dashboard
+        </Link>
         <Link href="/clientes" className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-medium transition-colors">
           Clientes
         </Link>
