@@ -20,11 +20,72 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "TraceLess - ¿Dónde está expuesto tu email?",
+  title: {
+    default: "TraceLess - Protección de Datos Personales Argentina | Ley 25.326",
+    template: "%s | TraceLess",
+  },
   description:
-    "Descubrí en qué filtraciones de datos apareció tu correo electrónico y generá cartas de baja para eliminar tu información personal.",
+    "Herramienta gratuita para verificar si tu email apareció en filtraciones de datos. Generá cartas Habeas Data bajo la Ley 25.326 para solicitar la eliminación de tus datos personales. Monitoreo de dark web y cumplimiento de normativa argentina.",
+  keywords: [
+    "protección de datos",
+    "Ley 25.326",
+    "Habeas Data",
+    "filtraciones de datos",
+    "privacidad",
+    "email expuesto",
+    "dark web",
+    "datos personales",
+    "Argentina",
+    "cumplimiento normativo",
+    "RGPD",
+    "brote de datos",
+    "filtración",
+    "seguridad informática",
+  ],
+  authors: [{ name: "TraceLess" }],
+  creator: "TraceLess",
+  metadataBase: new URL("https://www.traceless.com.ar"),
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: "https://www.traceless.com.ar",
+    siteName: "TraceLess",
+    title: "TraceLess - ¿Dónde está expuesto tu email? Protección de Datos Argentina",
+    description:
+      "Verificá si tu email apareció en filtraciones de datos. Generá cartas Habeas Data y monitoreá tu privacidad gratis.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "TraceLess - Protección de Datos Personales",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TraceLess - Protección de Datos Personales Argentina",
+    description:
+      "Verificá si tu email apareció en filtraciones de datos y generá cartas Habeas Data gratis.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://www.traceless.com.ar",
+  },
   icons: {
     icon: "/favicon.svg",
+    shortcut: "/favicon.ico",
   },
 }
 
@@ -40,6 +101,39 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "TraceLess",
+              url: "https://www.traceless.com.ar",
+              description:
+                "Herramienta gratuita para verificar si tu email apareció en filtraciones de datos. Generá cartas Habeas Data bajo la Ley 25.326.",
+              applicationCategory: "SecurityApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "ARS",
+              },
+              author: {
+                "@type": "Organization",
+                name: "TraceLess",
+                url: "https://www.traceless.com.ar",
+              },
+              inLanguage: "es-AR",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://www.traceless.com.ar?q={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
+        />
+      </head>
       <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
           <ToastProvider>

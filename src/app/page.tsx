@@ -58,62 +58,61 @@ const FEATURES = [
 
 const PRICING = [
   {
-    name: "Starter",
-    price: "$49",
-    period: "/mes",
-    description: "Para empresas que recién empiezan",
+    name: "Free",
+    price: "$0",
+    period: "",
+    description: "Para verificar tu email gratis",
     features: [
-      "1 empresa",
-      "Checklist de cumplimiento",
-      "Política de privacidad",
-      "1 usuario",
-      "Soporte por email",
+      "Escaneo de brokers",
+      "2 búsquedas/mes",
+      "Monitoreo básico",
     ],
     cta: "Empezar gratis",
     popular: false,
   },
   {
-    name: "Pro",
-    price: "$149",
-    period: "/mes",
-    description: "Para empresas en crecimiento",
+    name: "Básico",
+    price: "$5",
+    period: " USD/mes",
+    description: "Para proteger tu identidad digital",
     features: [
-      "5 empresas",
-      "Todo de Starter",
-      "Registro de actividades",
-      "Gestión de consentimientos",
-      "Reportes descargables",
-      "3 usuarios",
-      "Soporte prioritario",
+      "Escaneo ilimitado",
+      "Cartas ilimitadas",
+      "3 brokers eliminación",
+      "Monitoreo mensual",
     ],
-    cta: "Empezar gratis",
+    cta: "Suscribirse",
     popular: true,
   },
   {
-    name: "Enterprise",
-    price: "$399",
-    period: "/mes",
-    description: "Para grandes organizaciones",
+    name: "Pro",
+    price: "$12",
+    period: " USD/mes",
+    description: "Para máxima protección",
     features: [
-      "Empresas ilimitadas",
-      "Todo de Pro",
-      "API de integración",
-      "Monitoreo de breach",
-      "Auditorías personalizadas",
-      "Usuarios ilimitados",
-      "Soporte dedicado",
-      "SLA garantizado",
+      "TODOS los brokers",
+      "Monitoreo dark web",
+      "Alertas por email",
+      "Soporte prioritario",
     ],
-    cta: "Contactar ventas",
+    cta: "Suscribirse",
     popular: false,
   },
-]
-
-const STATS = [
-  { value: "2,847", label: "Empresas cumplieron" },
-  { value: "15,000+", label: "Empleados capacitados" },
-  { value: "99.2%", label: "Tasa de cumplimiento" },
-  { value: "48hs", label: "Tiempo promedio de setup" },
+  {
+    name: "Familia",
+    price: "$15",
+    period: " USD/mes",
+    description: "5 miembros de familia",
+    features: [
+      "Todo del Pro",
+      "5 miembros de familia",
+      "Alertas familiares",
+      "Monitoreo menores",
+      "$3 por miembro extra",
+    ],
+    cta: "Suscribirse",
+    popular: false,
+  },
 ]
 
 export default function HomePage() {
@@ -168,20 +167,6 @@ export default function HomePage() {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-16 border-y border-zinc-100 dark:border-zinc-800">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-3xl font-bold text-zinc-900 dark:text-white">{stat.value}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -266,11 +251,11 @@ export default function HomePage() {
               Sin costos ocultos. Cancelá cuando quieras.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-4 gap-8">
             {PRICING.map((plan, i) => (
               <div
                 key={i}
-                className={`p-8 rounded-2xl border ${
+                className={`p-8 rounded-2xl border flex flex-col ${
                   plan.popular
                     ? "border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/10"
                     : "border-zinc-200 dark:border-zinc-800"
@@ -287,7 +272,7 @@ export default function HomePage() {
                   <span className="text-4xl font-bold text-zinc-900 dark:text-white">{plan.price}</span>
                   <span className="text-zinc-500 dark:text-zinc-400">{plan.period}</span>
                 </div>
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((feature, j) => (
                     <li key={j} className="flex items-start gap-2 text-zinc-600 dark:text-zinc-400">
                       <span className="text-blue-500 mt-0.5">✓</span>
@@ -296,8 +281,8 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  href={plan.name === "Enterprise" ? "/contact" : "/sign-up"}
-                  className={`block w-full py-3 px-4 rounded-xl font-semibold text-center transition-colors ${
+                  href={plan.name === "Free" ? "/sign-up" : "/premium"}
+                  className={`block w-full py-3 px-4 rounded-xl font-semibold text-center transition-colors mt-auto ${
                     plan.popular
                       ? "bg-blue-600 hover:bg-blue-700 text-white"
                       : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white"
@@ -306,6 +291,59 @@ export default function HomePage() {
                   {plan.cta}
                 </Link>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ - SEO optimized */}
+      <section className="py-24 bg-zinc-50 dark:bg-zinc-900">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-4">
+              Preguntas frecuentes sobre protección de datos
+            </h2>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400">
+              Resolvemos las dudas más comunes sobre la Ley 25.326 y la protección de datos personales en Argentina.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {[
+              {
+                q: "¿Qué es la Ley 25.326 de protección de datos personales?",
+                a: "Es la ley argentina que regula el tratamiento de datos personales. Establece los derechos de las personas sobre sus datos y las obligaciones de las empresas que los recopilan y procesan.",
+              },
+              {
+                q: "¿Qué es un Habeas Data?",
+                a: "Es un recurso legal que permite a las personas solicitar la eliminación, rectificación o actualización de sus datos personales en registros o bases de datos.",
+              },
+              {
+                q: "¿Cómo sé si mi email fue filtrado?",
+                a: "Con TraceLess podés verificar instantáneamente si tu email aparece en bases de datos filtradas. Utilizamos fuentes públicas de filtraciones conocidas.",
+              },
+              {
+                q: "¿Es gratis usar TraceLess?",
+                a: "Sí, la verificación básica es gratuita. Ofrecemos planes premium para empresas que necesitan funcionalidades avanzadas como monitoreo continuo y generación de cartas.",
+              },
+              {
+                q: "¿Qué hago si encontraron mis datos?",
+                a: "TraceLess te genera automáticamente una carta Habeas Data para solicitar la eliminación de tus datos. También podés activar el monitoreo continuo para estar alerta.",
+              },
+              {
+                q: "¿Las empresas están obligadas a eliminar mis datos?",
+                a: "Sí, bajo la Ley 25.326, las empresas están obligadas a atender solicitudes de eliminación de datos personales. El incumplimiento puede generar multas.",
+              },
+            ].map((item, i) => (
+              <details
+                key={i}
+                className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+              >
+                <summary className="font-semibold text-zinc-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                  {item.q}
+                  <span className="text-zinc-400 ml-2">+</span>
+                </summary>
+                <p className="mt-4 text-zinc-600 dark:text-zinc-400">{item.a}</p>
+              </details>
             ))}
           </div>
         </div>
