@@ -199,6 +199,78 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Ley 25.326 */}
+      <section className="py-24">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-4">
+              ¿Qué es la Ley 25.326?
+            </h2>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400">
+              La ley argentina que protege tus datos personales.
+            </p>
+          </div>
+          <div className="prose prose-zinc dark:prose-invert max-w-none">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">¿Qué regula?</h3>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    La Ley 25.326 de Protección de Datos Personales regula el tratamiento de datos personales
+                    en Argentina. Establece los derechos de las personas sobre sus datos y las obligaciones de
+                    las empresas que los recopilan y procesan.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">¿Quién aplica?</h3>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    Aplica a todas las empresas, organismos públicos y profesionales que recolecten, guarden o
+                    procesen datos personales de personas en Argentina. Incluye nombre, DNI, email, dirección,
+                    historial médico, y más.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">Tus derechos</h3>
+                  <ul className="space-y-2 text-zinc-600 dark:text-zinc-400">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">✓</span>
+                      <span><strong>Acceso:</strong> Saber qué datos tiene una empresa sobre vos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">✓</span>
+                      <span><strong>Rectificación:</strong> Corregir datos incorrectos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">✓</span>
+                      <span><strong>Eliminación:</strong> Solicitar la baja de tus datos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">✓</span>
+                      <span><strong>Oposición:</strong> Negarte al tratamiento de tus datos</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">Habeas Data</h3>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    Es el recurso legal que tenés para ejercer tus derechos. Si una empresa no responde tu
+                    solicitud de acceso o eliminación, podés interponer un Habeas Data ante la justicia.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
+              <p className="text-zinc-700 dark:text-zinc-300 text-center">
+                <strong>TraceLess te ayuda a ejercer estos derechos.</strong> Generamos las cartas Habeas Data
+                automáticamente y te monitoreamos para que tus datos no reaparezcan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="py-24 bg-zinc-50 dark:bg-zinc-900">
         <div className="max-w-6xl mx-auto px-4">
