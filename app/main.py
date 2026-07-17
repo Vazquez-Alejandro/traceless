@@ -18,10 +18,11 @@ app.include_router(clientes_router)
 app.include_router(facturas_router)
 
 REACT_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
-FACTURAS_DIR = Path(__file__).resolve().parents[1] / "facturas"
-FACTURAS_DIR.mkdir(exist_ok=True)
 
-app.mount("/facturas", StaticFiles(directory=str(FACTURAS_DIR)), name="facturas")
+from app.pdf import FACTURAS_DIR
+_has_facturas = FACTURAS_DIR.exists()
+if _has_facturas:
+    app.mount("/facturas", StaticFiles(directory=str(FACTURAS_DIR)), name="facturas")
 
 _HAS_REACT = REACT_DIST.exists() and (REACT_DIST / "index.html").exists()
 if _HAS_REACT:

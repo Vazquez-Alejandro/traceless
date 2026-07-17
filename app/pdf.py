@@ -1,7 +1,8 @@
 from pathlib import Path
+import tempfile
 
-FACTURAS_DIR = Path(__file__).resolve().parents[1] / "facturas"
-FACTURAS_DIR.mkdir(exist_ok=True)
+TMP = Path(tempfile.gettempdir()) / "traceless_facturas"
+FACTURAS_DIR = TMP
 
 def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     return f"""<!DOCTYPE html>
@@ -50,6 +51,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
 """
 
 def guardar_factura_html(factura: dict, cliente: dict, emisor: dict) -> str:
+    FACTURAS_DIR.mkdir(parents=True, exist_ok=True)
     html = generar_html_factura(factura, cliente, emisor)
     filename = f"factura-{factura['id']}.html"
     path = FACTURAS_DIR / filename
