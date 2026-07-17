@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from .db import supabase
-from .afip import generar_factura_afip
-from .pdf import generar_pdf_factura, guardar_factura_html
-from .whatsapp import enviar_factura_whatsapp
+from app.db import supabase
+from app.afip import generar_factura_afip
+from app.pdf import generar_pdf_factura, guardar_factura_html
+from app.whatsapp import enviar_factura_whatsapp
 from pathlib import Path
 import os
 

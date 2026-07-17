@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from supabase import Client
-from .db import supabase, admin_insert
+from app.db import supabase, admin_insert
 import os
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

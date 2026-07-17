@@ -9,9 +9,9 @@ load_dotenv()
 
 app = FastAPI(title="TraceLess API")
 
-from .auth import router as auth_router
-from .clientes import router as clientes_router
-from .facturas import router as facturas_router
+from app.auth import router as auth_router
+from app.clientes import router as clientes_router
+from app.facturas import router as facturas_router
 
 app.include_router(auth_router)
 app.include_router(clientes_router)
