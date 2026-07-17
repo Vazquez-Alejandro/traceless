@@ -1,4 +1,11 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from fastapi import FastAPI
 
-from app.main import app
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
