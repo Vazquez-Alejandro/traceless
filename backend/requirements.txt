@@ -1,0 +1,11 @@
+fastapi[standard]
+uvicorn[standard]
+supabase
+
+pydantic
+python-dotenv
+httpx
+pyOpenSSL
+lxml
+requests
+zeep
