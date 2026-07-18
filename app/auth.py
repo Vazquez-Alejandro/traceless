@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from supabase import Client
 from app.db import supabase, admin_insert
@@ -38,7 +38,8 @@ def login(req: LoginRequest):
     }
 
 @router.get("/me")
-def me(token: str = ""):
+def me(authorization: str = Header("")):
+    token = authorization.replace("Bearer ", "").strip()
     if not token:
         raise HTTPException(401, "Token requerido")
     res = supabase.auth.get_user(token)
