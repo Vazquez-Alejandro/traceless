@@ -110,12 +110,16 @@ def _login() -> dict:
             if fresh and fresh["expires"] > now:
                 _ta_cache = fresh
                 return fresh
-            import time
-            time.sleep(65)
-            resp = service.loginCms(in0=cms_b64)
+            raise RuntimeError(
+                "ARCA ya emitió un TA válido y no permite emitir otro hasta que expire "
+                "(retención de 10 min en homologación, 2 min en producción). "
+                "Si es la primera vez que ejecutás desde esta instancia, esperá "
+                "a que expire el TA anterior (~12h desde su emisión). "
+                "Error: alreadyAuthenticated"
+            )
         elif "coe.notAuthorized" in str(e):
             raise RuntimeError("Certificado no autorizado para el servicio wsfe. "
-                               "Verificá que la autorización esté activa en WSASS.")
+                                "Verificá que la autorización esté activa en WSASS.")
         elif "cms.cert.untrusted" in str(e):
             raise RuntimeError("Certificado no emitido por CA de confianza de ARCA (homologación).")
         elif "cms.sign.invalid" in str(e):
