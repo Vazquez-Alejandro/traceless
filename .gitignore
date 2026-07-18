@@ -12,3 +12,4 @@ frontend/dist/
 # Generated
 facturas/
 .vercel
+.env*

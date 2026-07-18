@@ -6,13 +6,9 @@ from app.db import supabase
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
-from pathlib import Path
 import os
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
-
-FACTURAS_DIR = Path(__file__).resolve().parents[1] / "facturas"
-FACTURAS_DIR.mkdir(exist_ok=True)
 
 def get_user_id(authorization: str = ""):
     token = authorization.replace("Bearer ", "").strip()
@@ -91,7 +87,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
             pdf_url=pdf_url,
         )
 
-    return {"factura": {**factura, "pdf_url": f"/facturas/{pdf_nombre}"}}
+    return {"factura": {**factura, "pdf_url": html_url}}
 
 @router.get("")
 def listar_facturas(authorization: str = Header("")):
