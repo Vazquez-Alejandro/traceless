@@ -37,7 +37,7 @@ def login(req: LoginRequest):
         "user": {"id": res.user.id, "email": res.user.email},
     }
 
-@router.post("/me")
+@router.get("/me")
 def me(token: str = ""):
     if not token:
         raise HTTPException(401, "Token requerido")
