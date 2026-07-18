@@ -1,7 +1,137 @@
-import os
-from datetime import datetime
+import os, base64, uuid, logging
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from lxml import etree
+import requests
+import zeep
+import zeep.exceptions
 
-AFIP_PRODUCTION = os.getenv("AFIP_PRODUCTION", "0") == "1"
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7SignatureBuilder, PKCS7Options
+from cryptography import x509
+
+logger = logging.getLogger("afip")
+
+ARCA_HOMO = os.getenv("ARCA_ENV", "homologacion") != "produccion"
+CUIT = os.getenv("ARCA_CUIT", "20294796577")
+
+_WSAA_WSDL = "https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl"
+_WSFE_WSDL = "https://wswhomo.afip.gov.ar/wsfev1/service.asmx?WSDL"
+if not ARCA_HOMO:
+    _WSAA_WSDL = "https://wsaa.afip.gov.ar/ws/services/LoginCms?wsdl"
+    _WSFE_WSDL = "https://servicios1.afip.gov.ar/wsfev1/service.asmx?WSDL"
+
+_ta_cache = None
+
+def _cargar_certs():
+    env = os.getenv("ARCA_CERT_B64")
+    env_key = os.getenv("ARCA_KEY_B64")
+    if env and env_key:
+        cert = base64.b64decode(env).decode()
+        key = base64.b64decode(env_key).decode()
+    else:
+        d = Path("/home/alejandro")
+        cert = (d / "arca.crt").read_text()
+        key = (d / "arca.key").read_text()
+    return cert, key
+
+def _fecha_utc():
+    return datetime.now(timezone.utc)
+
+def _generar_tra() -> bytes:
+    tz = timezone(timedelta(hours=-3))
+    now = datetime.now(tz)
+    exp = now + timedelta(hours=12)
+    uid = uuid.uuid4().int & 0xFFFFFFFF
+    xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<loginTicketRequest version="1.0">
+    <header>
+        <uniqueId>{uid}</uniqueId>
+        <generationTime>{now.strftime("%Y-%m-%dT%H:%M:%S.000")}-03:00</generationTime>
+        <expirationTime>{exp.strftime("%Y-%m-%dT%H:%M:%S.000")}-03:00</expirationTime>
+    </header>
+    <service>wsfe</service>
+</loginTicketRequest>"""
+    return xml.encode("utf-8")
+
+def _firmar_cms(tra: bytes, cert_pem: str, key_pem: str) -> str:
+    cert = x509.load_pem_x509_certificate(cert_pem.encode())
+    key = load_pem_private_key(key_pem.encode(), password=None)
+    builder = PKCS7SignatureBuilder().set_data(tra)
+    builder = builder.add_signer(cert, key, hashes.SHA256())
+    cms = builder.sign(serialization.Encoding.DER, [PKCS7Options.Binary])
+    return base64.b64encode(cms).decode()
+
+_CACHE_PATH = "/tmp/arcata.json"
+
+def _ta_cache_load() -> dict | None:
+    try:
+        import json
+        d = json.loads(open(_CACHE_PATH).read())
+        d["expires"] = datetime.fromisoformat(d["expires"])
+        return d
+    except Exception:
+        return None
+
+def _ta_cache_save(ta: dict):
+    import json
+    d = dict(ta)
+    d["expires"] = ta["expires"].isoformat()
+    try:
+        open(_CACHE_PATH, "w").write(json.dumps(d))
+    except Exception:
+        pass
+
+def _login() -> dict:
+    global _ta_cache
+    now = datetime.now(timezone.utc)
+
+    cached = _ta_cache or _ta_cache_load()
+    if cached and cached["expires"] > now:
+        _ta_cache = cached
+        return cached
+
+    cert, key = _cargar_certs()
+    tra = _generar_tra()
+    cms_b64 = _firmar_cms(tra, cert, key)
+
+    client = zeep.Client(
+        wsdl=_WSAA_WSDL,
+        settings=zeep.Settings(strict=False),
+    )
+    service = client.bind('LoginCMSService', 'LoginCms')
+
+    try:
+        resp = service.loginCms(in0=cms_b64)
+    except zeep.exceptions.Fault as e:
+        if "alreadyAuthenticated" in str(e):
+            fresh = _ta_cache_load()
+            if fresh and fresh["expires"] > now:
+                _ta_cache = fresh
+                return fresh
+            import time
+            time.sleep(65)
+            resp = service.loginCms(in0=cms_b64)
+        elif "coe.notAuthorized" in str(e):
+            raise RuntimeError("Certificado no autorizado para el servicio wsfe. "
+                               "Verificá que la autorización esté activa en WSASS.")
+        elif "cms.cert.untrusted" in str(e):
+            raise RuntimeError("Certificado no emitido por CA de confianza de ARCA (homologación).")
+        elif "cms.sign.invalid" in str(e):
+            raise RuntimeError("Firma inválida del CMS. Verificá el par certificado/clave.")
+        else:
+            raise
+
+    root = etree.fromstring(resp.encode())
+    token = root.findtext(".//token")
+    sign = root.findtext(".//sign")
+    exp = root.findtext(".//expirationTime")
+    expires = datetime.fromisoformat(exp) if exp else now + timedelta(hours=12)
+
+    _ta_cache = {"token": token, "sign": sign, "expires": expires}
+    _ta_cache_save(_ta_cache)
+    return _ta_cache
 
 def get_tipos_comprobante():
     return [
@@ -20,35 +150,111 @@ def get_condiciones_iva():
         "No Responsable",
     ]
 
+def _punto_venta() -> int:
+    return int(os.getenv("ARCA_PUNTO_VENTA", "1"))
+
+def _doc_tipo(cuit: str) -> tuple:
+    return (80, cuit.replace("-", ""))
+
+def _alicuota_iva(tipo: int) -> tuple:
+    if tipo == 19:
+        return (4, 10.5)
+    return (3, 21.0)
+
 def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           tipo: int, importe: float,
                           condicion_iva: str, descripcion: str) -> dict:
-    if AFIP_PRODUCTION:
-        return _wsfe_generate(cliente_cuit, tipo, importe, condicion_iva, descripcion)
+    USE_REAL = os.getenv("ARCA_USE_REAL", "0") == "1"
+    if USE_REAL:
+        return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion)
     return _mock_generate(cliente_cuit, tipo, importe, descripcion)
 
 def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str) -> dict:
     iva_percentage = 0.21
-    if tipo == 6:  # Factura B
-        iva_percentage = 0.21
-    elif tipo == 11:  # Factura C
-        iva_percentage = 0.21
-    elif tipo == 19:  # Factura E
+    if tipo == 19:
         iva_percentage = 0.105
-
     neto = round(importe / (1 + iva_percentage), 2)
     iva = round(importe - neto, 2)
-
     return {
         "cae": f"{datetime.now().strftime('%Y%m%d')}{str(hash(cliente_cuit))[-8:]}",
         "cae_vencimiento": datetime.now().strftime("%Y-%m-%d"),
-        "numero": f"00001-{datetime.now().strftime('%Y%m%d')}-{abs(hash(descripcion)) % 99999999:08d}",
+        "numero": f"{_punto_venta():04d}-{datetime.now().strftime('%Y%m%d')}-{abs(hash(descripcion)) % 99999999:08d}",
         "neto": neto,
         "iva": iva,
         "total": importe,
         "tipo": tipo,
     }
 
-def _wsfe_generate(cliente_cuit: str, tipo: int, importe: float,
-                    condicion_iva: str, descripcion: str) -> dict:
-    raise NotImplementedError("AFIP producción no implementado aún")
+def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
+                     tipo: int, importe: float,
+                     condicion_iva: str, descripcion: str) -> dict:
+    ta = _login()
+    pto_vta = _punto_venta()
+    doc_tipo, doc_nro = _doc_tipo(cliente_cuit)
+    iva_id, iva_pct = _alicuota_iva(tipo)
+    neto = round(importe / (1 + iva_pct / 100), 2)
+    iva_imp = round(importe - neto, 2)
+
+    client = zeep.Client(wsdl=_WSFE_WSDL)
+    auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
+
+    req = {
+        "Auth": auth,
+        "FeCAEReq": {
+            "FeCabReq": {
+                "CantReg": 1,
+                "PtoVta": pto_vta,
+                "CbteTipo": tipo,
+            },
+            "FeDetReq": {
+                "FECAEDetRequest": {
+                    "Concepto": 1,
+                    "DocTipo": doc_tipo,
+                    "DocNro": doc_nro,
+                    "CbteDesde": 1,
+                    "CbteHasta": 1,
+                    "CbteFch": datetime.now().strftime("%Y%m%d"),
+                    "ImpTotal": importe,
+                    "ImpTotConc": 0,
+                    "ImpNeto": neto,
+                    "ImpOpEx": 0,
+                    "ImpTrib": 0,
+                    "ImpIVA": iva_imp,
+                    "FchServDesde": None,
+                    "FchServHasta": None,
+                    "FchVtoPago": None,
+                    "MonId": "PES",
+                    "MonCotiz": 1,
+                    "Iva": {
+                        "AlicIva": {
+                            "Id": iva_id,
+                            "BaseImp": neto,
+                            "Importe": iva_imp,
+                        }
+                    },
+                }
+            },
+        }
+    }
+
+    try:
+        resp = client.service.FECAEASolicitar(**req)
+    except Exception as e:
+        raise RuntimeError(f"Error en FECAEASolicitar: {e}")
+
+    if hasattr(resp, 'Errors') and resp.Errors:
+        errs = []
+        for e in resp.Errors.Err:
+            errs.append(f"[{e.Codigo}] {e.Descripcion}")
+        raise RuntimeError("Errores ARCA: " + " | ".join(errs))
+
+    ed = resp.FeDetResp.FECAEDetResponse[0]
+    return {
+        "cae": ed.CAE,
+        "cae_vencimiento": ed.CAEFchVto,
+        "numero": f"{pto_vta:04d}-{ed.CbteDesde:08d}",
+        "neto": neto,
+        "iva": iva_imp,
+        "total": importe,
+        "tipo": tipo,
+    }

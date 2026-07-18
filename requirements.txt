@@ -5,7 +5,7 @@ supabase
 pydantic
 python-dotenv
 httpx
-pyOpenSSL
+cryptography
 lxml
 requests
 zeep
