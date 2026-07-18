@@ -1,5 +1,48 @@
 import { Link } from "react-router-dom";
 
+const PLANS = [
+  {
+    key: "free",
+    name: "Gratis",
+    price: "Gratis",
+    desc: "Para probar la plataforma",
+    features: ["3 facturas por mes", "Sin WhatsApp", "1 usuario"],
+    highlighted: false,
+  },
+  {
+    key: "basic",
+    name: "Básico",
+    price: "$5/mes",
+    desc: "Para freelancers que empiezan",
+    features: ["50 facturas por mes", "WhatsApp incluido", "1 usuario"],
+    highlighted: false,
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    price: "$12/mes",
+    desc: "Para profesionales activos",
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "1 usuario"],
+    highlighted: true,
+  },
+  {
+    key: "pyme",
+    name: "PyME",
+    price: "$15/mes",
+    desc: "Para pequeños equipos",
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "Hasta 3 usuarios"],
+    highlighted: false,
+  },
+  {
+    key: "corporate",
+    name: "Corporativo",
+    price: "$75/mes",
+    desc: "Para estudios y empresas",
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "Usuarios ilimitados", "Soporte prioritario"],
+    highlighted: false,
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -31,6 +74,53 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/register" className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">Comenzar Gratis</Link>
             <Link to="/login" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">Iniciar Sesión</Link>
+          </div>
+        </div>
+      </section>
+
+      <section id="precios" className="py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-4">Planes simples, sin sorpresas</h2>
+          <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
+            Empezá gratis y escalá cuando lo necesites. Pagás solo por lo que usás.
+          </p>
+          <div className="grid md:grid-cols-5 gap-4">
+            {PLANS.map((p) => (
+              <div
+                key={p.key}
+                className={`relative p-5 rounded-2xl border flex flex-col ${
+                  p.highlighted
+                    ? "bg-blue-600/10 border-blue-500/40 shadow-lg shadow-blue-600/10"
+                    : "bg-gray-900/40 border-gray-800/40"
+                }`}
+              >
+                {p.highlighted && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-500 text-[10px] font-semibold rounded-full">
+                    MÁS POPULAR
+                  </div>
+                )}
+                <h3 className="text-base font-semibold mb-1">{p.name}</h3>
+                <div className="text-2xl font-bold mb-1">{p.price}</div>
+                <p className="text-xs text-gray-400 mb-4">{p.desc}</p>
+                <ul className="space-y-1.5 mb-6 flex-1">
+                  {p.features.map((f, i) => (
+                    <li key={i} className="text-xs text-gray-300 flex items-center gap-1.5">
+                      <span className="text-blue-400">✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={p.key === "free" ? "/register" : `/register?plan=${p.key}`}
+                  className={`block w-full text-center py-2 rounded-xl text-xs font-semibold ${
+                    p.highlighted
+                      ? "bg-blue-600 hover:bg-blue-500 text-white"
+                      : "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-700/30"
+                  }`}
+                >
+                  {p.key === "free" ? "Comenzar Gratis" : "Elegir Plan"}
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>

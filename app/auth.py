@@ -15,6 +15,15 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+def get_user_id(authorization: str = ""):
+    token = authorization.replace("Bearer ", "").strip()
+    if not token:
+        raise HTTPException(401, "Token requerido")
+    res = supabase.auth.get_user(token)
+    if not res.user:
+        raise HTTPException(401, "Token inválido")
+    return res.user.id
+
 @router.post("/signup")
 def signup(req: SignupRequest):
     res = supabase.auth.sign_up({"email": req.email, "password": req.password})

@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+
+const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
+  const plan = searchParams.get("plan");
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,7 +20,14 @@ export default function Register() {
       await api.auth.signup({ email, password, name });
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
-      navigate("/dashboard");
+      if (plan && plan !== "free") {
+        const p = await fetch(`${BASE_URL}/api/planes`, {
+          headers: { Authorization: `Bearer ${res.token}` },
+        }).then(r => r.json());
+        window.location.href = p.checkout_url || `/dashboard?upgrade=${plan}`;
+      } else {
+        navigate("/dashboard");
+      }
     } catch {
       setError("Error al crear la cuenta");
     }
@@ -27,7 +38,9 @@ export default function Register() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link to="/" className="text-2xl font-bold">TraceLess</Link>
-          <p className="text-gray-400 text-sm mt-2">Crear cuenta gratuita</p>
+          <p className="text-gray-400 text-sm mt-2">
+            {plan && plan !== "free" ? `Registrate en el plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}` : "Crear cuenta gratuita"}
+          </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input type="text" placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} required
@@ -38,7 +51,7 @@ export default function Register() {
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
-            Crear cuenta
+            {plan && plan !== "free" ? "Crear cuenta e ir al pago" : "Crear cuenta gratuita"}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">

@@ -6,6 +6,7 @@ from app.db import supabase
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
+from app.lemon import can_create_invoice, get_user_plan
 import os
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
@@ -29,6 +30,11 @@ class FacturaCreate(BaseModel):
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     uid = get_user_id(authorization)
 
+    ok, msg = can_create_invoice(uid)
+    if not ok:
+        raise HTTPException(402, msg)
+
+    plan = get_user_plan(uid)
     cliente = supabase.table("clientes").select("*").eq("id", req.cliente_id).eq("user_id", uid).single().execute()
     if not cliente.data:
         raise HTTPException(404, "Cliente no encontrado")
@@ -76,16 +82,17 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
 
     supabase.table("facturas").update({"pdf_url": html_url}).eq("id", factura["id"]).execute()
 
-    telefono = cliente.data.get("telefono", "")
-    if telefono:
-        pdf_url = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
-        await enviar_factura_whatsapp(
-            telefono=telefono,
-            cliente=cliente.data["nombre"],
-            numero=factura["numero"],
-            total=factura["total"],
-            pdf_url=pdf_url,
-        )
+    if plan["whatsapp"]:
+        telefono = cliente.data.get("telefono", "")
+        if telefono:
+            pdf_url = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
+            await enviar_factura_whatsapp(
+                telefono=telefono,
+                cliente=cliente.data["nombre"],
+                numero=factura["numero"],
+                total=factura["total"],
+                pdf_url=pdf_url,
+            )
 
     return {"factura": {**factura, "pdf_url": html_url}}
 
