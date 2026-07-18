@@ -7,13 +7,7 @@ except Exception:
     import traceback
     _err = traceback.format_exc()
 
-    from fastapi import FastAPI, Response
-    app = FastAPI()
-
-    @app.get("/{path:path}")
-    async def catch_all(path: str):
-        return Response(
-            json.dumps({"import_error": _err, "path": path}, indent=2),
-            media_type="application/json",
-            status_code=500,
-        )
+    def app(environ, start_response):
+        body = json.dumps({"import_error": _err, "type": "wsgi"}).encode()
+        start_response("500 Internal Server Error", [("Content-Type", "application/json")])
+        return [body]
