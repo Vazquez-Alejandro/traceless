@@ -13,3 +13,5 @@ frontend/dist/
 facturas/
 .vercel
 .env*
+backend/
+
