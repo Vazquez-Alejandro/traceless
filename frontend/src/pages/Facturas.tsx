@@ -32,6 +32,9 @@ export default function Facturas() {
   const [usarItems, setUsarItems] = useState(false);
   const [copiado, setCopiado] = useState("");
   const [toast, setToast] = useState("");
+  const [ultimoLink, setUltimoLink] = useState("");
+  const [nuevoCliente, setNuevoCliente] = useState(false);
+  const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
 
@@ -104,13 +107,25 @@ export default function Facturas() {
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
     }
-    await api.facturas.create(body);
+    const res = await api.facturas.create(body);
+    const id = res?.factura?.id;
+    const link = id ? `${window.location.origin}/api/facturas/public/${id}` : "";
+    setUltimoLink(link);
     setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios" });
     setDetalles([]);
     setUsarItems(false);
     setShowForm(false);
-    setToast("Factura creada correctamente. Compartí el link con tu cliente.");
+    setToast("Factura creada ✅ Compartila con tu cliente");
     load();
+  };
+
+  const crearClienteRapido = async () => {
+    if (!cliForm.nombre) return;
+    await api.clientes.create(cliForm);
+    setNuevoCliente(false);
+    setCliForm({ nombre: "", apellido: "", telefono: "", cuit: "" });
+    const res = await api.clientes.list();
+    setClientes(res.clientes || []);
   };
 
   return (
@@ -133,13 +148,27 @@ export default function Facturas() {
       {showForm && (
         <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
           <div className="grid md:grid-cols-2 gap-4 mb-4">
-            <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required
-              className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
-              <option value="">Seleccionar cliente</option>
-              {clientes.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required
+                className="flex-1 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
+                <option value="">Seleccionar cliente</option>
+                {clientes.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => setNuevoCliente(!nuevoCliente)} className="px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-xl">+</button>
+            </div>
+            {nuevoCliente && (
+              <div className="flex gap-2 col-span-2 p-3 bg-gray-900/60 rounded-xl border border-gray-800/40">
+                <input placeholder="Nombre" value={cliForm.nombre} onChange={e => setCliForm({...cliForm, nombre: e.target.value})}
+                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                <input placeholder="Apellido" value={cliForm.apellido} onChange={e => setCliForm({...cliForm, apellido: e.target.value})}
+                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                <input placeholder="WhatsApp" value={cliForm.telefono} onChange={e => setCliForm({...cliForm, telefono: e.target.value})}
+                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                <button type="button" onClick={crearClienteRapido} className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg">Crear</button>
+              </div>
+            )}
             <select value={form.tipo} onChange={e => setForm({ ...form, tipo: parseInt(e.target.value) })}
               className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
               <option value={6}>Factura B</option>
@@ -188,8 +217,13 @@ export default function Facturas() {
       )}
 
       {toast && (
-        <div className="mb-4 p-3 rounded-xl bg-green-900/40 border border-green-700/40 text-sm text-green-300 text-center">
-          {toast}
+        <div className="mb-4 p-3 rounded-xl bg-green-900/40 border border-green-700/40 text-sm text-green-300 flex items-center justify-center gap-2">
+          <span>{toast}</span>
+          {ultimoLink && (
+            <button onClick={() => { navigator.clipboard.writeText(ultimoLink); setToast("✅ Link copiado"); }} className="text-green-200 underline hover:text-white text-xs">
+              Copiar link
+            </button>
+          )}
         </div>
       )}
 
