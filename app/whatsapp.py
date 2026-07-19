@@ -24,11 +24,30 @@ async def enviar_whatsapp(telefono: str, mensaje: str) -> dict:
         res = await client.post(url, json=payload, headers=headers)
         return res.json()
 
-async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, total: float, pdf_url: str) -> dict:
+MESES = [
+    "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+]
+
+async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, total: float, pdf_url: str, fecha: str = "") -> dict:
+    mes = ""
+    if fecha:
+        try:
+            mes_num = int(fecha.split("-")[1])
+            mes = MESES[mes_num]
+        except (IndexError, ValueError):
+            pass
+
+    if mes:
+        cuerpo = f"Hola {cliente}, te envío la factura correspondiente al mes de {mes}."
+    else:
+        cuerpo = f"Hola {cliente}, te envío tu factura."
+
     mensaje = (
         f"🧾 *Factura {numero}*\n\n"
-        f"Hola {cliente}, te enviamos tu factura por *${total:,.2f}*\n\n"
-        f"Podés descargar el PDF acá: {pdf_url}\n\n"
+        f"{cuerpo}\n\n"
+        f"Total: *${total:,.2f}*\n\n"
+        f"PDF: {pdf_url}\n\n"
         f"Gracias por tu confianza."
     )
     return await enviar_whatsapp(telefono, mensaje)

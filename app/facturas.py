@@ -145,6 +145,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
                 numero=factura["numero"],
                 total=factura["total"],
                 pdf_url=pdf_url,
+                fecha=factura["fecha"].split("T")[0],
             )
 
     return {"factura": {**factura, "pdf_url": html_url}}
