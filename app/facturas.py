@@ -123,11 +123,6 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     res = supabase.table("facturas").insert(factura_data).execute()
     factura = res.data[0]
 
-    pdf_bytes = generar_pdf_factura(
-        factura={**factura_data, "tipo_nombre": _tipo_nombre(req.tipo)},
-        cliente=cliente.data,
-        emisor=emisor,
-    )
     html_url = guardar_factura_html(
         factura={**factura_data, "id": factura["id"], "tipo_nombre": _tipo_nombre(req.tipo)},
         cliente=cliente.data,
