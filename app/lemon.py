@@ -105,7 +105,7 @@ def handle_webhook(payload: bytes, signature: str) -> dict:
         _set_user_plan(user_email, plan_key)
         return {"ok": True, "event": event_name, "plan": plan_key}
 
-    if event_name == "subscription_updated":
+    if event_name in ("subscription_updated", "subscription_cancelled"):
         attrs = data.get("data", {}).get("attributes", {})
         status = attrs.get("status", "")
         if status in ("cancelled", "expired", "unpaid"):
