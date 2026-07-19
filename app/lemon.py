@@ -154,7 +154,14 @@ def get_user_plan(user_id: str) -> dict:
             },
         )
         if r.status_code == 200:
-            plan_key = r.json().get("app_metadata", {}).get("plan", DEFAULT_PLAN)
+            meta = r.json().get("app_metadata", {})
+            plan_key = meta.get("plan", DEFAULT_PLAN)
+            trial_end = meta.get("trial_end")
+            if trial_end:
+                from datetime import datetime
+                end = datetime.fromisoformat(trial_end.replace("Z", "+00:00"))
+                if end > datetime.now(timezone.utc):
+                    plan_key = "pro"
         else:
             plan_key = DEFAULT_PLAN
     except Exception:

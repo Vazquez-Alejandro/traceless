@@ -37,6 +37,8 @@ export const api = {
       request(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: string) =>
       request(`/clientes/${id}`, { method: "DELETE" }),
+    importBulk: (data: any[]) =>
+      request("/clientes/import", { method: "POST", body: JSON.stringify(data) }),
   },
   facturas: {
     list: () => request("/facturas"),

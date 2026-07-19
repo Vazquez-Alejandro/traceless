@@ -1,6 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s %(message)s",
+)
+logging.getLogger("zeep").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 load_dotenv()
 

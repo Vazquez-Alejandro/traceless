@@ -66,6 +66,18 @@ def _firmar_cms(tra: bytes, cert_pem: str, key_pem: str) -> str:
 _CACHE_PATH = "/tmp/arcata.json"
 
 def _ta_cache_load() -> dict | None:
+    # Try Supabase first
+    try:
+        from app.db import supabase
+        r = supabase.table("cache").select("*").eq("key", "arcata").single().execute()
+        if r.data:
+            d = r.data
+            d["expires"] = datetime.fromisoformat(d["expires"])
+            if d["expires"] > datetime.now(timezone.utc):
+                return d
+    except Exception:
+        pass
+    # Fallback to file
     try:
         import json
         d = json.loads(open(_CACHE_PATH).read())
@@ -78,6 +90,13 @@ def _ta_cache_save(ta: dict):
     import json
     d = dict(ta)
     d["expires"] = ta["expires"].isoformat()
+    # Try Supabase
+    try:
+        from app.db import supabase
+        supabase.table("cache").upsert({"key": "arcata", **d, "expires": d["expires"]}).execute()
+    except Exception:
+        pass
+    # File fallback
     try:
         open(_CACHE_PATH, "w").write(json.dumps(d))
     except Exception:

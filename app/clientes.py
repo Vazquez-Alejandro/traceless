@@ -57,3 +57,21 @@ def eliminar_cliente(cliente_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)
     supabase.table("clientes").delete().eq("id", cliente_id).eq("user_id", uid).execute()
     return {"ok": True}
+
+@router.post("/import")
+def importar_clientes(req: list[ClienteCreate], authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    creados = 0
+    for c in req:
+        supabase.table("clientes").insert({
+            "user_id": uid,
+            "nombre": c.nombre,
+            "apellido": c.apellido,
+            "email": c.email or "",
+            "telefono": c.telefono or "",
+            "cuit": c.cuit or "",
+            "direccion": c.direccion or "",
+            "condicion_iva": c.condicion_iva,
+        }).execute()
+        creados += 1
+    return {"ok": True, "importados": creados}

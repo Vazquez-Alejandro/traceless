@@ -30,6 +30,7 @@ export default function Facturas() {
   const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios" });
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
+  const [copiado, setCopiado] = useState("");
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
 
@@ -49,6 +50,13 @@ export default function Facturas() {
     } catch {
       alert("Error al anular la factura");
     }
+  };
+
+  const handleShare = async (facturaId: string) => {
+    const url = `${window.location.origin}/api/facturas/public/${facturaId}`;
+    await navigator.clipboard.writeText(url);
+    setCopiado(facturaId);
+    setTimeout(() => setCopiado(""), 2000);
   };
 
   const addItem = () => {
@@ -85,9 +93,17 @@ export default function Facturas() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Facturas</h1>
-        <button onClick={() => { setShowForm(!showForm); setDetalles([]); setUsarItems(false); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
-          {showForm ? "Cancelar" : "+ Nueva Factura"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => {
+            const t = localStorage.getItem("token");
+            window.open(`/api/facturas/export?token=${t}`, "_blank");
+          }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+            Exportar Excel
+          </button>
+          <button onClick={() => { setShowForm(!showForm); setDetalles([]); setUsarItems(false); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+            {showForm ? "Cancelar" : "+ Nueva Factura"}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -154,12 +170,17 @@ export default function Facturas() {
               <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
               <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
               <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full ${
-                f.estado === "anulada" ? "bg-red-900/40 text-red-400" : "bg-green-900/40 text-green-400"
+                f.estado === "anulada" ? "bg-red-900/40 text-red-400" : f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-green-900/40 text-green-400"
               }`}>
-                {f.estado === "anulada" ? "Anulada" : "Emitida"}
+                {f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {copiado === f.id ? (
+                <span className="text-xs text-green-400">¡Link copiado!</span>
+              ) : (
+                <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Compartir</button>
+              )}
               <a href={f.pdf_url || `/api/facturas/${f.id}`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
               {f.estado !== "anulada" && (
                 <button onClick={() => handleCancel(f.id)} className="text-xs text-red-400 hover:underline">Anular</button>

@@ -137,6 +137,77 @@ def anular_factura(factura_id: str, authorization: str = Header("")):
     supabase.table("facturas").update({"estado": "anulada"}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura anulada correctamente. Recordá emitir la nota de crédito correspondiente ante ARCA."}
 
+@router.get("/export")
+def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = "", token: str = ""):
+    auth = authorization or f"Bearer {token}"
+    uid = get_user_id(auth)
+    q = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit)").eq("user_id", uid)
+    if desde:
+        q = q.gte("fecha", desde)
+    if hasta:
+        q = q.lte("fecha", hasta)
+    res = q.order("created_at", desc=True).execute()
+    facturas = res.data
+
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Facturas"
+    ws.append(["Número", "Fecha", "Cliente", "CUIT", "Tipo", "Neto", "IVA", "Total", "CAE", "Estado"])
+    for f in facturas:
+        cli = f.get("clientes") or {}
+        ws.append([
+            f["numero"], f["fecha"], f"{cli.get('nombre','')} {cli.get('apellido','')}",
+            cli.get("cuit", ""), f.get("tipo", ""), f.get("neto", 0),
+            f.get("iva", 0), f["total"], f.get("cae", ""), f.get("estado", ""),
+        ])
+    import tempfile
+    path = tempfile.mktemp(suffix=".xlsx")
+    wb.save(path)
+    from fastapi.responses import FileResponse
+    return FileResponse(path, filename=f"facturas-{datetime.now().strftime('%Y%m%d')}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@router.get("/public/{factura_id}")
+def factura_publica(factura_id: str):
+    res = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).single().execute()
+    if not res.data:
+        raise HTTPException(404, "Factura no encontrada")
+    return {"factura": res.data}
+
+@router.get("/recordatorios")
+def enviar_recordatorios(secret: str = ""):
+    if secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(403, "No autorizado")
+    from app.whatsapp import enviar_factura_whatsapp
+    import asyncio
+    vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")).execute()
+    enviados = 0
+    for f in vencidas.data:
+        cli = f.get("clientes") or {}
+        telefono = cli.get("telefono", "")
+        if not telefono:
+            continue
+        total = f.get("total", 0)
+        num = f.get("numero", "")
+        pdf = f.get("pdf_url", "")
+        base = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+        asyncio.create_task(enviar_factura_whatsapp(telefono, cli.get("nombre",""), num, total, f"{base}{pdf}"))
+        supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
+        enviados += 1
+    return {"ok": True, "recordatorios_enviados": enviados}
+
+@router.get("/estadisticas")
+def estadisticas(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    res = supabase.table("facturas").select("total, fecha, estado").eq("user_id", uid).execute()
+    facturas = res.data
+    totales = sum(f["total"] for f in facturas if f["estado"] != "anulada")
+    emitidas = sum(1 for f in facturas if f["estado"] == "emitida")
+    vencidas = sum(1 for f in facturas if f["estado"] == "vencida")
+    pagadas = sum(1 for f in facturas if f["estado"] == "pagada")
+    anuladas = sum(1 for f in facturas if f["estado"] == "anulada")
+    return {"totales": totales, "emitidas": emitidas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas}
+
 @router.get("/{factura_id}")
 def obtener_factura(factura_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)

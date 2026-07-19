@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
-from app.db import supabase, admin_insert
+from app.db import supabase, admin_insert, _URL, _SERVICE_KEY
 import os
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -34,6 +34,14 @@ def signup(req: SignupRequest):
             "email": req.email,
             "nombre": req.name,
         })
+        from datetime import datetime, timedelta, timezone
+        trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        import httpx
+        r = httpx.put(
+            f"{_URL}/auth/v1/admin/users/{res.user.id}",
+            headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+            json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
+        )
     return {"user": {"id": res.user.id, "email": req.email} if res.user else None}
 
 @router.post("/login")

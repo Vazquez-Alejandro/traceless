@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 
 interface Cliente {
@@ -14,6 +14,8 @@ export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+  const [importando, setImportando] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () => api.clientes.list().then(res => setClientes(res.clientes || []));
 
@@ -27,13 +29,46 @@ export default function Clientes() {
     load();
   };
 
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportando(true);
+    const text = await file.text();
+    const lines = text.split("\n").filter(Boolean);
+    const header = lines[0].toLowerCase();
+    const cols = header.split(",").map(c => c.trim());
+    const data = lines.slice(1).map(line => {
+      const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+      const idx = (name: string) => cols.indexOf(name);
+      return {
+        nombre: vals[idx("nombre")] || "",
+        apellido: vals[idx("apellido")] || vals[idx("nombre")] || "",
+        email: vals[idx("email")] || "",
+        telefono: vals[idx("telefono")] || vals[idx("whatsapp")] || "",
+        cuit: vals[idx("cuit")] || vals[idx("documento")] || "",
+        direccion: vals[idx("direccion")] || "",
+        condicion_iva: "Responsable Inscripto",
+      };
+    });
+    await api.clientes.importBulk(data);
+    setImportando(false);
+    load();
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Clientes</h1>
-        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
-          {showForm ? "Cancelar" : "+ Nuevo Cliente"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+            {importando ? "Importando..." : "Importar CSV"}
+          </button>
+          <input ref={fileRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+            {showForm ? "Cancelar" : "+ Nuevo Cliente"}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -61,7 +96,7 @@ export default function Clientes() {
             </div>
           </div>
         ))}
-        {clientes.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No tenés clientes aún. Creá tu primero.</p>}
+        {clientes.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No tenés clientes aún. Creá tu primero o importá un CSV.</p>}
       </div>
     </div>
   );
