@@ -60,12 +60,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      {trial && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30">
-          <p className="text-sm font-medium">🎉 Disfrutando de Pro gratis por 7 días</p>
-        </div>
-      )}
-      {plan === "Gratis" && !trial && (
+      {plan === "Gratis" && (
         <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">Plan Gratis</p>

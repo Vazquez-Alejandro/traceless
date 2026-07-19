@@ -31,6 +31,7 @@ export default function Facturas() {
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
   const [copiado, setCopiado] = useState("");
+  const [toast, setToast] = useState("");
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
 
@@ -39,6 +40,13 @@ export default function Facturas() {
     api.clientes.list().then(res => setClientes(res.clientes || []));
   }, []);
 
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(""), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
   const handleCancel = async (id: string) => {
     if (!confirm("¿Estás seguro de anular esta factura? No se puede deshacer.")) return;
     try {
@@ -46,9 +54,23 @@ export default function Facturas() {
         method: "PUT",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+      setToast("Factura anulada correctamente");
       load();
     } catch {
       alert("Error al anular la factura");
+    }
+  };
+
+  const handlePay = async (id: string) => {
+    try {
+      await fetch(`/api/facturas/${id}/pagar`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setToast("Factura marcada como pagada");
+      load();
+    } catch {
+      alert("Error al marcar como pagada");
     }
   };
 
@@ -56,6 +78,7 @@ export default function Facturas() {
     const url = `${window.location.origin}/api/facturas/public/${facturaId}`;
     await navigator.clipboard.writeText(url);
     setCopiado(facturaId);
+    setToast("Link de factura copiado al portapapeles");
     setTimeout(() => setCopiado(""), 2000);
   };
 
@@ -86,6 +109,7 @@ export default function Facturas() {
     setDetalles([]);
     setUsarItems(false);
     setShowForm(false);
+    setToast("Factura creada correctamente. Compartí el link con tu cliente.");
     load();
   };
 
@@ -163,6 +187,12 @@ export default function Facturas() {
         </form>
       )}
 
+      {toast && (
+        <div className="mb-4 p-3 rounded-xl bg-green-900/40 border border-green-700/40 text-sm text-green-300 text-center">
+          {toast}
+        </div>
+      )}
+
       <div className="space-y-3">
         {facturas.map(f => (
           <div key={f.id} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800/40 flex items-center justify-between">
@@ -170,9 +200,11 @@ export default function Facturas() {
               <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
               <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
               <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full ${
-                f.estado === "anulada" ? "bg-red-900/40 text-red-400" : f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-green-900/40 text-green-400"
+                f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
+                f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
+                f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-blue-900/40 text-blue-400"
               }`}>
-                {f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
+                {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -182,8 +214,11 @@ export default function Facturas() {
                 <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Compartir</button>
               )}
               <a href={f.pdf_url || `/api/facturas/${f.id}`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
-              {f.estado !== "anulada" && (
-                <button onClick={() => handleCancel(f.id)} className="text-xs text-red-400 hover:underline">Anular</button>
+              {f.estado === "emitida" && (
+                <>
+                  <button onClick={() => handlePay(f.id)} className="text-xs text-green-400 hover:underline">Pagada</button>
+                  <button onClick={() => handleCancel(f.id)} className="text-xs text-red-400 hover:underline">Anular</button>
+                </>
               )}
             </div>
           </div>

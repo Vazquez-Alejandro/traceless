@@ -15,11 +15,25 @@ export default function Clientes() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
   const [importando, setImportando] = useState(false);
+  const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () => api.clientes.list().then(res => setClientes(res.clientes || []));
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(""), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  const copiar = (c: Cliente) => {
+    const txt = `${c.nombre} ${c.apellido} - CUIT: ${c.cuit || "—"} - Tel: ${c.telefono || "—"}`;
+    navigator.clipboard.writeText(txt);
+    setToast("Datos copiados: " + txt.slice(0, 40) + "...");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,12 +102,19 @@ export default function Clientes() {
       )}
 
       <div className="space-y-3">
+      {toast && (
+        <div className="mb-4 p-3 rounded-xl bg-green-900/40 border border-green-700/40 text-sm text-green-300 text-center">
+          {toast}
+        </div>
+      )}
+
         {clientes.map(c => (
           <div key={c.id} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800/40 flex items-center justify-between">
             <div>
               <div className="font-medium">{c.nombre} {c.apellido}</div>
               <div className="text-xs text-gray-500">{c.cuit || c.email || c.telefono}</div>
             </div>
+            <button onClick={() => copiar(c)} className="text-xs text-gray-400 hover:text-white">Copiar</button>
           </div>
         ))}
         {clientes.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No tenés clientes aún. Creá tu primero o importá un CSV.</p>}

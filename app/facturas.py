@@ -137,6 +137,17 @@ def anular_factura(factura_id: str, authorization: str = Header("")):
     supabase.table("facturas").update({"estado": "anulada"}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura anulada correctamente. Recordá emitir la nota de crédito correspondiente ante ARCA."}
 
+@router.put("/{factura_id}/pagar")
+def pagar_factura(factura_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
+    if not factura.data:
+        raise HTTPException(404, "Factura no encontrada")
+    if factura.data["estado"] != "emitida":
+        raise HTTPException(400, "Solo se pueden pagar facturas en estado emitida")
+    supabase.table("facturas").update({"estado": "pagada"}).eq("id", factura_id).execute()
+    return {"ok": True, "mensaje": "Factura marcada como pagada"}
+
 @router.get("/export")
 def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = "", token: str = ""):
     auth = authorization or f"Bearer {token}"

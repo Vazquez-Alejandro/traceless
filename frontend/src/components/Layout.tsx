@@ -7,7 +7,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-6">
@@ -20,7 +20,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Salir</button>
         </div>
       </nav>
-      <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 py-8 flex-1">{children}</main>
+      <footer className="border-t border-gray-800/30 py-6">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+          <span>TraceLess — © 2026</span>
+          <div className="flex items-center gap-4">
+            <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
+            <Link to="/privacidad" className="hover:text-gray-400">Privacidad</Link>
+            <span>Contacto: hola@traceless.com.ar</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

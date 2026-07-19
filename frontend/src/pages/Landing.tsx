@@ -144,11 +144,12 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-gray-800/30 py-8">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-gray-600">
           <span>TraceLess — © 2026</span>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
             <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
             <Link to="/privacidad" className="hover:text-gray-400">Privacidad</Link>
+            <span>Contacto: hola@traceless.com.ar</span>
           </div>
         </div>
       </footer>
