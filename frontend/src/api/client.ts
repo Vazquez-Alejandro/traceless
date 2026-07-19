@@ -15,10 +15,15 @@ async function request(path: string, options: RequestInit = {}) {
   if (res.status === 401) {
     localStorage.removeItem("token");
     window.location.href = "/login";
-    throw new Error("No autorizado");
+    return { error: "No autorizado" };
   }
 
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    const text = await res.text();
+    return { error: text || `Error ${res.status}` };
+  }
 }
 
 export const api = {
