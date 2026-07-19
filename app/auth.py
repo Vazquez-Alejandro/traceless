@@ -66,7 +66,20 @@ def me(authorization: str = Header("")):
     perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
     from app.lemon import get_user_plan
     plan = get_user_plan(res.user.id)
-    return {"user": {"id": res.user.id, "email": res.user.email, "nombre": perfil.data.get("nombre", "") if perfil.data else "", "plan": plan["name"]}}
+    wp_token = os.getenv("WHATSAPP_TOKEN", "")
+    wp_phone = os.getenv("WHATSAPP_PHONE_ID", "")
+    whatsapp_ok = bool(wp_token and wp_phone)
+    return {
+        "user": {
+            "id": res.user.id, "email": res.user.email,
+            "nombre": perfil.data.get("nombre", "") if perfil.data else "",
+            "plan": plan["name"],
+            "whatsapp_configurado": whatsapp_ok,
+            "telefono": perfil.data.get("telefono", "") if perfil.data else "",
+            "cuit": perfil.data.get("cuit", "") if perfil.data else "",
+            "condicion_iva": perfil.data.get("condicion_iva", "Responsable Inscripto") if perfil.data else "Responsable Inscripto",
+        }
+    }
 
 class ProfileUpdate(BaseModel):
     nombre: Optional[str] = None

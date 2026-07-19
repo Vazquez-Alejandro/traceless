@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
@@ -12,9 +11,9 @@ const PLANS_LIST = [
 ];
 
 export default function Perfil() {
-  const [user, setUser] = useState({ nombre: "", email: "", plan: "Gratis" });
+  const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
-  const [nombre, setNombre] = useState("");
+  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "" });
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -23,8 +22,9 @@ export default function Perfil() {
     fetch(`${BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => r.json()).then(d => {
-      setUser(d.user || d);
-      setNombre(d.user?.nombre || "");
+      const u = d.user || d;
+      setUser(u);
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto" });
     });
   }, []);
 
@@ -33,9 +33,9 @@ export default function Perfil() {
     await fetch(`${BASE_URL}/api/auth/me`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre }),
+      body: JSON.stringify(form),
     });
-    setUser({ ...user, nombre });
+    setUser({ ...user, ...form });
     setEdit(false);
     setMsg("Perfil actualizado");
     setTimeout(() => setMsg(""), 3000);
@@ -68,19 +68,51 @@ export default function Perfil() {
           <div>
             <label className="text-gray-500 text-xs">Nombre</label>
             {edit ? (
-              <input value={nombre} onChange={e => setNombre(e.target.value)}
+              <input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})}
                 className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
-            ) : (
-              <p className="text-white mt-0.5">{user.nombre || "—"}</p>
-            )}
+            ) : <p className="text-white mt-0.5">{user.nombre || "—"}</p>}
           </div>
           <div>
             <label className="text-gray-500 text-xs">Email</label>
             <p className="text-white mt-0.5">{user.email}</p>
           </div>
           <div>
+            <label className="text-gray-500 text-xs">CUIT</label>
+            {edit ? (
+              <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+            ) : <p className="text-white mt-0.5">{user.cuit || "—"}</p>}
+          </div>
+          <div>
+            <label className="text-gray-500 text-xs">Teléfono</label>
+            {edit ? (
+              <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+            ) : <p className="text-white mt-0.5">{user.telefono || "—"}</p>}
+          </div>
+          <div>
+            <label className="text-gray-500 text-xs">Condición IVA</label>
+            {edit ? (
+              <select value={form.condicion_iva} onChange={e => setForm({...form, condicion_iva: e.target.value})}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1">
+                <option>Responsable Inscripto</option>
+                <option>Monotributista</option>
+                <option>Consumidor Final</option>
+                <option>Exento</option>
+              </select>
+            ) : <p className="text-white mt-0.5">{user.condicion_iva || "—"}</p>}
+          </div>
+          <div>
             <label className="text-gray-500 text-xs">Plan actual</label>
             <p className="text-white mt-0.5 font-semibold">{user.plan}</p>
+          </div>
+          <div>
+            <label className="text-gray-500 text-xs">WhatsApp</label>
+            <p className="text-white mt-0.5">
+              {user.whatsapp_configurado
+                ? <span className="text-green-400">✅ Configurado</span>
+                : <span className="text-yellow-400">⏳ Pendiente de configuración</span>}
+            </p>
           </div>
           {edit && (
             <button onClick={handleSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl mt-2">
