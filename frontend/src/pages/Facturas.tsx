@@ -38,6 +38,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
 
+
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
 
   useEffect(() => {
@@ -123,11 +124,13 @@ export default function Facturas() {
 
   const crearClienteRapido = async () => {
     if (!cliForm.nombre) return;
-    await api.clientes.create(cliForm);
+    const res = await api.clientes.create(cliForm);
+    const nuevo = res.cliente;
     setNuevoCliente(false);
     setCliForm({ nombre: "", apellido: "", telefono: "", cuit: "" });
-    const res = await api.clientes.list();
-    setClientes(res.clientes || []);
+    const list = await api.clientes.list();
+    setClientes(list.clientes || []);
+    if (nuevo?.id) setForm({ ...form, cliente_id: nuevo.id });
   };
 
   return (
@@ -161,14 +164,18 @@ export default function Facturas() {
               <button type="button" onClick={() => setNuevoCliente(!nuevoCliente)} className="px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-xl">+</button>
             </div>
             {nuevoCliente && (
-              <div className="flex gap-2 col-span-2 p-3 bg-gray-900/60 rounded-xl border border-gray-800/40">
-                <input placeholder="Nombre" value={cliForm.nombre} onChange={e => setCliForm({...cliForm, nombre: e.target.value})}
-                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
-                <input placeholder="Apellido" value={cliForm.apellido} onChange={e => setCliForm({...cliForm, apellido: e.target.value})}
-                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
-                <input placeholder="WhatsApp" value={cliForm.telefono} onChange={e => setCliForm({...cliForm, telefono: e.target.value})}
-                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
-                <button type="button" onClick={crearClienteRapido} className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg">Crear</button>
+              <div className="flex flex-col gap-2 col-span-2 p-3 bg-gray-900/60 rounded-xl border border-gray-800/40">
+                <div className="flex gap-2 flex-wrap">
+                  <input placeholder="Nombre" value={cliForm.nombre} onChange={e => setCliForm({...cliForm, nombre: e.target.value})}
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                  <input placeholder="Apellido" value={cliForm.apellido} onChange={e => setCliForm({...cliForm, apellido: e.target.value})}
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                  <input placeholder="WhatsApp" value={cliForm.telefono} onChange={e => setCliForm({...cliForm, telefono: e.target.value})}
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                  <input placeholder="CUIT" value={cliForm.cuit} onChange={e => setCliForm({...cliForm, cuit: e.target.value})}
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
+                  <button type="button" onClick={crearClienteRapido} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg whitespace-nowrap">Crear Cliente</button>
+                </div>
               </div>
             )}
             <select value={form.tipo} onChange={e => setForm({ ...form, tipo: parseInt(e.target.value) })}
