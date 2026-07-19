@@ -4,10 +4,10 @@ const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANS_LIST = [
   { key: "free", name: "Gratis", price: "Gratis" },
-  { key: "basic", name: "Básico", price: "$5/mes" },
-  { key: "pro", name: "Pro", price: "$12/mes" },
-  { key: "pyme", name: "PyME", price: "$15/mes" },
-  { key: "corporate", name: "Corporativo", price: "$75/mes" },
+  { key: "basic", name: "Básico", price: "$9/mes" },
+  { key: "pro", name: "Pro", price: "$19/mes" },
+  { key: "pyme", name: "PyME", price: "$29/mes" },
+  { key: "corporate", name: "Corporativo", price: "$99/mes" },
 ];
 
 export default function Perfil() {

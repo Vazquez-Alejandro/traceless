@@ -12,7 +12,7 @@ const PLANS = [
   {
     key: "basic",
     name: "Básico",
-    price: "$5/mes",
+    price: "$9/mes",
     desc: "Para freelancers que empiezan",
     features: ["50 facturas por mes", "WhatsApp incluido", "1 usuario"],
     highlighted: false,
@@ -20,7 +20,7 @@ const PLANS = [
   {
     key: "pro",
     name: "Pro",
-    price: "$12/mes",
+    price: "$19/mes",
     desc: "Para profesionales activos",
     features: ["Facturas ilimitadas", "WhatsApp incluido", "1 usuario"],
     highlighted: true,
@@ -28,7 +28,7 @@ const PLANS = [
   {
     key: "pyme",
     name: "PyME",
-    price: "$15/mes",
+    price: "$29/mes",
     desc: "Para pequeños equipos",
     features: ["Facturas ilimitadas", "WhatsApp incluido", "Hasta 3 usuarios"],
     highlighted: false,
@@ -36,7 +36,7 @@ const PLANS = [
   {
     key: "corporate",
     name: "Corporativo",
-    price: "$75/mes",
+    price: "$99/mes",
     desc: "Para estudios y empresas",
     features: ["Facturas ilimitadas", "WhatsApp incluido", "Usuarios ilimitados", "Soporte prioritario"],
     highlighted: false,
