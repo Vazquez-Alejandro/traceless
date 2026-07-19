@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.db import supabase
+from app.db import supabase, _URL, _SERVICE_KEY
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
@@ -31,6 +31,7 @@ class FacturaCreate(BaseModel):
     importe: Optional[float] = None
     descripcion: str = "Honorarios"
     detalles: list[DetalleItem] = []
+    recurrente: bool = False
 
 @router.post("")
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
@@ -48,11 +49,18 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
 
+    import json as _json
+
     if req.detalles:
         subtotal = sum(d.cantidad * d.precio_unitario for d in req.detalles)
         importe_total = round(subtotal, 2)
+        descripcion_final = _json.dumps({"d": req.descripcion, "i": [{"desc": it.descripcion, "cant": it.cantidad, "precio": it.precio_unitario} for it in req.detalles], "r": req.recurrente}, ensure_ascii=False)
     else:
         importe_total = req.importe or 0
+        if req.recurrente:
+            descripcion_final = _json.dumps({"d": req.descripcion, "i": [], "r": True}, ensure_ascii=False)
+        else:
+            descripcion_final = req.descripcion
 
     last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
     ultimo_numero = 0
@@ -72,8 +80,6 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         ultimo_numero=ultimo_numero,
     )
 
-    detalles_json = [d.model_dump() for d in req.detalles] if req.detalles else []
-
     factura_data = {
         "user_id": uid,
         "cliente_id": req.cliente_id,
@@ -84,11 +90,34 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         "neto": afip_result["neto"],
         "iva": afip_result["iva"],
         "total": afip_result["total"],
-        "descripcion": req.descripcion,
-        "detalles": detalles_json,
+        "descripcion": descripcion_final,
         "fecha": datetime.now().strftime("%Y-%m-%d"),
         "estado": "emitida",
     }
+
+    if req.recurrente:
+        try:
+            import httpx
+            r = httpx.get(f"{_URL}/auth/v1/admin/users/{uid}",
+                headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"})
+            if r.status_code == 200:
+                meta = r.json().get("app_metadata", {})
+                recs = meta.get("recurrentes", [])
+                prox = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+                recs.append({
+                    "cliente_id": req.cliente_id,
+                    "tipo": req.tipo,
+                    "importe": importe_total,
+                    "descripcion": descripcion_final,
+                    "proxima": prox,
+                    "activo": True,
+                })
+                meta["recurrentes"] = recs
+                httpx.put(f"{_URL}/auth/v1/admin/users/{uid}",
+                    headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+                    json={"app_metadata": meta})
+        except Exception:
+            pass
 
     res = supabase.table("facturas").insert(factura_data).execute()
     factura = res.data[0]
@@ -189,9 +218,11 @@ def factura_publica(factura_id: str):
 def enviar_recordatorios(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
-    from app.whatsapp import enviar_factura_whatsapp
+    from app.whatsapp import enviar_whatsapp
     import asyncio
-    vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")).execute()
+    now = datetime.now()
+    # Recordatorios semanales: facturas emitidas hace 7+ días
+    vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (now - timedelta(days=7)).strftime("%Y-%m-%d")).execute()
     enviados = 0
     for f in vencidas.data:
         cli = f.get("clientes") or {}
@@ -200,12 +231,78 @@ def enviar_recordatorios(secret: str = ""):
             continue
         total = f.get("total", 0)
         num = f.get("numero", "")
+        dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
+        if dias >= 30:
+            msg = f"⚠️ *{cli.get('nombre','')}*, la factura *{num}* por ${total:,.2f} tiene más de 30 días impaga. Te notificamos que se sumará a la próxima factura si no se cancela antes."
+            supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
+        else:
+            msg = f"📋 *Recordatorio:* La factura *{num}* por ${total:,.2f} a nombre de {cli.get('nombre','')} está pendiente de pago ({dias} días)."
         pdf = f.get("pdf_url", "")
-        base = os.getenv("BASE_URL", "https://www.traceless.com.ar")
-        asyncio.create_task(enviar_factura_whatsapp(telefono, cli.get("nombre",""), num, total, f"{base}{pdf}"))
-        supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
+        if pdf:
+            base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+            msg += f"\nPodés verla acá: {base_url}{pdf}"
+        asyncio.create_task(enviar_whatsapp(telefono, msg))
         enviados += 1
     return {"ok": True, "recordatorios_enviados": enviados}
+
+@router.get("/recurrentes")
+def procesar_recurrentes(secret: str = ""):
+    if secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(403, "No autorizado")
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    emitidas = 0
+    import httpx as _httpx
+    import asyncio
+    limit = 50
+    offset = 0
+    while True:
+        r = _httpx.get(f"{_URL}/auth/v1/admin/users?per_page={limit}&page={offset//limit +1}",
+            headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"})
+        if r.status_code != 200:
+            break
+        users = r.json().get("users", [])
+        if not users:
+            break
+        for u in users:
+            meta = u.get("app_metadata", {})
+            recs = meta.get("recurrentes", [])
+            changed = False
+            for rec in recs:
+                if not rec.get("activo"):
+                    continue
+                if rec.get("proxima", "") <= hoy:
+                    try:
+                        uid = u["id"]
+                        cli = supabase.table("clientes").select("*").eq("id", rec["cliente_id"]).eq("user_id", uid).single().execute()
+                        if not cli.data:
+                            continue
+                        perf = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+                        emisor = perf.data or {}
+                        from app.afip import _mock_generate
+                        res = _mock_generate(cli.data.get("cuit",""), rec["tipo"], rec["importe"], rec.get("descripcion",""), 0)
+                        fd = {
+                            "user_id": uid, "cliente_id": rec["cliente_id"],
+                            "tipo": rec["tipo"], "numero": res["numero"],
+                            "cae": res["cae"], "cae_vencimiento": res["cae_vencimiento"],
+                            "neto": res["neto"], "iva": res["iva"],
+                            "total": res["total"],
+                            "descripcion": rec.get("descripcion",""),
+                            "fecha": hoy, "estado": "emitida",
+                        }
+                        supabase.table("facturas").insert(fd).execute()
+                        from datetime import timedelta
+                        rec["proxima"] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+                        changed = True
+                        emitidas += 1
+                    except Exception:
+                        pass
+            if changed:
+                meta["recurrentes"] = recs
+                _httpx.put(f"{_URL}/auth/v1/admin/users/{u['id']}",
+                    headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+                    json={"app_metadata": meta})
+        offset += limit
+    return {"ok": True, "emitidas": emitidas}
 
 @router.get("/estadisticas")
 def estadisticas(authorization: str = Header("")):

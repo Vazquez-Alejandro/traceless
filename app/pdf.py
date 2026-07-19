@@ -59,14 +59,36 @@ def guardar_factura_html(factura: dict, cliente: dict, emisor: dict) -> str:
     return f"/facturas/{filename}"
 
 def _detalles(f):
-    return f.get("detalles") or []
+    items = f.get("detalles") or []
+    if items:
+        return items
+    desc = f.get("descripcion", "")
+    if desc.startswith("{"):
+        try:
+            import json
+            parsed = json.loads(desc)
+            return [{"descripcion": i["desc"], "cantidad": i["cant"], "precio_unitario": i["precio"]} for i in parsed.get("i", [])]
+        except Exception:
+            return []
+    return []
 
 def _detalle_html(d):
     subt = d["cantidad"] * d["precio_unitario"]
     return f'<tr><td>{d["descripcion"]}</td><td style="text-align:center">{d["cantidad"]}</td><td style="text-align:right">${d["precio_unitario"]:,.2f}</td><td style="text-align:right">${subt:,.2f}</td></tr>'
 
 def _default_item(f):
-    return f'<tr><td colspan="3">{f.get("descripcion", "Servicios")}</td><td style="text-align:right">${f["total"]:,.2f}</td></tr>'
+    desc = f.get("descripcion", "Servicios")
+    extra = ""
+    if desc.startswith("{"):
+        try:
+            import json
+            parsed = json.loads(desc)
+            desc = parsed.get("d", "Servicios")
+            if parsed.get("r"):
+                extra = '<div style="font-size:10px;color:#7c3aed;margin-top:2px">♻️ Factura recurrente</div>'
+        except Exception:
+            pass
+    return f'<tr><td colspan="3">{desc}{extra}</td><td style="text-align:right">${f["total"]:,.2f}</td></tr>'
 
 def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     return generar_html_factura(factura, cliente, emisor).encode("utf-8")

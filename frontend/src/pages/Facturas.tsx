@@ -27,7 +27,7 @@ export default function Facturas() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios" });
+  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
   const [copiado, setCopiado] = useState("");
@@ -111,7 +111,7 @@ export default function Facturas() {
     const id = res?.factura?.id;
     const link = id ? `${window.location.origin}/api/facturas/public/${id}` : "";
     setUltimoLink(link);
-    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios" });
+    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
     setDetalles([]);
     setUsarItems(false);
     setShowForm(false);
@@ -183,10 +183,16 @@ export default function Facturas() {
               className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-            <input type="checkbox" checked={usarItems} onChange={e => setUsarItems(e.target.checked)} />
-            Desglosar por items
-          </label>
+          <div className="flex items-center gap-4 mb-4">
+            <label className="flex items-center gap-2 text-xs text-gray-400">
+              <input type="checkbox" checked={usarItems} onChange={e => setUsarItems(e.target.checked)} />
+              Desglosar por items
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-400">
+              <input type="checkbox" checked={form.recurrente} onChange={e => setForm({ ...form, recurrente: e.target.checked })} />
+              Factura recurrente (se repite cada mes)
+            </label>
+          </div>
 
           {usarItems && (
             <div className="mb-4 space-y-2">
@@ -233,13 +239,18 @@ export default function Facturas() {
             <div>
               <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
               <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
-              <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full ${
-                f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
-                f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
-                f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-blue-900/40 text-blue-400"
-              }`}>
-                {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
-              </span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full ${
+                  f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
+                  f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
+                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-blue-900/40 text-blue-400"
+                }`}>
+                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
+                </span>
+                {(f as any).recurrente && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">Recurrente</span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {copiado === f.id ? (
