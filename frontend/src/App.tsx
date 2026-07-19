@@ -7,6 +7,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Facturas from "./pages/Facturas";
+import Terminos from "./pages/Terminos";
+import Privacidad from "./pages/Privacidad";
 import Layout from "./components/Layout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -32,6 +34,8 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
       <Route path="/facturas" element={<ProtectedRoute><Facturas /></ProtectedRoute>} />
+      <Route path="/terminos" element={<Terminos />} />
+      <Route path="/privacidad" element={<Privacidad />} />
     </Routes>
   );
 }

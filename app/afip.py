@@ -167,22 +167,24 @@ def _alicuota_iva(tipo: int) -> tuple:
 
 def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           tipo: int, importe: float,
-                          condicion_iva: str, descripcion: str) -> dict:
+                          condicion_iva: str, descripcion: str,
+                          ultimo_numero: int = 0) -> dict:
     USE_REAL = os.getenv("ARCA_USE_REAL", "0") == "1"
     if USE_REAL:
-        return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion)
-    return _mock_generate(cliente_cuit, tipo, importe, descripcion)
+        return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero)
+    return _mock_generate(cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
-def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str) -> dict:
+def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str, ultimo_numero: int = 0) -> dict:
     iva_percentage = 0.21
     if tipo == 19:
         iva_percentage = 0.105
     neto = round(importe / (1 + iva_percentage), 2)
     iva = round(importe - neto, 2)
+    prox = ultimo_numero + 1
     return {
-        "cae": f"{datetime.now().strftime('%Y%m%d')}{str(hash(cliente_cuit))[-8:]}",
+        "cae": f"{datetime.now().strftime('%Y%m%d')}{prox:08d}",
         "cae_vencimiento": datetime.now().strftime("%Y-%m-%d"),
-        "numero": f"{_punto_venta():04d}-{datetime.now().strftime('%Y%m%d')}-{abs(hash(descripcion)) % 99999999:08d}",
+        "numero": f"{_punto_venta():04d}-{prox:08d}",
         "neto": neto,
         "iva": iva,
         "total": importe,
@@ -191,7 +193,8 @@ def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: st
 
 def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                      tipo: int, importe: float,
-                     condicion_iva: str, descripcion: str) -> dict:
+                     condicion_iva: str, descripcion: str,
+                     ultimo_numero: int = 0) -> dict:
     ta = _login()
     pto_vta = _punto_venta()
     doc_tipo, doc_nro = _doc_tipo(cliente_cuit)

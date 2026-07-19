@@ -79,13 +79,37 @@ def _plan_from_variant(variant_id) -> str:
 def _set_user_plan(email: str, plan_key: str):
     if not email:
         return
-    res = supabase.auth.admin.get_user_by_email(email)
-    if res.user is None:
+    import httpx
+    from app.db import _URL, _SERVICE_KEY
+    # Get user by email via Auth admin API (bypass list_users pagination)
+    r = httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        headers={
+            "apikey": _SERVICE_KEY,
+            "Authorization": f"Bearer {_SERVICE_KEY}",
+        },
+        params={"filter": email},
+    )
+    if r.status_code != 200:
+        logger.warning(f"Failed to get user by email {email}: {r.status_code}")
+        return
+    users = r.json().get("users", [])
+    if not users:
         logger.warning(f"User not found for email {email}")
         return
-    supabase.auth.admin.update_user_by_id(res.user.id, {
-        "app_metadata": {**res.user.app_metadata, "plan": plan_key},
-    })
+    user = users[0]
+    uid = user["id"]
+    meta = dict(user.get("app_metadata", {}))
+    meta["plan"] = plan_key
+    httpx.put(
+        f"{_URL}/auth/v1/admin/users/{uid}",
+        headers={
+            "apikey": _SERVICE_KEY,
+            "Authorization": f"Bearer {_SERVICE_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={"app_metadata": meta},
+    )
     logger.info(f"Plan {plan_key} set for {email}")
 
 def handle_webhook(payload: bytes, signature: str) -> dict:
@@ -119,9 +143,20 @@ def handle_webhook(payload: bytes, signature: str) -> dict:
     return {"ok": True, "event": event_name}
 
 def get_user_plan(user_id: str) -> dict:
+    import httpx
+    from app.db import _URL, _SERVICE_KEY
     try:
-        res = supabase.auth.admin.get_user_by_id(user_id)
-        plan_key = res.user.app_metadata.get("plan", DEFAULT_PLAN)
+        r = httpx.get(
+            f"{_URL}/auth/v1/admin/users/{user_id}",
+            headers={
+                "apikey": _SERVICE_KEY,
+                "Authorization": f"Bearer {_SERVICE_KEY}",
+            },
+        )
+        if r.status_code == 200:
+            plan_key = r.json().get("app_metadata", {}).get("plan", DEFAULT_PLAN)
+        else:
+            plan_key = DEFAULT_PLAN
     except Exception:
         plan_key = DEFAULT_PLAN
     return PLANS.get(plan_key, PLANS[DEFAULT_PLAN])

@@ -14,6 +14,7 @@ interface Factura {
   fecha: string;
   estado: string;
   clientes: Cliente;
+  pdf_url?: string;
 }
 
 export default function Facturas() {
@@ -23,6 +24,19 @@ export default function Facturas() {
   const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios" });
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
+
+  const handleCancel = async (id: string) => {
+    if (!confirm("¿Estás seguro de anular esta factura? No se puede deshacer.")) return;
+    try {
+      await fetch(`/api/facturas/${id}/anular`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      load();
+    } catch {
+      alert("Error al anular la factura");
+    }
+  };
 
   useEffect(() => {
     load();
@@ -77,8 +91,18 @@ export default function Facturas() {
             <div>
               <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
               <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
+              <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full ${
+                f.estado === "anulada" ? "bg-red-900/40 text-red-400" : "bg-green-900/40 text-green-400"
+              }`}>
+                {f.estado === "anulada" ? "Anulada" : "Emitida"}
+              </span>
             </div>
-            <a href={f.pdf_url || `/api/facturas/${f.id}`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Ver</a>
+            <div className="flex items-center gap-2">
+              <a href={f.pdf_url || `/api/facturas/${f.id}`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
+              {f.estado !== "anulada" && (
+                <button onClick={() => handleCancel(f.id)} className="text-xs text-red-400 hover:underline">Anular</button>
+              )}
+            </div>
           </div>
         ))}
         {facturas.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No hay facturas aún.</p>}

@@ -42,6 +42,14 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
 
+    last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
+    ultimo_numero = 0
+    if last.data:
+        try:
+            ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
+        except (ValueError, IndexError):
+            ultimo_numero = 0
+
     afip_result = generar_factura_afip(
         cliente_cuit=cliente.data.get("cuit", ""),
         cliente_nombre=f"{cliente.data['nombre']} {cliente.data.get('apellido', '')}",
@@ -49,6 +57,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         importe=req.importe,
         condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
         descripcion=req.descripcion,
+        ultimo_numero=ultimo_numero,
     )
 
     factura_data = {
@@ -101,6 +110,17 @@ def listar_facturas(authorization: str = Header("")):
     uid = get_user_id(authorization)
     res = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit)").eq("user_id", uid).order("created_at", desc=True).execute()
     return {"facturas": res.data}
+
+@router.put("/{factura_id}/anular")
+def anular_factura(factura_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
+    if not factura.data:
+        raise HTTPException(404, "Factura no encontrada")
+    if factura.data["estado"] == "anulada":
+        raise HTTPException(400, "La factura ya está anulada")
+    supabase.table("facturas").update({"estado": "anulada"}).eq("id", factura_id).execute()
+    return {"ok": True, "mensaje": "Factura anulada correctamente. Recordá emitir la nota de crédito correspondiente ante ARCA."}
 
 @router.get("/{factura_id}")
 def obtener_factura(factura_id: str, authorization: str = Header("")):
