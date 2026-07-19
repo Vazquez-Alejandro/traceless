@@ -22,7 +22,7 @@ const PLANS = [
     name: "Pro",
     price: "$19/mes",
     desc: "Para profesionales activos",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "1 usuario"],
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "1 usuario", "Recordatorios automáticos", "Analytics de pagos"],
     highlighted: true,
   },
   {
@@ -30,7 +30,7 @@ const PLANS = [
     name: "PyME",
     price: "$29/mes",
     desc: "Para pequeños equipos",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "Hasta 3 usuarios"],
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "Hasta 3 usuarios", "Facturas recurrentes"],
     highlighted: false,
   },
   {
@@ -38,7 +38,7 @@ const PLANS = [
     name: "Corporativo",
     price: "$99/mes",
     desc: "Para estudios y empresas",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "Usuarios ilimitados", "Soporte prioritario"],
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "Usuarios ilimitados", "Soporte prioritario", "API"],
     highlighted: false,
   },
 ];
@@ -59,21 +59,72 @@ export default function Landing() {
       <section className="flex items-center justify-center px-6 pt-28 pb-20">
         <div className="text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs font-medium text-blue-400 mb-8">
-            Facturación inteligente para Argentina
+            🇦🇷 Hecho para freelancers argentinos
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
-            Gestioná tu negocio{" "}
+            Cobrá más rápido.{" "}
             <span className="bg-gradient-to-r from-blue-300 to-blue-500 bg-clip-text text-transparent">
-              sin rastro de papel
+              Facturá sin papel.
             </span>
           </h1>
           <p className="text-lg text-gray-400 leading-relaxed mb-10 max-w-xl mx-auto">
-            Facturá a tus clientes, enviales el comprobante por WhatsApp y olvidate de los vencimientos.
-            TraceLess es la herramienta que todo freelancer argentino necesita.
+            Emití facturas con validez ARCA, envialas por WhatsApp al instante y recibí alertas
+            cuando un cliente no paga. Una herramienta simple que te ahorra tiempo y dinero.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register" className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">Comenzar Gratis</Link>
-            <Link to="/login" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">Iniciar Sesión</Link>
+            <Link to="/register" className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">
+              Probar Gratis — Sin tarjeta
+            </Link>
+            <Link to="/login" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">
+              Ver Demo
+            </Link>
+          </div>
+          <p className="text-xs text-gray-600 mt-4">Prueba Pro 7 días gratis al registrarte. Cancelá cuando quieras.</p>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-16">Cómo funciona</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Creá tu cliente", desc: "Cargá sus datos una vez. Nombre, CUIT, teléfono. Después facturás en segundos." },
+              { step: "2", title: "Emití la factura", desc: "Elegí tipo A, B o C. Los montos se calculan solos. Con items o sin items." },
+              { step: "3", title: "Cobrá sin perseguir", desc: "La factura llega por WhatsApp al instante. Nosotros te recordamos si no paga." },
+            ].map((f, i) => (
+              <div key={i} className="text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4 text-lg font-bold text-blue-400">
+                  {f.step}
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-gray-900/20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-4">Todo lo que necesitás para facturar bien</h2>
+          <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
+            No es un ERP enorme. Es justo lo que un freelancer necesita para emitir, enviar y cobrar.
+          </p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: "🧾", title: "Facturas A, B, C y E", desc: "Con validez ARCA. Números correlativos automáticos." },
+              { icon: "📱", title: "Envío por WhatsApp", desc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs." },
+              { icon: "📊", title: "Dashboard inteligente", desc: "Vé qué clientes pagan a tiempo y quiénes se atrasan siempre." },
+              { icon: "🔄", title: "Facturas recurrentes", desc: "Se emiten solas cada mes. No te olvidés nunca más." },
+              { icon: "⏰", title: "Recordatorios automáticos", desc: "WhatsApp semanal a los clientes que deben. Sin hacer nada." },
+              { icon: "📎", title: "Links públicos", desc: "Compartí la factura por cualquier medio. Sin registro del cliente." },
+            ].map((f, i) => (
+              <div key={i} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all">
+                <div className="text-2xl mb-3">{f.icon}</div>
+                <h3 className="text-sm font-semibold mb-1.5">{f.title}</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -82,7 +133,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-4">Planes simples, sin sorpresas</h2>
           <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
-            Empezá gratis y escalá cuando lo necesites. Pagás solo por lo que usás.
+            Probá Pro gratis por 7 días. Después elegí el plan que mejor se adapte a vos.
           </p>
           <div className="grid md:grid-cols-5 gap-4">
             {PLANS.map((p) => (
@@ -90,13 +141,13 @@ export default function Landing() {
                 key={p.key}
                 className={`relative p-5 rounded-2xl border flex flex-col ${
                   p.highlighted
-                    ? "bg-blue-600/10 border-blue-500/40 shadow-lg shadow-blue-600/10"
+                    ? "bg-blue-600/10 border-blue-500/40 shadow-lg shadow-blue-600/10 scale-[1.02]"
                     : "bg-gray-900/40 border-gray-800/40"
                 }`}
               >
                 {p.highlighted && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-500 text-[10px] font-semibold rounded-full">
-                    MÁS POPULAR
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-500 text-[10px] font-semibold rounded-full whitespace-nowrap">
+                    RECOMENDADO
                   </div>
                 )}
                 <h3 className="text-base font-semibold mb-1">{p.name}</h3>
@@ -105,7 +156,7 @@ export default function Landing() {
                 <ul className="space-y-1.5 mb-6 flex-1">
                   {p.features.map((f, i) => (
                     <li key={i} className="text-xs text-gray-300 flex items-center gap-1.5">
-                      <span className="text-blue-400">✓</span> {f}
+                      <span className="text-blue-400 shrink-0">✓</span> {f}
                     </li>
                   ))}
                 </ul>
@@ -125,21 +176,15 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-20 bg-gray-900/20">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: "🧾", title: "Facturación ARCA", desc: "Generá facturas A, B, C y E con un clic. Sin formularios, sin complicaciones." },
-              { icon: "📱", title: "Envío por WhatsApp", desc: "Tus facturas llegan directo al celular de tu cliente. Más rápido, más profesional." },
-              { icon: "📅", title: "Recordatorios", desc: "Nunca más te olvidés de un vencimiento. Te avisamos por WhatsApp antes de cada fecha." },
-            ].map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
-                <div className="text-3xl mb-4">{f.icon}</div>
-                <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-400">{f.desc}</p>
-              </div>
-            ))}
-          </div>
+      <section className="py-20 bg-gradient-to-b from-gray-900/20 to-gray-950">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold mb-4">Dejá de perseguir facturas</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            Probá TraceLess gratis. En 5 minutos tenés tu primera factura lista.
+          </p>
+          <Link to="/register" className="inline-block px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">
+            Probar Gratis
+          </Link>
         </div>
       </section>
 
@@ -149,7 +194,7 @@ export default function Landing() {
           <div className="flex items-center gap-4">
             <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
             <Link to="/privacidad" className="hover:text-gray-400">Privacidad</Link>
-            <span>Contacto: hola@traceless.com.ar</span>
+            <span>hola@traceless.com.ar</span>
           </div>
         </div>
       </footer>
