@@ -15,9 +15,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/dashboard" className="text-sm text-gray-400 hover:text-white">Dashboard</Link>
             <Link to="/clientes" className="text-sm text-gray-400 hover:text-white">Clientes</Link>
             <Link to="/facturas" className="text-sm text-gray-400 hover:text-white">Facturas</Link>
-            <Link to="/perfil" className="text-sm text-gray-400 hover:text-white">Perfil</Link>
           </div>
-          <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Salir</button>
+          <div className="flex items-center gap-3">
+            <Link to="/perfil" className="text-sm text-gray-400 hover:text-white">Mi Perfil</Link>
+            <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Salir</button>
+          </div>
         </div>
       </nav>
       <main className="max-w-6xl mx-auto px-4 py-8 flex-1">{children}</main>
