@@ -20,11 +20,17 @@ def get_user_id(authorization: str = ""):
         raise HTTPException(401, "Token inválido")
     return res.user.id
 
+class DetalleItem(BaseModel):
+    descripcion: str
+    cantidad: float = 1
+    precio_unitario: float
+
 class FacturaCreate(BaseModel):
     cliente_id: str
-    tipo: int = 6  # Factura B default
-    importe: float
+    tipo: int = 6
+    importe: Optional[float] = None
     descripcion: str = "Honorarios"
+    detalles: list[DetalleItem] = []
 
 @router.post("")
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
@@ -42,6 +48,12 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
 
+    if req.detalles:
+        subtotal = sum(d.cantidad * d.precio_unitario for d in req.detalles)
+        importe_total = round(subtotal, 2)
+    else:
+        importe_total = req.importe or 0
+
     last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
     ultimo_numero = 0
     if last.data:
@@ -54,11 +66,13 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         cliente_cuit=cliente.data.get("cuit", ""),
         cliente_nombre=f"{cliente.data['nombre']} {cliente.data.get('apellido', '')}",
         tipo=req.tipo,
-        importe=req.importe,
+        importe=importe_total,
         condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
         descripcion=req.descripcion,
         ultimo_numero=ultimo_numero,
     )
+
+    detalles_json = [d.model_dump() for d in req.detalles] if req.detalles else []
 
     factura_data = {
         "user_id": uid,
@@ -71,6 +85,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         "iva": afip_result["iva"],
         "total": afip_result["total"],
         "descripcion": req.descripcion,
+        "detalles": detalles_json,
         "fecha": datetime.now().strftime("%Y-%m-%d"),
         "estado": "emitida",
     }

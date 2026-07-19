@@ -38,8 +38,8 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     IVA: {cliente.get('condicion_iva', 'Consumidor Final')}
   </div>
   <table>
-    <tr><th>DescripciÃ³n</th><th style="text-align:right">Importe</th></tr>
-    <tr><td>{factura.get('descripcion', 'Servicios')}</td><td style="text-align:right">${factura['total']:,.2f}</td></tr>
+    <tr><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit</th><th style="text-align:right">Importe</th></tr>
+    {"".join(_detalle_html(d) for d in _detalles(factura)) if _detalles(factura) else _default_item(factura)}
   </table>
   <table class="totales">
     <tr><td>Neto</td><td style="text-align:right">${factura.get('neto', factura['total']):,.2f}</td></tr>
@@ -57,6 +57,16 @@ def guardar_factura_html(factura: dict, cliente: dict, emisor: dict) -> str:
     path = FACTURAS_DIR / filename
     path.write_text(html, encoding="utf-8")
     return f"/facturas/{filename}"
+
+def _detalles(f):
+    return f.get("detalles") or []
+
+def _detalle_html(d):
+    subt = d["cantidad"] * d["precio_unitario"]
+    return f'<tr><td>{d["descripcion"]}</td><td style="text-align:center">{d["cantidad"]}</td><td style="text-align:right">${d["precio_unitario"]:,.2f}</td><td style="text-align:right">${subt:,.2f}</td></tr>'
+
+def _default_item(f):
+    return f'<tr><td colspan="3">{f.get("descripcion", "Servicios")}</td><td style="text-align:right">${f["total"]:,.2f}</td></tr>'
 
 def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     return generar_html_factura(factura, cliente, emisor).encode("utf-8")

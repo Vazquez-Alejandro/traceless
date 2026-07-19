@@ -15,6 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/dashboard" className="text-sm text-gray-400 hover:text-white">Dashboard</Link>
             <Link to="/clientes" className="text-sm text-gray-400 hover:text-white">Clientes</Link>
             <Link to="/facturas" className="text-sm text-gray-400 hover:text-white">Facturas</Link>
+            <Link to="/perfil" className="text-sm text-gray-400 hover:text-white">Perfil</Link>
           </div>
           <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Salir</button>
         </div>
