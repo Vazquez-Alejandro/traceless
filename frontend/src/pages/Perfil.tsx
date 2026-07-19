@@ -52,7 +52,7 @@ export default function Perfil() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Mi Perfil</h1>
 
       {msg && <div className="mb-4 p-3 bg-green-900/30 border border-green-700/30 rounded-xl text-sm text-green-300">{msg}</div>}
