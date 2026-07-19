@@ -362,6 +362,45 @@ def analytics_clientes(authorization: str = Header("")):
     result.sort(key=lambda x: x["atraso_promedio"], reverse=True)
     return {"clientes": result}
 
+@router.get("/clientes/{cliente_id}")
+def historial_cliente(cliente_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    cli = supabase.table("clientes").select("*").eq("id", cliente_id).eq("user_id", uid).single().execute()
+    if not cli.data:
+        raise HTTPException(404, "Cliente no encontrado")
+    res = supabase.table("facturas").select("*").eq("cliente_id", cliente_id).eq("user_id", uid).order("created_at", desc=True).execute()
+    facturas = res.data
+    total = len(facturas)
+    pagadas_tiempo = 0
+    pagadas_vencidas = 0
+    impagas = 0
+    dias_atraso = []
+    total_facturado = 0
+    for f in facturas:
+        total_facturado += f["total"]
+        if f["estado"] == "pagada":
+            if f.get("fecha_pago") and f.get("vencimiento"):
+                dias = (datetime.strptime(f["fecha_pago"], "%Y-%m-%d") - datetime.strptime(f["vencimiento"], "%Y-%m-%d")).days
+                if dias <= 0:
+                    pagadas_tiempo += 1
+                else:
+                    pagadas_vencidas += 1
+                    dias_atraso.append(dias)
+            else:
+                pagadas_tiempo += 1
+        elif f["estado"] in ("emitida", "vencida"):
+            impagas += 1
+    atraso_prom = round(sum(dias_atraso) / len(dias_atraso)) if dias_atraso else 0
+    resumen = {
+        "total": total,
+        "total_facturado": total_facturado,
+        "pagadas_tiempo": pagadas_tiempo,
+        "pagadas_vencidas": pagadas_vencidas,
+        "impagas": impagas,
+        "atraso_promedio": atraso_prom,
+    }
+    return {"cliente": cli.data, "facturas": facturas, "resumen": resumen}
+
 @router.get("/{factura_id}")
 def obtener_factura(factura_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)

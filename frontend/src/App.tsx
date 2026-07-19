@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
+import ClienteHistorial from "./pages/ClienteHistorial";
 import Facturas from "./pages/Facturas";
 import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
+      <Route path="/clientes/:id" element={<ProtectedRoute><ClienteHistorial /></ProtectedRoute>} />
       <Route path="/facturas" element={<ProtectedRoute><Facturas /></ProtectedRoute>} />
       <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
       <Route path="/terminos" element={<Terminos />} />

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
 interface Cliente {
@@ -114,7 +115,10 @@ export default function Clientes() {
               <div className="font-medium">{c.nombre} {c.apellido}</div>
               <div className="text-xs text-gray-500">{c.cuit || c.email || c.telefono}</div>
             </div>
-            <button onClick={() => copiar(c)} className="text-xs text-gray-400 hover:text-white">Copiar</button>
+            <div className="flex items-center gap-2">
+              <Link to={`/clientes/${c.id}`} className="text-xs text-blue-400 hover:underline">Ver historial</Link>
+              <button onClick={() => copiar(c)} className="text-xs text-gray-400 hover:text-white">Copiar</button>
+            </div>
           </div>
         ))}
         {clientes.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No tenés clientes aún. Creá tu primero o importá un CSV.</p>}

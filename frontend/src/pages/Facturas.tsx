@@ -253,6 +253,11 @@ export default function Facturas() {
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">Recurrente</span>
                 )}
               </div>
+              <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1">
+                <span>📄 {f.fecha}</span>
+                {f.fecha_pago && <span>💚 {f.fecha_pago}</span>}
+                {f.estado === "anulada" && <span>🗑️ Anulada</span>}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {copiado === f.id ? (
