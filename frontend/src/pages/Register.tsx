@@ -21,10 +21,10 @@ export default function Register() {
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
       if (plan && plan !== "free") {
-        const p = await fetch(`${BASE_URL}/api/planes`, {
+        const p = await fetch(`${BASE_URL}/api/checkout/${plan}`, {
           headers: { Authorization: `Bearer ${res.token}` },
         }).then(r => r.json());
-        window.location.href = p.checkout_url || `/dashboard?upgrade=${plan}`;
+        window.location.href = p.url || `/dashboard?upgrade=${plan}`;
       } else {
         navigate("/dashboard");
       }

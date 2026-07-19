@@ -60,6 +60,7 @@ def checkout_url(plan_key: str, user_email: str) -> Optional[str]:
     return (
         f"https://app.lemonsqueezy.com/checkout/buy/{vid}"
         f"?checkout[email]={user_email}"
+        f"&checkout[custom][user_email]={user_email}"
     )
 
 def _verify_signature(payload: bytes, signature: str) -> bool:
