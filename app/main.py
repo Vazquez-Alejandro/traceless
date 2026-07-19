@@ -7,7 +7,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(name)s %(message)s",
 )
-logging.getLogger("zeep").setLevel(logging.WARNING)
+try: logging.getLogger("zeep").setLevel(logging.WARNING)
+except: pass
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 load_dotenv()

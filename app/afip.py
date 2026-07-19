@@ -3,8 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from lxml import etree
 import requests
-import zeep
-import zeep.exceptions
+
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -115,6 +114,7 @@ def _login() -> dict:
     tra = _generar_tra()
     cms_b64 = _firmar_cms(tra, cert, key)
 
+    import zeep
     client = zeep.Client(
         wsdl=_WSAA_WSDL,
         settings=zeep.Settings(strict=False),
@@ -123,7 +123,7 @@ def _login() -> dict:
 
     try:
         resp = service.loginCms(in0=cms_b64)
-    except zeep.exceptions.Fault as e:
+    except Exception as e:
         if "alreadyAuthenticated" in str(e):
             fresh = _ta_cache_load()
             if fresh and fresh["expires"] > now:
@@ -221,6 +221,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     neto = round(importe / (1 + iva_pct / 100), 2)
     iva_imp = round(importe - neto, 2)
 
+    import zeep
     client = zeep.Client(wsdl=_WSFE_WSDL)
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
