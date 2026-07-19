@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.db import supabase, _URL, _SERVICE_KEY
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
@@ -92,6 +92,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         "total": afip_result["total"],
         "descripcion": descripcion_final,
         "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
         "estado": "emitida",
     }
 
@@ -175,7 +176,7 @@ def pagar_factura(factura_id: str, authorization: str = Header("")):
         raise HTTPException(404, "Factura no encontrada")
     if factura.data["estado"] != "emitida":
         raise HTTPException(400, "Solo se pueden pagar facturas en estado emitida")
-    supabase.table("facturas").update({"estado": "pagada"}).eq("id", factura_id).execute()
+    supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura marcada como pagada"}
 
 @router.get("/export")
@@ -288,7 +289,9 @@ def procesar_recurrentes(secret: str = ""):
                             "neto": res["neto"], "iva": res["iva"],
                             "total": res["total"],
                             "descripcion": rec.get("descripcion",""),
-                            "fecha": hoy, "estado": "emitida",
+                            "fecha": hoy,
+                            "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+                            "estado": "emitida",
                         }
                         supabase.table("facturas").insert(fd).execute()
                         from datetime import timedelta
@@ -315,7 +318,49 @@ def estadisticas(authorization: str = Header("")):
     vencidas = sum(1 for f in facturas if f["estado"] == "vencida")
     pagadas = sum(1 for f in facturas if f["estado"] == "pagada")
     anuladas = sum(1 for f in facturas if f["estado"] == "anulada")
-    return {"totales": totales, "emitidas": emitidas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas}
+    por_cobrar = emitidas + vencidas
+    return {"totales": totales, "emitidas": emitidas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar}
+
+@router.get("/analytics/clientes")
+def analytics_clientes(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    res = supabase.table("facturas").select("total, fecha, vencimiento, fecha_pago, estado, clientes(nombre, apellido)").eq("user_id", uid).execute()
+    facturas = res.data
+    clientes: dict[str, dict] = {}
+    for f in facturas:
+        cli = f.get("clientes") or {}
+        cid = str(cli.get("nombre", "")) + " " + str(cli.get("apellido", ""))
+        if not cid.strip():
+            continue
+        if cid not in clientes:
+            clientes[cid] = {"cliente": cid.strip(), "total": 0, "pagadas_tiempo": 0, "pagadas_vencidas": 0, "impagas": 0, "dias_atraso": []}
+        c = clientes[cid]
+        c["total"] += 1
+        if f["estado"] == "pagada":
+            if f.get("fecha_pago") and f.get("vencimiento"):
+                dias = (datetime.strptime(f["fecha_pago"], "%Y-%m-%d") - datetime.strptime(f["vencimiento"], "%Y-%m-%d")).days
+                if dias <= 0:
+                    c["pagadas_tiempo"] += 1
+                else:
+                    c["pagadas_vencidas"] += 1
+                    c["dias_atraso"].append(dias)
+            else:
+                c["pagadas_tiempo"] += 1
+        elif f["estado"] in ("emitida", "vencida"):
+            c["impagas"] += 1
+    result = []
+    for c in clientes.values():
+        atraso_prom = round(sum(c["dias_atraso"]) / len(c["dias_atraso"])) if c["dias_atraso"] else 0
+        result.append({
+            "cliente": c["cliente"],
+            "total": c["total"],
+            "pagadas_tiempo": c["pagadas_tiempo"],
+            "pagadas_vencidas": c["pagadas_vencidas"],
+            "impagas": c["impagas"],
+            "atraso_promedio": atraso_prom,
+        })
+    result.sort(key=lambda x: x["atraso_promedio"], reverse=True)
+    return {"clientes": result}
 
 @router.get("/{factura_id}")
 def obtener_factura(factura_id: str, authorization: str = Header("")):

@@ -12,6 +12,8 @@ interface Factura {
   numero: string;
   total: number;
   fecha: string;
+  vencimiento: string;
+  fecha_pago?: string;
   estado: string;
   clientes: Cliente;
   pdf_url?: string;
@@ -238,7 +240,7 @@ export default function Facturas() {
           <div key={f.id} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800/40 flex items-center justify-between">
             <div>
               <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
+              <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha} · Vence: {f.vencimiento || "—"}</div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full ${
                   f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
