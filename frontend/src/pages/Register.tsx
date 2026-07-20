@@ -24,7 +24,12 @@ export default function Register() {
         const p = await fetch(`${BASE_URL}/api/checkout/${plan}`, {
           headers: { Authorization: `Bearer ${res.token}` },
         }).then(r => r.json());
-        window.location.href = p.url || `/dashboard?upgrade=${plan}`;
+        if (p.url) {
+          window.location.href = p.url;
+        } else {
+          console.error("Checkout error:", p);
+          navigate("/dashboard");
+        }
       } else {
         navigate("/dashboard");
       }
