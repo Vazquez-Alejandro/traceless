@@ -193,7 +193,10 @@ def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
         try:
             return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero)
         except Exception as e:
-            logger.warning("ARCA real falló, usando mock: %s", e)
+            logger.exception("ARCA real falló: %s", e)
+            import traceback
+            tb = traceback.format_exc()
+            logger.error("Traceback ARCA:\n%s", tb)
     return _mock_generate(cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
 def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str, ultimo_numero: int = 0) -> dict:
