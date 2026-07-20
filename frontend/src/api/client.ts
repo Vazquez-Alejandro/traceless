@@ -19,7 +19,11 @@ async function request(path: string, options: RequestInit = {}) {
   }
 
   try {
-    return await res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      return { error: data.detail || `Error ${res.status}` };
+    }
+    return data;
   } catch {
     const text = await res.text();
     return { error: text || `Error ${res.status}` };
