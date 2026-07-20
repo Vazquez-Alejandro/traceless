@@ -38,6 +38,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number }>({ invoices_limit: 3, invoices_used: 0 });
 
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
@@ -45,6 +46,9 @@ export default function Facturas() {
   useEffect(() => {
     load();
     api.clientes.list().then(res => setClientes(res.clientes || []));
+    api.auth.me().then(res => {
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used });
+    });
   }, []);
 
   useEffect(() => {
@@ -164,7 +168,13 @@ export default function Facturas() {
           }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             Exportar Excel
           </button>
-          <button onClick={() => { setShowForm(!showForm); setDetalles([]); setUsarItems(false); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+          <button onClick={() => {
+            if (userPlan.invoices_limit !== null && userPlan.invoices_used >= userPlan.invoices_limit) {
+              setToast(`Límite de ${userPlan.invoices_limit} facturas/mes alcanzado. Actualizá tu plan para seguir facturando.`);
+              return;
+            }
+            setShowForm(!showForm); setDetalles([]); setUsarItems(false);
+          }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
             {showForm ? "Cancelar" : "+ Nueva Factura"}
           </button>
         </div>

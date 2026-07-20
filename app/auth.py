@@ -64,8 +64,9 @@ def me(authorization: str = Header("")):
     if not res.user:
         raise HTTPException(401, "Token inválido")
     perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
-    from app.lemon import get_user_plan
+    from app.lemon import get_user_plan, get_invoice_count
     plan = get_user_plan(res.user.id)
+    invoices_used = get_invoice_count(res.user.id)
     wp_token = os.getenv("WHATSAPP_TOKEN", "")
     wp_phone = os.getenv("WHATSAPP_PHONE_ID", "")
     whatsapp_ok = bool(wp_token and wp_phone)
@@ -79,6 +80,8 @@ def me(authorization: str = Header("")):
             "cuit": perfil.data.get("cuit", "") if perfil.data else "",
             "direccion": perfil.data.get("direccion", "") if perfil.data else "",
             "condicion_iva": perfil.data.get("condicion_iva", "Responsable Inscripto") if perfil.data else "Responsable Inscripto",
+            "invoices_limit": plan["invoices_per_month"],
+            "invoices_used": invoices_used,
         }
     }
 
