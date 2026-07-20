@@ -259,6 +259,15 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     client = zeep.Client(wsdl=_WSFE_WSDL, transport=_arca_transport, settings=zeep.Settings(strict=False))
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
+    ultimo_arca = client.service.FECompUltimoAutorizado(Auth=auth, PtoVta=pto_vta, CbteTipo=tipo)
+    if hasattr(ultimo_arca, 'Errors') and ultimo_arca.Errors:
+        uerrs = []
+        for ue in (list(getattr(ultimo_arca.Errors, 'Err', []))):
+            uv = dict(ue.__values__) if hasattr(ue, '__values__') else {}
+            uerrs.append(f"[{uv.get('Codigo','?')}] {uv.get('Descripcion','?')}")
+        raise RuntimeError("Error al obtener último comprobante: " + " | ".join(uerrs))
+    prox_numero = (ultimo_arca.CbteNro or 0) + 1
+
     req = {
         "Auth": auth,
         "FeCAEReq": {
@@ -272,8 +281,8 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                     "Concepto": 1,
                     "DocTipo": doc_tipo,
                     "DocNro": doc_nro,
-                    "CbteDesde": 1,
-                    "CbteHasta": 1,
+                    "CbteDesde": prox_numero,
+                    "CbteHasta": prox_numero,
                     "CbteFch": datetime.now().strftime("%Y%m%d"),
                     "ImpTotal": neto + iva_imp,
                     "ImpTotConc": 0,
