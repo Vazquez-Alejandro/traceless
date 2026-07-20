@@ -111,6 +111,11 @@ export default function Facturas() {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
     }
     const res = await api.facturas.create(body);
+    if (res.error) {
+      setToast("Error: " + res.error);
+      setTimeout(() => setToast(""), 5000);
+      return;
+    }
     const id = res?.factura?.id;
     const link = id ? `${window.location.origin}/api/facturas/public/${id}` : "";
     setUltimoLink(link);
@@ -125,12 +130,20 @@ export default function Facturas() {
   const crearClienteRapido = async () => {
     if (!cliForm.nombre) return;
     const res = await api.clientes.create(cliForm);
+    if (res.error) {
+      setToast("Error al crear cliente: " + res.error);
+      return;
+    }
     const nuevo = res.cliente;
     setNuevoCliente(false);
     setCliForm({ nombre: "", apellido: "", telefono: "", cuit: "" });
     const list = await api.clientes.list();
     setClientes(list.clientes || []);
-    if (nuevo?.id) setForm({ ...form, cliente_id: nuevo.id });
+    if (nuevo?.id) {
+      setForm({ ...form, cliente_id: nuevo.id });
+      setToast("Cliente creado y seleccionado ✅");
+    }
+    setTimeout(() => setToast(""), 3000);
   };
 
   return (
