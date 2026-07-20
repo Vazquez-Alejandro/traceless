@@ -67,7 +67,7 @@ def _verify_signature(payload: bytes, signature: str) -> bool:
     if not WEBHOOK_SECRET:
         logger.warning("WEBHOOK_SECRET not set, skipping verification")
         return True
-    sig = hmac.new(WEBHOOK_SECRET.encode(), payload, hashlib.sha256).hexdigest()
+    sig = hmac.HMAC(WEBHOOK_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(f"sha256={sig}", signature)
 
 def _plan_from_variant(variant_id) -> str:
