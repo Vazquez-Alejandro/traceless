@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from lxml import etree
 import requests
+from requests.adapters import HTTPAdapter
 
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -11,17 +12,22 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7SignatureBui
 from cryptography import x509
 
 
-import urllib3.util.ssl_
-urllib3.util.ssl_.DEFAULT_CIPHERS = "DEFAULT:@SECLEVEL=0"
+_arca_ctx = ssl.create_default_context()
+_arca_ctx.check_hostname = False
+_arca_ctx.verify_mode = ssl.CERT_NONE
+_arca_ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
 
-_orig_create = urllib3.util.ssl_.create_urllib3_context
-def _arca_ssl_context(*args, **kwargs):
-    ctx = _orig_create(*args, **kwargs)
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
-    return ctx
-urllib3.util.ssl_.create_urllib3_context = _arca_ssl_context
+class _ArcaAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = _arca_ctx
+        return super().init_poolmanager(*args, **kwargs)
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = _arca_ctx
+        return super().proxy_manager_for(*args, **kwargs)
+
+_arca_ses = requests.Session()
+_arca_ses.mount("https://", _ArcaAdapter())
+_arca_transport = None
 
 logger = logging.getLogger("afip")
 
@@ -128,9 +134,14 @@ def _login() -> dict:
     cms_b64 = _firmar_cms(tra, cert, key)
 
     import zeep
+    from zeep.transports import Transport
+    global _arca_transport
+    if _arca_transport is None:
+        _arca_transport = Transport(session=_arca_ses)
     client = zeep.Client(
         wsdl=_WSAA_WSDL,
         settings=zeep.Settings(strict=False),
+        transport=_arca_transport,
     )
     service = client.bind('LoginCMSService', 'LoginCms')
 
@@ -241,7 +252,11 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     iva_imp = round(neto * iva_pct / 100, 2)
 
     import zeep
-    client = zeep.Client(wsdl=_WSFE_WSDL)
+    from zeep.transports import Transport
+    global _arca_transport
+    if _arca_transport is None:
+        _arca_transport = Transport(session=_arca_ses)
+    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_arca_transport)
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
     req = {
