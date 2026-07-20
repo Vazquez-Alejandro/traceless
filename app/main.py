@@ -66,8 +66,12 @@ def listar_planes(authorization: str = Header("")):
 
 @app.get("/api/checkout/{plan_key}")
 def get_checkout(plan_key: str, authorization: str = Header("")):
-    uid = get_user_id(authorization)
-    res = supabase.auth.admin.get_user_by_id(uid)
+    token = authorization.replace("Bearer ", "").strip()
+    if not token:
+        raise HTTPException(401, "Token requerido")
+    res = supabase.auth.get_user(token)
+    if not res.user:
+        raise HTTPException(401, "Token inválido")
     email = res.user.email
     url = checkout_url(plan_key, email)
     if not url:
