@@ -198,7 +198,7 @@ def get_condiciones_iva():
     ]
 
 def _punto_venta() -> int:
-    return int(os.getenv("ARCA_PUNTO_VENTA", "1"))
+    return int(os.getenv("ARCA_PUNTO_VENTA", "2"))
 
 def _doc_tipo(cuit: str) -> tuple:
     return (80, cuit.replace("-", ""))
