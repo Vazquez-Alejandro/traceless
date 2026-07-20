@@ -4,6 +4,8 @@ import httpx
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
 WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
 
+FOOTER = "\n\n✶ Hecho con TraceLess — traceless.com.ar"
+
 async def enviar_whatsapp(telefono: str, mensaje: str) -> dict:
     if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
         return {"status": "no_configured"}
@@ -17,7 +19,7 @@ async def enviar_whatsapp(telefono: str, mensaje: str) -> dict:
         "messaging_product": "whatsapp",
         "to": telefono,
         "type": "text",
-        "text": {"body": mensaje},
+        "text": {"body": mensaje + FOOTER},
     }
 
     async with httpx.AsyncClient() as client:
@@ -47,7 +49,6 @@ async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, tota
         f"🧾 *Factura {numero}*\n\n"
         f"{cuerpo}\n\n"
         f"Total: *${total:,.2f}*\n\n"
-        f"PDF: {pdf_url}\n\n"
-        f"Gracias por tu confianza."
+        f"PDF: {pdf_url}"
     )
     return await enviar_whatsapp(telefono, mensaje)
