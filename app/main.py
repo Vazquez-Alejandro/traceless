@@ -50,16 +50,6 @@ def root():
 def health():
     return {"status": "ok"}
 
-@app.get("/api/debug/checkout-config")
-def debug_checkout():
-    return {
-        "basic": os.getenv("LEMON_VARIANT_BASIC", "NOT SET"),
-        "pro": os.getenv("LEMON_VARIANT_PRO", "NOT SET"),
-        "pyme": os.getenv("LEMON_VARIANT_PYME", "NOT SET"),
-        "corporate": os.getenv("LEMON_VARIANT_CORPORATE", "NOT SET"),
-        "store_slug": os.getenv("LEMON_STORE_SLUG", "traceless"),
-    }
-
 @app.get("/api/planes")
 def listar_planes(authorization: str = Header("")):
     try:
