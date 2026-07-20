@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [plan, setPlan] = useState("Gratis");
   const [mensual, setMensual] = useState<{mes: string; total: number}[]>([]);
   const [clientesAnalytics, setClientesAnalytics] = useState<ClienteAnalytics[]>([]);
+  const [resumen, setResumen] = useState<{ mes_actual: number; mes_anterior: number; anio: number; mes_nombre: string } | null>(null);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -36,7 +37,10 @@ export default function Dashboard() {
       fetch(`${BASE_URL}/api/planes`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-    ]).then(([c, f, e, a, p]) => {
+      fetch(`${BASE_URL}/api/facturas/resumen`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+    ]).then(([c, f, e, a, p, r]) => {
       const facturas = f.facturas || [];
       setStats({
         clientes: (c.clientes || []).length,
@@ -48,6 +52,7 @@ export default function Dashboard() {
       });
       setPlan(p.plan_actual || "Gratis");
       setClientesAnalytics(a.clientes || []);
+      setResumen(r);
 
       const mesesMap: Record<string, number> = {};
       facturas.forEach((f: any) => {
@@ -87,6 +92,37 @@ export default function Dashboard() {
       )}
 
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+
+      {resumen && (
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/60 to-gray-900/30 border border-gray-800/40 mb-8">
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">Tu facturación</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
+              <div className="text-3xl font-bold text-white">${resumen.mes_actual.toLocaleString()}</div>
+              <div className="text-sm text-gray-400 mt-1">Facturado en {resumen.mes_nombre}</div>
+              {resumen.mes_anterior > 0 && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {resumen.mes_actual > resumen.mes_anterior ? "↗" : resumen.mes_actual < resumen.mes_anterior ? "↘" : "="}{" "}
+                  {resumen.mes_actual > resumen.mes_anterior
+                    ? `+$${(resumen.mes_actual - resumen.mes_anterior).toLocaleString()}`
+                    : resumen.mes_actual < resumen.mes_anterior
+                    ? `-$${(resumen.mes_anterior - resumen.mes_actual).toLocaleString()}`
+                    : "Igual"}{" "}
+                  vs mes anterior
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-white">${resumen.anio.toLocaleString()}</div>
+              <div className="text-sm text-gray-400 mt-1">Total del año</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-white">{stats.facturas}</div>
+              <div className="text-sm text-gray-400 mt-1">Facturas emitidas</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-4 gap-4 mb-8">
         {[

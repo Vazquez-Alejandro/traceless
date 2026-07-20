@@ -254,6 +254,47 @@ def enviar_recordatorios(secret: str = ""):
         enviados += 1
     return {"ok": True, "recordatorios_enviados": enviados}
 
+@router.get("/recordatorio-monotributo")
+def recordatorio_monotributo(secret: str = ""):
+    if secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(403, "No autorizado")
+    from app.whatsapp import enviar_whatsapp
+    import asyncio
+    from app.db import supabase as _sb
+    import httpx as _httpx
+    hoy = datetime.now()
+    dia = hoy.day
+    if dia < 20:
+        return {"ok": True, "mensaje": "Aun no es momento del recordatorio", "dia": dia}
+    r = _httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
+        params={"per_page": 100},
+    )
+    users = r.json().get("users", [])
+    enviados = 0
+    for u in users:
+        meta = u.get("app_metadata") or {}
+        plan = meta.get("plan", "free")
+        if plan == "free":
+            continue
+        perfil_r = _sb.table("perfiles").select("telefono, nombre").eq("id", u["id"]).execute()
+        perfil = perfil_r.data[0] if perfil_r.data else {}
+        tel = perfil.get("telefono", "")
+        nombre = perfil.get("nombre", "")
+        if not tel:
+            continue
+        cat = meta.get("monotributo_categoria", "")
+        msg = f"Hola {nombre}! " if nombre else "Hola! "
+        msg += "Recordá que pronto vence la cuota del monotributo."
+        if cat:
+            msg += f"\nTu categoria: {cat}"
+        msg += "\n\nNo te olvides de pagarlo para mantener todo en regla."
+        msg += "\n\n* Hecho con TraceLess -- traceless.com.ar"
+        asyncio.create_task(enviar_whatsapp(tel, msg))
+        enviados += 1
+    return {"ok": True, "enviados": enviados}
+
 @router.get("/recurrentes")
 def procesar_recurrentes(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
@@ -327,6 +368,38 @@ def estadisticas(authorization: str = Header("")):
     anuladas = sum(1 for f in facturas if f["estado"] == "anulada")
     por_cobrar = emitidas + vencidas
     return {"totales": totales, "emitidas": emitidas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar}
+
+@router.get("/resumen")
+def resumen(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    now = datetime.now()
+    anio = now.year
+    mes_actual = now.month
+    res = supabase.table("facturas").select("total, fecha, estado").eq("user_id", uid).execute()
+    facturas = res.data
+    mes_actual_total = 0
+    mes_anterior_total = 0
+    anio_total = 0
+    for f in facturas:
+        if f["estado"] == "anulada":
+            continue
+        total = f["total"]
+        anio_total += total
+        try:
+            fecha = datetime.strptime(f["fecha"], "%Y-%m-%d")
+            if fecha.year == anio:
+                if fecha.month == mes_actual:
+                    mes_actual_total += total
+                elif fecha.month == mes_actual - 1 or (mes_actual == 1 and fecha.month == 12):
+                    mes_anterior_total += total
+        except (ValueError, TypeError):
+            pass
+    return {
+        "mes_actual": round(mes_actual_total, 2),
+        "mes_anterior": round(mes_anterior_total, 2),
+        "anio": round(anio_total, 2),
+        "mes_nombre": now.strftime("%B").capitalize(),
+    }
 
 @router.get("/analytics/clientes")
 def analytics_clientes(authorization: str = Header("")):
