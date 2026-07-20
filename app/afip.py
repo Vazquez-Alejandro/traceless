@@ -11,26 +11,11 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7SignatureBui
 from cryptography import x509
 
 
-def _sesion_arca():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
-    from requests.adapters import HTTPAdapter
-    class ArcaAdapter(HTTPAdapter):
-        def init_poolmanager(self, *args, **kwargs):
-            kwargs["ssl_context"] = ctx
-            return super().init_poolmanager(*args, **kwargs)
-        def proxy_manager_for(self, *args, **kwargs):
-            kwargs["ssl_context"] = ctx
-            return super().proxy_manager_for(*args, **kwargs)
-    ses = requests.Session()
-    ses.mount("https://", ArcaAdapter())
-    return ses
-
-def _crear_transport():
-    import zeep
-    return zeep.Transport(session=_sesion_arca(), timeout=60)
+_default_ctx = ssl.create_default_context()
+_default_ctx.check_hostname = False
+_default_ctx.verify_mode = ssl.CERT_NONE
+_default_ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+ssl._create_default_https_context = lambda: _default_ctx
 
 logger = logging.getLogger("afip")
 
@@ -140,7 +125,6 @@ def _login() -> dict:
     client = zeep.Client(
         wsdl=_WSAA_WSDL,
         settings=zeep.Settings(strict=False),
-        transport=_crear_transport(),
     )
     service = client.bind('LoginCMSService', 'LoginCms')
 
@@ -251,7 +235,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     iva_imp = round(importe - neto, 2)
 
     import zeep
-    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_crear_transport())
+    client = zeep.Client(wsdl=_WSFE_WSDL)
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
     req = {
