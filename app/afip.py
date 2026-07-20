@@ -304,9 +304,18 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         raise RuntimeError(f"Error en FECAESolicitar: {e}")
 
     if hasattr(resp, 'Errors') and resp.Errors:
+        from zeep.helpers import serialize_object
         errs = []
-        for e in resp.Errors.Err:
-            errs.append(f"[{e.Codigo}] {e.Descripcion}")
+        raw = resp.Errors
+        if hasattr(raw, 'Err'):
+            items = raw.Err if isinstance(raw.Err, list) else [raw.Err]
+            for e in items:
+                ser = serialize_object(e)
+                cod = ser.get('Codigo', ser.get('codigo', '?'))
+                desc = ser.get('Descripcion', ser.get('descripcion', str(ser)))
+                errs.append(f"[{cod}] {desc}")
+        else:
+            errs.append(str(serialize_object(raw)))
         raise RuntimeError("Errores ARCA: " + " | ".join(errs))
 
     total_final = neto + iva_imp
