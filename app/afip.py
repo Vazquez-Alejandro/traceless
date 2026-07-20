@@ -238,7 +238,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     doc_tipo, doc_nro = _doc_tipo(cliente_cuit)
     iva_id, iva_pct = _alicuota_iva(tipo)
     neto = round(importe / (1 + iva_pct / 100), 2)
-    iva_imp = round(importe - neto, 2)
+    iva_imp = round(neto * iva_pct / 100, 2)
 
     import zeep
     client = zeep.Client(wsdl=_WSFE_WSDL)
@@ -260,7 +260,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                     "CbteDesde": 1,
                     "CbteHasta": 1,
                     "CbteFch": datetime.now().strftime("%Y%m%d"),
-                    "ImpTotal": importe,
+                    "ImpTotal": neto + iva_imp,
                     "ImpTotConc": 0,
                     "ImpNeto": neto,
                     "ImpOpEx": 0,
@@ -294,6 +294,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
             errs.append(f"[{e.Codigo}] {e.Descripcion}")
         raise RuntimeError("Errores ARCA: " + " | ".join(errs))
 
+    total_final = neto + iva_imp
     ed = resp.FeDetResp.FECAEDetResponse[0]
     return {
         "cae": ed.CAE,
@@ -301,6 +302,6 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         "numero": f"{pto_vta:04d}-{ed.CbteDesde:08d}",
         "neto": neto,
         "iva": iva_imp,
-        "total": importe,
+        "total": total_final,
         "tipo": tipo,
     }
