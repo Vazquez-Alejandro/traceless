@@ -24,7 +24,7 @@ export default function Perfil() {
     }).then(r => r.json()).then(d => {
       const u = d.user || d;
       setUser(u);
-      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto" });
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto" });
     });
   }, []);
 
@@ -82,6 +82,13 @@ export default function Perfil() {
               <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})}
                 className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
             ) : <p className="text-white mt-0.5">{user.cuit || "—"}</p>}
+          </div>
+          <div>
+            <label className="text-gray-500 text-xs">Domicilio fiscal</label>
+            {edit ? (
+              <input value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+            ) : <p className="text-white mt-0.5">{user.direccion || "—"}</p>}
           </div>
           <div>
             <label className="text-gray-500 text-xs">Teléfono</label>

@@ -77,6 +77,7 @@ def me(authorization: str = Header("")):
             "whatsapp_configurado": whatsapp_ok,
             "telefono": perfil.data.get("telefono", "") if perfil.data else "",
             "cuit": perfil.data.get("cuit", "") if perfil.data else "",
+            "direccion": perfil.data.get("direccion", "") if perfil.data else "",
             "condicion_iva": perfil.data.get("condicion_iva", "Responsable Inscripto") if perfil.data else "Responsable Inscripto",
         }
     }
