@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-import logging
+import logging, os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,9 +73,11 @@ def get_checkout(plan_key: str, authorization: str = Header("")):
     if not res.user:
         raise HTTPException(401, "Token inválido")
     email = res.user.email
+    vid = os.getenv(f"LEMON_VARIANT_{plan_key.upper()}", "")
+    logging.info(f"Checkout: plan={plan_key}, vid={vid}, email={email}")
     url = checkout_url(plan_key, email)
     if not url:
-        raise HTTPException(400, "Plan no disponible o no configurado")
+        raise HTTPException(400, f"Variant ID no configurado para plan '{plan_key}'. Variable LEMON_VARIANT_{plan_key.upper()} no encontrada o vacía.")
     return {"url": url}
 
 @app.post("/api/lemon/webhook")
