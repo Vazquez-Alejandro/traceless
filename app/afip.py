@@ -256,7 +256,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     global _arca_transport
     if _arca_transport is None:
         _arca_transport = Transport(session=_arca_ses)
-    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_arca_transport)
+    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_arca_transport, settings=zeep.Settings(strict=False))
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
     req = {
@@ -304,18 +304,17 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         raise RuntimeError(f"Error en FECAESolicitar: {e}")
 
     if hasattr(resp, 'Errors') and resp.Errors:
-        from zeep.helpers import serialize_object
         errs = []
         raw = resp.Errors
-        if hasattr(raw, 'Err'):
-            items = raw.Err if isinstance(raw.Err, list) else [raw.Err]
+        try:
+            items = list(raw.Err) if hasattr(raw, 'Err') else [raw]
             for e in items:
-                ser = serialize_object(e)
-                cod = ser.get('Codigo', ser.get('codigo', '?'))
-                desc = ser.get('Descripcion', ser.get('descripcion', str(ser)))
+                vals = dict(e.__values__) if hasattr(e, '__values__') else {}
+                cod = vals.get('Codigo', vals.get('codigo', '?'))
+                desc = vals.get('Descripcion', vals.get('descripcion', str(vals)))
                 errs.append(f"[{cod}] {desc}")
-        else:
-            errs.append(str(serialize_object(raw)))
+        except Exception as ex:
+            errs.append(f"parse_err={ex}, raw={str(raw)}")
         raise RuntimeError("Errores ARCA: " + " | ".join(errs))
 
     total_final = neto + iva_imp
