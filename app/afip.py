@@ -1,4 +1,4 @@
-import os, base64, uuid, logging
+import os, base64, uuid, logging, ssl
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from lxml import etree
@@ -9,6 +9,28 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7SignatureBuilder, PKCS7Options
 from cryptography import x509
+
+
+def _sesion_arca():
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+    from requests.adapters import HTTPAdapter
+    class ArcaAdapter(HTTPAdapter):
+        def init_poolmanager(self, *args, **kwargs):
+            kwargs["ssl_context"] = ctx
+            return super().init_poolmanager(*args, **kwargs)
+        def proxy_manager_for(self, *args, **kwargs):
+            kwargs["ssl_context"] = ctx
+            return super().proxy_manager_for(*args, **kwargs)
+    ses = requests.Session()
+    ses.mount("https://", ArcaAdapter())
+    return ses
+
+def _crear_transport():
+    import zeep
+    return zeep.Transport(session=_sesion_arca(), timeout=60)
 
 logger = logging.getLogger("afip")
 
@@ -118,6 +140,7 @@ def _login() -> dict:
     client = zeep.Client(
         wsdl=_WSAA_WSDL,
         settings=zeep.Settings(strict=False),
+        transport=_crear_transport(),
     )
     service = client.bind('LoginCMSService', 'LoginCms')
 
@@ -228,7 +251,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     iva_imp = round(importe - neto, 2)
 
     import zeep
-    client = zeep.Client(wsdl=_WSFE_WSDL)
+    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_crear_transport())
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
 
     req = {
