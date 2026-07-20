@@ -53,12 +53,14 @@ DEFAULT_PLAN = "free"
 def _variant_id(plan_key: str) -> Optional[str]:
     return os.getenv(f"LEMON_VARIANT_{plan_key.upper()}") or None
 
+STORE_SLUG = os.getenv("LEMON_STORE_SLUG", "traceless")
+
 def checkout_url(plan_key: str, user_email: str) -> Optional[str]:
     vid = _variant_id(plan_key)
     if not vid:
         return None
     return (
-        f"https://app.lemonsqueezy.com/checkout/buy/{vid}"
+        f"https://{STORE_SLUG}.lemonsqueezy.com/checkout/buy/{vid}"
         f"?checkout[email]={user_email}"
         f"&checkout[custom][user_email]={user_email}"
     )
