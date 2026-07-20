@@ -211,6 +211,18 @@ def factura_publica(factura_id: str):
         raise HTTPException(404, "Factura no encontrada")
     return {"factura": res.data}
 
+@router.get("/{factura_id}/pdf")
+def factura_pdf(factura_id: str):
+    f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).single().execute()
+    if not f.data:
+        raise HTTPException(404, "Factura no encontrada")
+    perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
+    emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
+    from app.pdf import generar_html_factura
+    html = generar_html_factura(f.data, f.data.get("clientes") or {}, emisor)
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(html)
+
 @router.get("/recordatorios")
 def enviar_recordatorios(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):

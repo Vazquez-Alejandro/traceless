@@ -302,7 +302,7 @@ export default function Facturas() {
               ) : (
                 <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Compartir</button>
               )}
-              <a href={f.pdf_url || `/api/facturas/${f.id}`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
+              <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
               {f.estado === "emitida" && (
                 <>
                   <button onClick={() => handlePay(f.id)} className="text-xs text-green-400 hover:underline">Pagada</button>
