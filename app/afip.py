@@ -261,11 +261,8 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
 
     ultimo_arca = client.service.FECompUltimoAutorizado(Auth=auth, PtoVta=pto_vta, CbteTipo=tipo)
     if hasattr(ultimo_arca, 'Errors') and ultimo_arca.Errors:
-        uerrs = []
-        for ue in (list(getattr(ultimo_arca.Errors, 'Err', []))):
-            uv = dict(ue.__values__) if hasattr(ue, '__values__') else {}
-            uerrs.append(f"[{uv.get('Codigo','?')}] {uv.get('Descripcion','?')}")
-        raise RuntimeError("Error al obtener último comprobante: " + " | ".join(uerrs))
+        from zeep.helpers import serialize_object
+        raise RuntimeError(f"Error al obtener último comprobante: {serialize_object(ultimo_arca.Errors)}")
     prox_numero = (ultimo_arca.CbteNro or 0) + 1
 
     req = {
@@ -313,18 +310,8 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         raise RuntimeError(f"Error en FECAESolicitar: {e}")
 
     if hasattr(resp, 'Errors') and resp.Errors:
-        errs = []
-        raw = resp.Errors
-        try:
-            items = list(raw.Err) if hasattr(raw, 'Err') else [raw]
-            for e in items:
-                vals = dict(e.__values__) if hasattr(e, '__values__') else {}
-                cod = vals.get('Codigo', vals.get('codigo', '?'))
-                desc = vals.get('Descripcion', vals.get('descripcion', str(vals)))
-                errs.append(f"[{cod}] {desc}")
-        except Exception as ex:
-            errs.append(f"parse_err={ex}, raw={str(raw)}")
-        raise RuntimeError("Errores ARCA: " + " | ".join(errs))
+        from zeep.helpers import serialize_object
+        raise RuntimeError(f"Errores ARCA: {serialize_object(resp.Errors)}")
 
     total_final = neto + iva_imp
     ed = resp.FeDetResp.FECAEDetResponse[0]
