@@ -11,11 +11,17 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7SignatureBui
 from cryptography import x509
 
 
-_default_ctx = ssl.create_default_context()
-_default_ctx.check_hostname = False
-_default_ctx.verify_mode = ssl.CERT_NONE
-_default_ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
-ssl._create_default_https_context = lambda: _default_ctx
+import urllib3.util.ssl_
+urllib3.util.ssl_.DEFAULT_CIPHERS = "DEFAULT:@SECLEVEL=0"
+
+_orig_create = urllib3.util.ssl_.create_urllib3_context
+def _arca_ssl_context(*args, **kwargs):
+    ctx = _orig_create(*args, **kwargs)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+    return ctx
+urllib3.util.ssl_.create_urllib3_context = _arca_ssl_context
 
 logger = logging.getLogger("afip")
 
@@ -278,9 +284,9 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     }
 
     try:
-        resp = client.service.FECAEASolicitar(**req)
+        resp = client.service.FECAESolicitar(**req)
     except Exception as e:
-        raise RuntimeError(f"Error en FECAEASolicitar: {e}")
+        raise RuntimeError(f"Error en FECAESolicitar: {e}")
 
     if hasattr(resp, 'Errors') and resp.Errors:
         errs = []
