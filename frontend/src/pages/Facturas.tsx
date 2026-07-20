@@ -37,6 +37,7 @@ export default function Facturas() {
   const [ultimoLink, setUltimoLink] = useState("");
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
+  const [loading, setLoading] = useState(false);
 
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
@@ -106,6 +107,7 @@ export default function Facturas() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo };
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
@@ -114,6 +116,7 @@ export default function Facturas() {
     if (res.error) {
       setToast("Error: " + res.error);
       setTimeout(() => setToast(""), 5000);
+      setLoading(false);
       return;
     }
     const id = res?.factura?.id;
@@ -124,14 +127,17 @@ export default function Facturas() {
     setUsarItems(false);
     setShowForm(false);
     setToast("Factura creada ✅ Compartila con tu cliente");
+    setLoading(false);
     load();
   };
 
   const crearClienteRapido = async () => {
     if (!cliForm.nombre) return;
+    setLoading(true);
     const res = await api.clientes.create(cliForm);
     if (res.error) {
       setToast("Error al crear cliente: " + res.error);
+      setLoading(false);
       return;
     }
     const nuevo = res.cliente;
@@ -143,6 +149,7 @@ export default function Facturas() {
       setForm({ ...form, cliente_id: nuevo.id });
       setToast("Cliente creado y seleccionado ✅");
     }
+    setLoading(false);
     setTimeout(() => setToast(""), 3000);
   };
 
@@ -238,8 +245,8 @@ export default function Facturas() {
             </div>
           )}
 
-          <button type="submit" className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">
-            Emitir Factura
+          <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+            {loading ? "Emitiendo..." : "Emitir Factura"}
           </button>
         </form>
       )}
