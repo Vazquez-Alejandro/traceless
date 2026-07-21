@@ -38,7 +38,17 @@ def get_user_id(authorization: str = ""):
 
 @router.post("/signup")
 def signup(req: SignupRequest):
-    res = supabase.auth.sign_up({"email": req.email, "password": req.password})
+    try:
+        res = supabase.auth.sign_up({"email": req.email, "password": req.password})
+    except Exception as e:
+        err = str(e)
+        if "rate limit" in err.lower() or "429" in err:
+            raise HTTPException(429, "Demasiados registros. Esperá un momento.")
+        if "already registered" in err.lower() or "already exists" in err.lower():
+            raise HTTPException(409, "Este email ya está registrado. Iniciá sesión.")
+        logger.error(f"Error en signup: {e}")
+        raise HTTPException(500, "Error al crear la cuenta")
+
     if res.user:
         try:
             admin_insert("perfiles", {
