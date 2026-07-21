@@ -32,7 +32,10 @@ export default function Landing() {
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between h-16 px-6">
-          <span className="font-bold text-xl">TraceLess</span>
+          <span className="flex items-center gap-2">
+            <img src="/favicon.svg" alt="TraceLess" className="w-8 h-8 rounded-lg" />
+            <span className="font-bold text-xl">TraceLess</span>
+          </span>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-sm text-gray-400 hover:text-white">Iniciar Sesión</Link>
             <Link to="/register" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">Comenzar Gratis</Link>

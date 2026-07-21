@@ -12,6 +12,10 @@ router = APIRouter(prefix="/api/retry", tags=["retry"])
 def queue_factura(user_id: str, cliente_id: str, tipo: int, importe: float,
                   descripcion: str = "Honorarios", detalles: list = None,
                   recurrente: bool = False, error: str = ""):
+    from app.lemon import has_feature
+    if not has_feature(user_id, "retry_queue"):
+        logger.info(f"Factura NO encolada: user={user_id} no tiene plan con retry_queue")
+        return
     supabase.table("facturas_pendientes").insert({
         "user_id": user_id,
         "cliente_id": cliente_id,

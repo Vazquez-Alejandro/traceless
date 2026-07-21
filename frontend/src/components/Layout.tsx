@@ -11,7 +11,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-full mx-auto flex items-center justify-between h-14 px-6">
           <div className="flex items-center gap-6">
-            <Link to="/dashboard" className="font-bold text-lg">TraceLess</Link>
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <img src="/favicon.svg" alt="TraceLess" className="w-7 h-7 rounded-lg" />
+              <span className="font-bold text-lg">TraceLess</span>
+            </Link>
             <Link to="/dashboard" className="text-sm text-gray-400 hover:text-white">Dashboard</Link>
             <Link to="/clientes" className="text-sm text-gray-400 hover:text-white">Clientes</Link>
             <Link to="/facturas" className="text-sm text-gray-400 hover:text-white">Facturas</Link>

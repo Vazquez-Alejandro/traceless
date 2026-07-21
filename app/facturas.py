@@ -6,7 +6,7 @@ from app.db import supabase, _URL, _SERVICE_KEY
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
-from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send
+from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send, has_feature
 from app.retry_queue import queue_factura
 import os
 
@@ -41,6 +41,9 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     ok, msg = can_create_invoice(uid)
     if not ok:
         raise HTTPException(402, msg)
+
+    if req.recurrente and not has_feature(uid, "recurrentes"):
+        raise HTTPException(403, "Facturas recurrentes disponibles en plan Profesional y Equipo")
 
     try:
         result = await _crear_factura_interna(uid, req)
@@ -430,6 +433,8 @@ def resumen(authorization: str = Header("")):
 @router.get("/analytics/clientes")
 def analytics_clientes(authorization: str = Header("")):
     uid = get_user_id(authorization)
+    if not has_feature(uid, "analytics"):
+        raise HTTPException(403, "Analytics disponible en plan Profesional y Equipo")
     res = supabase.table("facturas").select("total, fecha, vencimiento, fecha_pago, estado, clientes(nombre, apellido)").eq("user_id", uid).execute()
     facturas = res.data
     clientes: dict[str, dict] = {}

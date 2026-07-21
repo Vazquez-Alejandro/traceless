@@ -201,6 +201,10 @@ def can_send_whatsapp(user_id: str) -> tuple[bool, str]:
         return False, f"Límite de {limit} mensajes WhatsApp/mes alcanzado ({count}/{limit}). Actualizá tu plan."
     return True, ""
 
+def has_feature(user_id: str, feature: str) -> bool:
+    plan = get_user_plan(user_id)
+    return plan.get(feature, False)
+
 def log_whatsapp_send(user_id: str, factura_id: str = "", tipo: str = "factura"):
     supabase.table("whatsapp_log").insert({
         "user_id": user_id,
