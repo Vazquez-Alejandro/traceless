@@ -68,6 +68,8 @@ def login(req: LoginRequest):
     res = supabase.auth.sign_in_with_password({"email": req.email, "password": req.password})
     if not res.session:
         raise HTTPException(401, "Credenciales inválidas")
+    if res.user and res.user.email_confirmed_at is None:
+        raise HTTPException(403, "Tu email no fue verificado. Revisá tu casilla de correo.")
     return {
         "token": res.session.access_token,
         "refresh_token": res.session.refresh_token,

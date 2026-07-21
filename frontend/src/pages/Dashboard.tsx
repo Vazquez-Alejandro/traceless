@@ -175,7 +175,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {resumen && (
+      {resumen && resumen.mes_actual !== undefined && resumen.mes_actual !== null && (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/60 to-gray-900/30 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold text-gray-400 mb-3">Tu facturación</h2>
           <div className="grid md:grid-cols-3 gap-6">
