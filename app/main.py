@@ -36,7 +36,7 @@ from app.auth import router as auth_router, get_user_id
 from app.clientes import router as clientes_router
 from app.facturas import router as facturas_router
 from app.db import supabase
-from app.lemon import handle_webhook, checkout_url, get_user_plan, PLANS, get_whatsapp_count
+from app.lemon import handle_webhook, get_user_plan, PLANS, get_whatsapp_count
 from app.mercadopago import router as mp_router
 from app.retry_queue import router as retry_router
 
@@ -67,22 +67,6 @@ def listar_planes(authorization: str = Header("")):
         return {
             "planes": {k: {**v} for k, v in PLANS.items()},
         }
-
-@app.get("/api/checkout/{plan_key}")
-def get_checkout(plan_key: str, authorization: str = Header("")):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    email = res.user.email
-    vid = os.getenv(f"LEMON_VARIANT_{plan_key.upper()}", "")
-    logging.info(f"Checkout: plan={plan_key}, vid={vid}, email={email}")
-    url = checkout_url(plan_key, email)
-    if not url:
-        raise HTTPException(400, f"Variant ID no configurado para plan '{plan_key}'. Variable LEMON_VARIANT_{plan_key.upper()} no encontrada o vacía.")
-    return {"url": url}
 
 @app.get("/api/whatsapp/stats")
 def whatsapp_stats(authorization: str = Header("")):
