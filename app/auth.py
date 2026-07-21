@@ -108,18 +108,26 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
     if not plan:
         raise HTTPException(400, "Parámetro 'plan' requerido")
     uid = get_user_id(authorization)
-    from app.lemon import checkout_url
+    from app.mercadopago import MP_PRICES, MP_TOKEN
+    if plan not in MP_PRICES:
+        raise HTTPException(400, "Plan no válido")
     res = supabase.auth.get_user(authorization.replace("Bearer ", "").strip())
     email = res.user.email
-    url = checkout_url(plan, email)
-    if not url:
-        raise HTTPException(400, "Plan no disponible")
-    return {"url": url}
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
-    return {"user": {"id": res.user.id, "email": res.user.email, "nombre": perfil.data.get("nombre", "") if perfil.data else ""}}
+    import httpx
+    body = {
+        "items": [{
+            "id": plan,
+            "title": f"TraceLess Plan {MP_PRICES[plan]['name']}",
+            "quantity": 1,
+            "unit_price": MP_PRICES[plan]["amount"],
+            "currency_id": "ARS",
+        }],
+        "payer": {"email": email},
+        "external_reference": uid,
+        "statement_descriptor": "TRACELESS",
+    }
+    r = httpx.post("https://api.mercadopago.com/checkout/preferences", json=body,
+        headers={"Authorization": f"Bearer {MP_TOKEN}", "Content-Type": "application/json"}, timeout=15)
+    if r.status_code not in (200, 201):
+        raise HTTPException(500, "Error al crear preferencia de pago")
+    return {"url": r.json()["init_point"]}
