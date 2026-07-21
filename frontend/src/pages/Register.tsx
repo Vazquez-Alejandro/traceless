@@ -27,6 +27,10 @@ export default function Register() {
     if (!selectedPlan) return;
     try {
       const signupRes = await api.auth.signup({ email, password, name });
+      if (signupRes.error) {
+        setError(signupRes.error);
+        return;
+      }
       if (signupRes.user?.needs_verification) {
         setVerified(true);
         return;
