@@ -44,7 +44,8 @@ export default function Perfil() {
   const handleUpgrade = async (planKey: string) => {
     if (planKey === "free") return;
     const token = localStorage.getItem("token");
-    const r = await fetch(`${BASE_URL}/api/checkout/${planKey}`, {
+    const r = await fetch(`${BASE_URL}/api/mercadopago/checkout?plan_key=${planKey}`, {
+      method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
     const d = await r.json();

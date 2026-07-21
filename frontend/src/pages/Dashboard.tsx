@@ -80,7 +80,8 @@ export default function Dashboard() {
 
   const handleUpgrade = async (planKey: string) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${BASE_URL}/api/checkout/${planKey}`, {
+    const res = await fetch(`${BASE_URL}/api/mercadopago/checkout?plan_key=${planKey}`, {
+      method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
