@@ -52,7 +52,7 @@ def root():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "v2-resend"}
 
 @app.get("/api/planes")
 def listar_planes(authorization: str = Header("")):
