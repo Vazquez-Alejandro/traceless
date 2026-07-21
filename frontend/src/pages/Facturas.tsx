@@ -5,16 +5,19 @@ interface Cliente {
   id: string;
   nombre: string;
   apellido: string;
+  telefono?: string;
 }
 
 interface Factura {
   id: string;
   numero: string;
+  tipo: number;
   total: number;
   fecha: string;
   vencimiento: string;
   fecha_pago?: string;
   estado: string;
+  descripcion?: string;
   clientes: Cliente;
   pdf_url?: string;
 }
@@ -93,6 +96,35 @@ export default function Facturas() {
     setTimeout(() => setCopiado(""), 2000);
   };
 
+  const handleWhatsApp = (f: Factura) => {
+    const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
+    const url = `${window.location.origin}/api/facturas/public/${f.id}`;
+    const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}`);
+    const waUrl = telefono ? `https://wa.me/54${telefono}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    window.open(waUrl, "_blank");
+  };
+
+  const handleClone = (f: Factura) => {
+    let desc = "Honorarios";
+    try {
+      const parsed = JSON.parse(f.descripcion || "");
+      desc = parsed.d || "Honorarios";
+    } catch {
+      desc = f.descripcion || "Honorarios";
+    }
+    setForm({
+      cliente_id: f.clientes?.id || "",
+      tipo: f.tipo,
+      importe: String(f.total),
+      descripcion: desc,
+      recurrente: false,
+    });
+    setDetalles([]);
+    setUsarItems(false);
+    setShowForm(true);
+    setToast("Datos copiados. Modificá lo que necesites y emití.");
+  };
+
   const addItem = () => {
     setDetalles([...detalles, { descripcion: "", cantidad: 1, precio_unitario: 0 }]);
   };
@@ -121,6 +153,17 @@ export default function Facturas() {
       setToast("Error: " + res.error);
       setTimeout(() => setToast(""), 5000);
       setLoading(false);
+      return;
+    }
+    if (res.pendiente) {
+      setToast("⏳ ARCA está tomando un café. Dejanos la factura acá, nos encargamos de aprobarla y enviarla por WhatsApp apenas vuelva. Podés cerrar la app tranquilo.");
+      setTimeout(() => setToast(""), 8000);
+      setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
+      setDetalles([]);
+      setUsarItems(false);
+      setShowForm(false);
+      setLoading(false);
+      load();
       return;
     }
     const id = res?.factura?.id;
@@ -262,10 +305,10 @@ export default function Facturas() {
       )}
 
       {toast && (
-        <div className="mb-4 p-3 rounded-xl bg-green-900/40 border border-green-700/40 text-sm text-green-300 flex items-center justify-center gap-2">
+        <div className="mb-4 p-3 rounded-xl bg-blue-900/30 border border-blue-700/30 text-sm text-blue-200 flex items-center justify-center gap-2">
           <span>{toast}</span>
           {ultimoLink && (
-            <button onClick={() => { navigator.clipboard.writeText(ultimoLink); setToast("✅ Link copiado"); }} className="text-green-200 underline hover:text-white text-xs">
+            <button onClick={() => { navigator.clipboard.writeText(ultimoLink); setToast("✅ Link copiado"); }} className="text-blue-300 underline hover:text-white text-xs">
               Copiar link
             </button>
           )}
@@ -297,10 +340,12 @@ export default function Facturas() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => handleClone(f)} title="Reemitir esta factura" className="text-xs text-gray-400 hover:text-white">Reemitir</button>
+              <button onClick={() => handleWhatsApp(f)} title="Enviar por WhatsApp" className="text-xs text-green-400 hover:text-green-300">WhatsApp</button>
               {copiado === f.id ? (
                 <span className="text-xs text-green-400">¡Link copiado!</span>
               ) : (
-                <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Compartir</button>
+                <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Copiar link</button>
               )}
               <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
               {f.estado === "emitida" && (
