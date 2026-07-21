@@ -10,4 +10,3 @@ lxml
 requests
 zeep
 openpyxl
-mercadopago
