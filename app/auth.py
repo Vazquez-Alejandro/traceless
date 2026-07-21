@@ -3,9 +3,104 @@ from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
 from app.db import supabase, admin_insert, _URL, _SERVICE_KEY
-import os, logging
+import os, logging, jwt
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger("auth")
+
+# Resend config
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <noreply@traceless.com.ar>")
+VERIFY_SECRET = os.getenv("VERIFY_SECRET", os.getenv("JWT_SECRET", "change-me"))
+BASE_URL = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+
+def create_verify_token(email: str) -> str:
+    payload = {"email": email, "exp": datetime.now(timezone.utc) + timedelta(hours=24), "type": "verify"}
+    return jwt.encode(payload, VERIFY_SECRET, algorithm="HS256")
+
+def verify_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(token, VERIFY_SECRET, algorithms=["HS256"])
+        if payload.get("type") != "verify":
+            return None
+        return payload.get("email")
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def create_reset_token(email: str) -> str:
+    payload = {"email": email, "exp": datetime.now(timezone.utc) + timedelta(hours=1), "type": "reset"}
+    return jwt.encode(payload, VERIFY_SECRET, algorithm="HS256")
+
+def verify_reset_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(token, VERIFY_SECRET, algorithms=["HS256"])
+        if payload.get("type") != "reset":
+            return None
+        return payload.get("email")
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def send_reset_email(email: str, token: str) -> bool:
+    if not RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY no configurado, saltando envío de mail")
+        return False
+    try:
+        import resend
+        resend.api_key = RESEND_API_KEY
+        reset_url = f"{BASE_URL}/reset-password?token={token}"
+        resend.Emails.send({
+            "from": RESEND_FROM,
+            "to": email,
+            "subject": "Restablecé tu contraseña en TraceLess",
+            "html": f"""
+                <div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px;">
+                    <h2 style="color:#1e293b;">Restablecer contraseña</h2>
+                    <p>Hacé clic para elegir una nueva contraseña:</p>
+                    <p style="margin:24px 0;">
+                        <a href="{reset_url}" style="background:#3b82f6;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Restablecer contraseña</a>
+                    </p>
+                    <p style="color:#64748b;font-size:14px;">O copiá este link:<br><a href="{reset_url}">{reset_url}</a></p>
+                    <p style="color:#64748b;font-size:12px;">Expira en 1 hora. Si no pediste esto, ignorá este mail.</p>
+                </div>
+            """
+        })
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando mail reset: {e}")
+        return False
+
+def send_verification_email(email: str, token: str) -> bool:
+    if not RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY no configurado, saltando envío de mail")
+        return False
+    try:
+        import resend
+        resend.api_key = RESEND_API_KEY
+        verify_url = f"{BASE_URL}/verify-email?token={token}"
+        resend.Emails.send({
+            "from": RESEND_FROM,
+            "to": email,
+            "subject": "Verificá tu cuenta en TraceLess",
+            "html": f"""
+                <div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px;">
+                    <h2 style="color:#1e293b;">Bienvenido a TraceLess</h2>
+                    <p>Hacé clic para activar tu cuenta:</p>
+                    <p style="margin:24px 0;">
+                        <a href="{verify_url}" style="background:#3b82f6;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Verificar cuenta</a>
+                    </p>
+                    <p style="color:#64748b;font-size:14px;">O copiá este link:<br><a href="{verify_url}">{verify_url}</a></p>
+                    <p style="color:#64748b;font-size:12px;">Expira en 24 horas. Si no te registraste, ignorá este mail.</p>
+                </div>
+            """
+        })
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando mail verificación: {e}")
+        return False
 
 # Map plan names back to keys
 _PLAN_NAME_TO_KEY = {"Gratis": "free", "Profesional": "pro", "Equipo": "team"}
@@ -25,6 +120,7 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 class ResetPasswordRequest(BaseModel):
+    token: str
     password: str
 
 def get_user_id(authorization: str = ""):
@@ -69,6 +165,11 @@ def signup(req: SignupRequest):
             )
         except Exception as e:
             logger.warning(f"Error seteando plan: {e}")
+
+    # Crear token y enviar mail de verificación
+    token = create_verify_token(req.email)
+    send_verification_email(req.email, token)
+
     return {"user": {"email": req.email, "needs_verification": True}}
 
 @router.post("/login")
@@ -86,20 +187,73 @@ def login(req: LoginRequest):
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest):
-    base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
-    supabase.auth.reset_password_for_email(
-        req.email,
-        redirect_to=f"{base_url}/reset-password",
-    )
+    token = create_reset_token(req.email)
+    send_reset_email(req.email, token)
     return {"ok": True, "mensaje": "Si el email existe, recibiste un link para restablecer tu contraseña."}
 
 @router.post("/reset-password")
-def reset_password(req: ResetPasswordRequest, authorization: str = Header("")):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    supabase.auth.update_user(token, {"password": req.password})
+def reset_password(req: ResetPasswordRequest):
+    email = verify_reset_token(req.token)
+    if not email:
+        raise HTTPException(400, "Link inválido o expirado")
+
+    import httpx
+    r = httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        params={"filter[email]": f"eq.{email}"},
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
+        timeout=10,
+    )
+    if r.status_code != 200 or not r.json().get("users"):
+        raise HTTPException(404, "Usuario no encontrado")
+
+    user = r.json()["users"][0]
+    r2 = httpx.put(
+        f"{_URL}/auth/v1/admin/users/{user['id']}",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+        json={"password": req.password},
+        timeout=10,
+    )
+    if r2.status_code != 200:
+        raise HTTPException(500, "Error al actualizar la contraseña")
+
     return {"ok": True, "mensaje": "Contraseña actualizada"}
+
+class VerifyRequest(BaseModel):
+    token: str
+
+@router.post("/verify-email")
+def verify_email(req: VerifyRequest):
+    email = verify_token(req.token)
+    if not email:
+        raise HTTPException(400, "Link inválido o expirado")
+
+    # Buscar usuario en Supabase admin API
+    import httpx
+    r = httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        params={"filter[email]": f"eq.{email}"},
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
+        timeout=10,
+    )
+    if r.status_code != 200 or not r.json().get("users"):
+        raise HTTPException(404, "Usuario no encontrado")
+
+    user = r.json()["users"][0]
+    if user.get("email_confirmed_at"):
+        return {"ok": True, "mensaje": "Email ya estaba verificado"}
+
+    now = datetime.now(timezone.utc).isoformat()
+    r2 = httpx.put(
+        f"{_URL}/auth/v1/admin/users/{user['id']}",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+        json={"email_confirmed_at": now},
+        timeout=10,
+    )
+    if r2.status_code != 200:
+        raise HTTPException(500, "Error al confirmar el email")
+
+    return {"ok": True, "mensaje": "Email verificado correctamente"}
 
 @router.get("/me")
 def me(authorization: str = Header("")):

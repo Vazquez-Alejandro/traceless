@@ -20,13 +20,12 @@ export default function ResetPassword() {
       setError("Las contraseñas no coinciden");
       return;
     }
-    const token = searchParams.get("access_token") || searchParams.get("token") || "";
+    const token = searchParams.get("token") || "";
     if (!token) {
       setError("Token inválido. Pedí un nuevo link de recuperación.");
       return;
     }
-    localStorage.setItem("token", token);
-    const res = await api.auth.resetPassword(password);
+    const res = await api.auth.resetPassword(token, password);
     if (res.error) {
       setError("Error al actualizar la contraseña. Pedí un nuevo link.");
     } else {

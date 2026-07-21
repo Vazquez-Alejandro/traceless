@@ -10,3 +10,4 @@ lxml
 requests
 zeep
 openpyxl
+resend>=2.34.0
