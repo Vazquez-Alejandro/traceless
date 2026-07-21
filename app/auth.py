@@ -7,6 +7,9 @@ import os, logging
 
 logger = logging.getLogger("auth")
 
+# Map plan names back to keys
+_PLAN_NAME_TO_KEY = {"Gratis": "free", "Profesional": "pro", "Equipo": "team"}
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 class SignupRequest(BaseModel):
@@ -96,9 +99,6 @@ def me(authorization: str = Header("")):
         raise HTTPException(401, "Token inválido")
     perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
     from app.lemon import get_user_plan, get_invoice_count, get_whatsapp_count
-
-# Map plan names back to keys
-_PLAN_NAME_TO_KEY = {"Gratis": "free", "Profesional": "pro", "Equipo": "team"}
     plan = get_user_plan(res.user.id)
     invoices_used = get_invoice_count(res.user.id)
     whatsapp_used = get_whatsapp_count(res.user.id)
