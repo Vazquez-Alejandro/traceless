@@ -134,39 +134,45 @@ def get_user_id(authorization: str = ""):
 
 @router.post("/signup")
 def signup(req: SignupRequest):
-    try:
-        res = supabase.auth.sign_up({"email": req.email, "password": req.password})
-    except Exception as e:
-        err = str(e)
-        if "rate limit" in err.lower() or "429" in err:
-            raise HTTPException(429, "Demasiados registros. Esperá un momento.")
-        if "already registered" in err.lower() or "already exists" in err.lower():
-            raise HTTPException(409, "Este email ya está registrado. Iniciá sesión.")
-        logger.error(f"Error en signup: {e}")
+    import httpx
+    from datetime import datetime, timedelta, timezone
+
+    # Crear usuario via admin API (bypassea rate limit de Supabase)
+    r = httpx.post(
+        f"{_URL}/auth/v1/admin/users",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+        json={"email": req.email, "password": req.password, "email_confirm": False},
+        timeout=10,
+    )
+    if r.status_code == 409:
+        raise HTTPException(409, "Este email ya está registrado. Iniciá sesión.")
+    if r.status_code != 200:
+        logger.error(f"Error creando usuario: {r.status_code} {r.text}")
         raise HTTPException(500, "Error al crear la cuenta")
 
-    if res.user:
-        try:
-            admin_insert("perfiles", {
-                "id": res.user.id,
-                "email": req.email,
-                "nombre": req.name,
-            })
-        except Exception as e:
-            logger.warning(f"Error insertando perfil: {e}")
-        from datetime import datetime, timedelta, timezone
-        trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        import httpx
-        try:
-            r = httpx.put(
-                f"{_URL}/auth/v1/admin/users/{res.user.id}",
-                headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-                json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
-            )
-        except Exception as e:
-            logger.warning(f"Error seteando plan: {e}")
+    user = r.json()
+    user_id = user["id"]
 
-    # Crear token y enviar mail de verificación
+    try:
+        admin_insert("perfiles", {
+            "id": user_id,
+            "email": req.email,
+            "nombre": req.name,
+        })
+    except Exception as e:
+        logger.warning(f"Error insertando perfil: {e}")
+
+    trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    try:
+        httpx.put(
+            f"{_URL}/auth/v1/admin/users/{user_id}",
+            headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+            json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
+            timeout=10,
+        )
+    except Exception as e:
+        logger.warning(f"Error seteando plan: {e}")
+
     token = create_verify_token(req.email)
     send_verification_email(req.email, token)
 
