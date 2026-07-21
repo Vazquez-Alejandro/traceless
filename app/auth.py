@@ -59,9 +59,7 @@ def signup(req: SignupRequest):
             )
         except Exception as e:
             logger.warning(f"Error seteando plan: {e}")
-        needs_verification = res.user.email_confirmed_at is None
-        return {"user": {"id": res.user.id, "email": req.email, "needs_verification": needs_verification}}
-    return {"user": None}
+    return {"user": {"email": req.email, "needs_verification": True}}
 
 @router.post("/login")
 def login(req: LoginRequest):
@@ -101,7 +99,18 @@ def me(authorization: str = Header("")):
     res = supabase.auth.get_user(token)
     if not res.user:
         raise HTTPException(401, "Token inválido")
-    perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
+    perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).execute()
+    perfil_data = perfil.data[0] if perfil.data else None
+    if not perfil_data:
+        try:
+            admin_insert("perfiles", {
+                "id": res.user.id,
+                "email": res.user.email or "",
+                "nombre": "",
+            })
+            perfil_data = {"id": res.user.id, "email": res.user.email, "nombre": ""}
+        except Exception as e:
+            logger.warning(f"Error creando perfil en me(): {e}")
     from app.lemon import get_user_plan, get_invoice_count, get_whatsapp_count
     plan = get_user_plan(res.user.id)
     invoices_used = get_invoice_count(res.user.id)
@@ -113,7 +122,7 @@ def me(authorization: str = Header("")):
     return {
         "user": {
             "id": res.user.id, "email": res.user.email,
-            "nombre": perfil.data.get("nombre", "") if perfil.data else "",
+            "nombre": perfil_data.get("nombre", "") if perfil_data else "",
             "plan": plan["name"],
             "plan_key": plan_key,
             "features": {
@@ -123,10 +132,10 @@ def me(authorization: str = Header("")):
                 "retry_queue": plan.get("retry_queue", False),
             },
             "whatsapp_configurado": whatsapp_ok,
-            "telefono": perfil.data.get("telefono", "") if perfil.data else "",
-            "cuit": perfil.data.get("cuit", "") if perfil.data else "",
-            "direccion": perfil.data.get("direccion", "") if perfil.data else "",
-            "condicion_iva": perfil.data.get("condicion_iva", "Responsable Inscripto") if perfil.data else "Responsable Inscripto",
+            "telefono": perfil_data.get("telefono", "") if perfil_data else "",
+            "cuit": perfil_data.get("cuit", "") if perfil_data else "",
+            "direccion": perfil_data.get("direccion", "") if perfil_data else "",
+            "condicion_iva": perfil_data.get("condicion_iva", "Responsable Inscripto") if perfil_data else "Responsable Inscripto",
             "invoices_limit": plan["invoices_per_month"],
             "invoices_used": invoices_used,
             "whatsapp_limit": plan.get("whatsapp_monthly_limit", 0),
