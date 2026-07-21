@@ -15,6 +15,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [verified, setVerified] = useState(false);
   const [searchParams] = useSearchParams();
   const planParam = searchParams.get("plan");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(planParam);
@@ -25,7 +26,11 @@ export default function Register() {
     setError("");
     if (!selectedPlan) return;
     try {
-      await api.auth.signup({ email, password, name });
+      const signupRes = await api.auth.signup({ email, password, name });
+      if (signupRes.user?.needs_verification) {
+        setVerified(true);
+        return;
+      }
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
       if (selectedPlan !== "free") {
@@ -46,6 +51,25 @@ export default function Register() {
       setError("Error al crear la cuenta");
     }
   };
+
+  if (verified) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <Link to="/" className="text-2xl font-bold">TraceLess</Link>
+          <div className="mt-8 p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
+            <div className="text-4xl mb-4">📧</div>
+            <h2 className="text-lg font-semibold mb-2">Revisá tu email</h2>
+            <p className="text-sm text-gray-400 mb-4">
+              Te enviamos un link de verificación a <span className="text-white font-medium">{email}</span>. Hacé clic en el link para activar tu cuenta.
+            </p>
+            <p className="text-xs text-gray-500">¿No te llegó? Revisá la carpeta de spam.</p>
+          </div>
+          <Link to="/login" className="inline-block mt-4 text-sm text-blue-400 hover:underline">Ir a iniciar sesión</Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!selectedPlan) {
     return (

@@ -59,7 +59,9 @@ def signup(req: SignupRequest):
             )
         except Exception as e:
             logger.warning(f"Error seteando plan: {e}")
-    return {"user": {"id": res.user.id, "email": req.email} if res.user else None}
+        needs_verification = res.user.email_confirmed_at is None
+        return {"user": {"id": res.user.id, "email": req.email, "needs_verification": needs_verification}}
+    return {"user": None}
 
 @router.post("/login")
 def login(req: LoginRequest):
