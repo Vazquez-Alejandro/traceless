@@ -3,7 +3,9 @@ from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
 from app.db import supabase, admin_insert, _URL, _SERVICE_KEY
-import os
+import os, logging
+
+logger = logging.getLogger("auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -35,19 +37,25 @@ def get_user_id(authorization: str = ""):
 def signup(req: SignupRequest):
     res = supabase.auth.sign_up({"email": req.email, "password": req.password})
     if res.user:
-        admin_insert("perfiles", {
-            "id": res.user.id,
-            "email": req.email,
-            "nombre": req.name,
-        })
+        try:
+            admin_insert("perfiles", {
+                "id": res.user.id,
+                "email": req.email,
+                "nombre": req.name,
+            })
+        except Exception as e:
+            logger.warning(f"Error insertando perfil: {e}")
         from datetime import datetime, timedelta, timezone
         trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
         import httpx
-        r = httpx.put(
-            f"{_URL}/auth/v1/admin/users/{res.user.id}",
-            headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-            json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
-        )
+        try:
+            r = httpx.put(
+                f"{_URL}/auth/v1/admin/users/{res.user.id}",
+                headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+                json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
+            )
+        except Exception as e:
+            logger.warning(f"Error seteando plan: {e}")
     return {"user": {"id": res.user.id, "email": req.email} if res.user else None}
 
 @router.post("/login")
