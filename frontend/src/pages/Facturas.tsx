@@ -41,7 +41,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number }>({ invoices_limit: 3, invoices_used: 0 });
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean } }>({ invoices_limit: 3, invoices_used: 0, features: { recurrentes: false, analytics: false } });
 
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
@@ -50,7 +50,7 @@ export default function Facturas() {
     load();
     api.clientes.list().then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
-      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used });
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false } });
     });
   }, []);
 
@@ -270,10 +270,14 @@ export default function Facturas() {
               <input type="checkbox" checked={usarItems} onChange={e => setUsarItems(e.target.checked)} />
               Desglosar por items
             </label>
-            <label className="flex items-center gap-2 text-xs text-gray-400">
-              <input type="checkbox" checked={form.recurrente} onChange={e => setForm({ ...form, recurrente: e.target.checked })} />
-              Factura recurrente (se repite cada mes)
-            </label>
+            {userPlan.features.recurrentes ? (
+              <label className="flex items-center gap-2 text-xs text-gray-400">
+                <input type="checkbox" checked={form.recurrente} onChange={e => setForm({ ...form, recurrente: e.target.checked })} />
+                Factura recurrente (se repite cada mes)
+              </label>
+            ) : (
+              <span className="text-xs text-gray-600 italic">Facturas recurrentes · <button type="button" onClick={() => window.location.href = '/perfil'} className="text-blue-400 hover:underline not-italic">Mejorá tu plan</button></span>
+            )}
           </div>
 
           {usarItems && (

@@ -17,6 +17,8 @@ interface ClienteAnalytics {
 export default function Dashboard() {
   const [stats, setStats] = useState({ clientes: 0, facturas: 0, total: 0, emitidas: 0, por_cobrar: 0, pagadas: 0 });
   const [plan, setPlan] = useState("Gratis");
+  const [planKey, setPlanKey] = useState("free");
+  const [features, setFeatures] = useState({ analytics: false, recurrentes: false, multi_user: false, retry_queue: false });
   const [mensual, setMensual] = useState<{mes: string; total: number}[]>([]);
   const [clientesAnalytics, setClientesAnalytics] = useState<ClienteAnalytics[]>([]);
   const [resumen, setResumen] = useState<{ mes_actual: number; mes_anterior: number; anio: number; mes_nombre: string } | null>(null);
@@ -62,6 +64,8 @@ export default function Dashboard() {
       setResumen(r);
       const user = me.user || me;
       setProfileComplete(!!(user.cuit && user.direccion));
+      setPlanKey(user.plan_key || "free");
+      setFeatures(user.features || { analytics: false, recurrentes: false, multi_user: false, retry_queue: false });
       if (wp) setWhatsappStats(wp);
 
       const mesesMap: Record<string, number> = {};
@@ -88,16 +92,6 @@ export default function Dashboard() {
     if (data.url) window.location.href = data.url;
   };
 
-  const handleMercadoPago = async (planKey: string) => {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${BASE_URL}/api/mercadopago/checkout?plan_key=${planKey}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-  };
-
   return (
     <div>
       {plan === "Gratis" && (
@@ -106,10 +100,7 @@ export default function Dashboard() {
             <p className="text-sm font-medium">Plan Gratis</p>
             <p className="text-xs text-gray-400">3 facturas por mes · Sin WhatsApp</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => handleUpgrade("basic")} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Actualizar</button>
-            <button onClick={() => handleMercadoPago("basic")} className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg">Pagar con MP</button>
-          </div>
+          <button onClick={() => handleUpgrade("pro")} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Mejorar a Profesional</button>
         </div>
       )}
 
@@ -229,6 +220,18 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {!features.analytics && stats.facturas > 0 && (
+        <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8 border-dashed">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold mb-1 text-gray-300">Analytics de pagos</h2>
+              <p className="text-xs text-gray-500">Vedó cómo y cuándo te pagan tus clientes</p>
+            </div>
+            <button onClick={() => handleUpgrade("pro")} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Desbloquear</button>
+          </div>
+        </div>
+      )}
+
       {mensual.length > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold mb-4 text-gray-300">Facturación mensual</h2>
@@ -249,7 +252,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {clientesAnalytics.length > 0 && (
+      {features.analytics && clientesAnalytics.length > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold mb-4 text-gray-300">Comportamiento de pagos por cliente</h2>
           <div className="overflow-x-auto">

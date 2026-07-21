@@ -88,17 +88,28 @@ def me(authorization: str = Header("")):
         raise HTTPException(401, "Token inválido")
     perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).single().execute()
     from app.lemon import get_user_plan, get_invoice_count, get_whatsapp_count
+
+# Map plan names back to keys
+_PLAN_NAME_TO_KEY = {"Gratis": "free", "Profesional": "pro", "Equipo": "team"}
     plan = get_user_plan(res.user.id)
     invoices_used = get_invoice_count(res.user.id)
     whatsapp_used = get_whatsapp_count(res.user.id)
     wp_token = os.getenv("WHATSAPP_TOKEN", "")
     wp_phone = os.getenv("WHATSAPP_PHONE_ID", "")
     whatsapp_ok = bool(wp_token and wp_phone)
+    plan_key = _PLAN_NAME_TO_KEY.get(plan["name"], "free")
     return {
         "user": {
             "id": res.user.id, "email": res.user.email,
             "nombre": perfil.data.get("nombre", "") if perfil.data else "",
             "plan": plan["name"],
+            "plan_key": plan_key,
+            "features": {
+                "analytics": plan.get("analytics", False),
+                "recurrentes": plan.get("recurrentes", False),
+                "multi_user": plan.get("multi_user", False),
+                "retry_queue": plan.get("retry_queue", False),
+            },
             "whatsapp_configurado": whatsapp_ok,
             "telefono": perfil.data.get("telefono", "") if perfil.data else "",
             "cuit": perfil.data.get("cuit", "") if perfil.data else "",

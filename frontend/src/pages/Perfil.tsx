@@ -4,10 +4,8 @@ const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANS_LIST = [
   { key: "free", name: "Gratis", price: "$0", desc: "3 facturas/mes" },
-  { key: "basic", name: "Básico", price: "$8.500/mes", desc: "50 facturas + WhatsApp" },
-  { key: "pro", name: "Pro", price: "$17.500/mes", desc: "Ilimitado + WhatsApp" },
-  { key: "pyme", name: "PyME", price: "$27.000/mes", desc: "Para equipos" },
-  { key: "corporate", name: "Corporativo", price: "$92.000/mes", desc: "Todo incluido" },
+  { key: "pro", name: "Profesional", price: "$15.000/mes", desc: "Ilimitado + WhatsApp" },
+  { key: "team", name: "Equipo", price: "$29.000/mes", desc: "Hasta 5 usuarios" },
 ];
 
 export default function Perfil() {

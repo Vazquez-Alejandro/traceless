@@ -6,10 +6,8 @@ const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANES = [
   { key: "free", name: "Gratis", price: "$0", desc: "3 facturas/mes", color: "border-gray-600" },
-  { key: "basic", name: "Básico", price: "$8.500/mes", desc: "50 facturas + WhatsApp", color: "border-blue-500" },
-  { key: "pro", name: "Pro", price: "$17.500/mes", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
-  { key: "pyme", name: "PyME", price: "$27.000/mes", desc: "Para equipos", color: "border-yellow-500" },
-  { key: "corporate", name: "Corporativo", price: "$92.000/mes", desc: "Todo incluido", color: "border-green-500" },
+  { key: "pro", name: "Profesional", price: "$15.000/mes", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
+  { key: "team", name: "Equipo", price: "$29.000/mes", desc: "Hasta 5 usuarios", color: "border-yellow-500" },
 ];
 
 export default function Register() {

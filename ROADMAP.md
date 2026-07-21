@@ -14,9 +14,19 @@
 
 ## Completado
 
+### 2026-07-21 — Simplificación a 3 planes
+- [x] **Planes reducidos a 3**: Gratis ($0), Profesional ($15.000/mes), Equipo ($29.000/mes)
+- [x] **Features por plan en backend**: `analytics`, `recurrentes`, `multi_user`, `retry_queue`
+- [x] **/me endpoint**: Devuelve `plan_key` y `features` para que el frontend sepa qué ocultar
+- [x] Landing: 3 planes, grid `md:grid-cols-3`
+- [x] Register: 3 opciones de plan
+- [x] Perfil: 3 opciones de plan
+- [x] Dashboard: Analytics bloqueado para plan Gratis con CTA a desbloquear
+- [x] Facturas: Checkbox "recurrente" bloqueado para plan Gratis con link a /perfil
+
 ### 2026-07-21
 - [x] Onboarding: plan picker en registro, checklist en dashboard
-- [x] WhatsApp limits por plan (Free:0, Basic:50, Pro:300, PyME:500, Corporate:2000)
+- [x] WhatsApp limits por plan (Free:0, Pro:300, Team:1000)
 - [x] Mercado Pago para pagos en pesos (checkout + webhook + precios ARS)
 - [x] ARCA retry queue (cola de reintentos con backoff exponencial)
 - [x] Tablas Supabase: whatsapp_log, facturas_pendientes

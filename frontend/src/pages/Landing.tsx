@@ -10,35 +10,19 @@ const PLANS = [
     highlighted: false,
   },
   {
-    key: "basic",
-    name: "Básico",
-    price: "$9/mes",
-    desc: "Para freelancers que empiezan",
-    features: ["50 facturas por mes", "WhatsApp incluido", "1 usuario"],
-    highlighted: false,
-  },
-  {
     key: "pro",
-    name: "Pro",
-    price: "$19/mes",
-    desc: "Para profesionales activos",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "1 usuario", "Recordatorios automáticos", "Analytics de pagos"],
+    name: "Profesional",
+    price: "$15.000/mes",
+    desc: "Para freelancers y monotributistas",
+    features: ["Facturas ilimitadas", "WhatsApp incluido", "Analytics de pagos", "Facturas recurrentes", "1 usuario"],
     highlighted: true,
   },
   {
-    key: "pyme",
-    name: "PyME",
-    price: "$29/mes",
-    desc: "Para pequeños equipos",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "Hasta 3 usuarios", "Facturas recurrentes"],
-    highlighted: false,
-  },
-  {
-    key: "corporate",
-    name: "Corporativo",
-    price: "$99/mes",
-    desc: "Para estudios y empresas",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "Usuarios ilimitados", "Soporte prioritario", "API"],
+    key: "team",
+    name: "Equipo",
+    price: "$29.000/mes",
+    desc: "Para estudios y PyMEs",
+    features: ["Todo del plan Profesional", "Hasta 5 usuarios", "Soporte prioritario", "Cola de reintentos ARCA"],
     highlighted: false,
   },
 ];
@@ -135,7 +119,7 @@ export default function Landing() {
           <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
             Probá Pro gratis por 7 días. Después elegí el plan que mejor se adapte a vos.
           </p>
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {PLANS.map((p) => (
               <div
                 key={p.key}
