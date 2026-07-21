@@ -73,13 +73,13 @@ export default function Landing() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/register" className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">
-              Probar Gratis — Sin tarjeta
+              Empezar Gratis — Sin tarjeta
             </Link>
-            <Link to="/login" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">
-              Ver Demo
+            <Link to="/register?plan=pro" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">
+              Probar Pro 7 días gratis
             </Link>
           </div>
-          <p className="text-xs text-gray-600 mt-4">Prueba Pro 7 días gratis al registrarte. Cancelá cuando quieras.</p>
+          <p className="text-xs text-gray-600 mt-4">Sin tarjeta de crédito. Cancelá cuando quieras.</p>
         </div>
       </section>
 

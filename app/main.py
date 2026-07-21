@@ -36,11 +36,15 @@ from app.auth import router as auth_router, get_user_id
 from app.clientes import router as clientes_router
 from app.facturas import router as facturas_router
 from app.db import supabase
-from app.lemon import handle_webhook, checkout_url, get_user_plan, PLANS
+from app.lemon import handle_webhook, checkout_url, get_user_plan, PLANS, get_whatsapp_count
+from app.mercadopago import router as mp_router
+from app.retry_queue import router as retry_router
 
 app.include_router(auth_router)
 app.include_router(clientes_router)
 app.include_router(facturas_router)
+app.include_router(mp_router)
+app.include_router(retry_router)
 
 @app.get("/")
 def root():
@@ -79,6 +83,19 @@ def get_checkout(plan_key: str, authorization: str = Header("")):
     if not url:
         raise HTTPException(400, f"Variant ID no configurado para plan '{plan_key}'. Variable LEMON_VARIANT_{plan_key.upper()} no encontrada o vacía.")
     return {"url": url}
+
+@app.get("/api/whatsapp/stats")
+def whatsapp_stats(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    plan = get_user_plan(uid)
+    used = get_whatsapp_count(uid)
+    limit = plan.get("whatsapp_monthly_limit", 0)
+    return {
+        "used": used,
+        "limit": limit,
+        "remaining": max(0, limit - used) if limit > 0 else 0,
+        "plan": plan["name"],
+    }
 
 @app.post("/api/lemon/webhook")
 async def lemon_webhook(request: Request):

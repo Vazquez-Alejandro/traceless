@@ -20,7 +20,10 @@ export default function Dashboard() {
   const [mensual, setMensual] = useState<{mes: string; total: number}[]>([]);
   const [clientesAnalytics, setClientesAnalytics] = useState<ClienteAnalytics[]>([]);
   const [resumen, setResumen] = useState<{ mes_actual: number; mes_anterior: number; anio: number; mes_nombre: string } | null>(null);
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [whatsappStats, setWhatsappStats] = useState({ used: 0, limit: 0, remaining: 0 });
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -40,7 +43,11 @@ export default function Dashboard() {
       fetch(`${BASE_URL}/api/facturas/resumen`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-    ]).then(([c, f, e, a, p, r]) => {
+      api.auth.me(),
+      fetch(`${BASE_URL}/api/whatsapp/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+    ]).then(([c, f, e, a, p, r, me, wp]) => {
       const facturas = f.facturas || [];
       setStats({
         clientes: (c.clientes || []).length,
@@ -53,6 +60,9 @@ export default function Dashboard() {
       setPlan(p.plan_actual || "Gratis");
       setClientesAnalytics(a.clientes || []);
       setResumen(r);
+      const user = me.user || me;
+      setProfileComplete(!!(user.cuit && user.direccion));
+      if (wp) setWhatsappStats(wp);
 
       const mesesMap: Record<string, number> = {};
       facturas.forEach((f: any) => {
@@ -77,6 +87,16 @@ export default function Dashboard() {
     if (data.url) window.location.href = data.url;
   };
 
+  const handleMercadoPago = async (planKey: string) => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/api/mercadopago/checkout?plan_key=${planKey}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+  };
+
   return (
     <div>
       {plan === "Gratis" && (
@@ -87,11 +107,81 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleUpgrade("basic")} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Actualizar</button>
+            <button onClick={() => handleMercadoPago("basic")} className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg">Pagar con MP</button>
           </div>
         </div>
       )}
 
+      {whatsappStats.limit > 0 && (
+        <div className="mb-6 p-4 rounded-xl bg-gray-900/40 border border-gray-800/40">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-400">WhatsApp este mes</span>
+            <span className="text-xs font-medium">{whatsappStats.used}/{whatsappStats.limit} mensajes</span>
+          </div>
+          <div className="w-full bg-gray-800 rounded-full h-1.5">
+            <div
+              className={`h-1.5 rounded-full transition-all ${whatsappStats.used / whatsappStats.limit > 0.8 ? 'bg-yellow-500' : 'bg-blue-500'}`}
+              style={{ width: `${Math.min((whatsappStats.used / whatsappStats.limit) * 100, 100)}%` }}
+            />
+          </div>
+          {whatsappStats.used / whatsappStats.limit > 0.8 && (
+            <p className="text-[10px] text-yellow-400 mt-1.5">Cerca del límite. Los mensajes de WhatsApp cuestan por envío.</p>
+          )}
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+
+      {stats.facturas === 0 && (
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 mb-8">
+          <h2 className="text-base font-semibold mb-4">Bienvenido a TraceLess</h2>
+          <p className="text-sm text-gray-400 mb-5">Seguí estos pasos para emitir tu primera factura en menos de 2 minutos:</p>
+          <div className="space-y-3">
+            <div className={`flex items-center gap-3 p-3 rounded-xl ${profileComplete ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${profileComplete ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+                {profileComplete ? "✓" : "1"}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Completá tu perfil</div>
+                <div className="text-xs text-gray-500">CUIT y domicilio fiscal para que la factura sea válida</div>
+              </div>
+              {!profileComplete && (
+                <Link to="/perfil" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                  Completar
+                </Link>
+              )}
+            </div>
+            <div className={`flex items-center gap-3 p-3 rounded-xl ${stats.clientes > 0 ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${stats.clientes > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+                {stats.clientes > 0 ? "✓" : "2"}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Cargá tu primer cliente</div>
+                <div className="text-xs text-gray-500">Nombre, teléfono y CUIT (si lo tenés)</div>
+              </div>
+              {stats.clientes === 0 && (
+                <Link to="/clientes" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                  Agregar
+                </Link>
+              )}
+            </div>
+            <div className={`flex items-center gap-3 p-3 rounded-xl ${stats.facturas > 0 ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${stats.facturas > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+                {stats.facturas > 0 ? "✓" : "3"}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Emití tu primera factura</div>
+                <div className="text-xs text-gray-500">Elegí el tipo, poné el monto y listo</div>
+              </div>
+              {stats.facturas === 0 && (
+                <Link to="/facturas" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                  Facturar
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {resumen && (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/60 to-gray-900/30 border border-gray-800/40 mb-8">

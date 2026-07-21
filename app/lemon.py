@@ -17,6 +17,7 @@ PLANS = {
         "price_label": "Gratis",
         "invoices_per_month": 3,
         "whatsapp": False,
+        "whatsapp_monthly_limit": 0,
     },
     "basic": {
         "name": "Básico",
@@ -24,6 +25,7 @@ PLANS = {
         "price_label": "$9/mes",
         "invoices_per_month": 50,
         "whatsapp": True,
+        "whatsapp_monthly_limit": 50,
     },
     "pro": {
         "name": "Pro",
@@ -31,6 +33,7 @@ PLANS = {
         "price_label": "$19/mes",
         "invoices_per_month": None,
         "whatsapp": True,
+        "whatsapp_monthly_limit": 300,
     },
     "pyme": {
         "name": "PyME",
@@ -38,6 +41,7 @@ PLANS = {
         "price_label": "$29/mes",
         "invoices_per_month": None,
         "whatsapp": True,
+        "whatsapp_monthly_limit": 500,
     },
     "corporate": {
         "name": "Corporativo",
@@ -45,6 +49,7 @@ PLANS = {
         "price_label": "$99/mes",
         "invoices_per_month": None,
         "whatsapp": True,
+        "whatsapp_monthly_limit": 2000,
     },
 }
 
@@ -184,3 +189,25 @@ def can_create_invoice(user_id: str) -> tuple[bool, str]:
     if count >= limit:
         return False, f"Límite de {limit} facturas/mes alcanzado. Actualizá tu plan."
     return True, ""
+
+def get_whatsapp_count(user_id: str) -> int:
+    start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    res = supabase.table("whatsapp_log").select("id", count="exact").eq("user_id", user_id).gte("created_at", start).execute()
+    return res.count or 0
+
+def can_send_whatsapp(user_id: str) -> tuple[bool, str]:
+    plan = get_user_plan(user_id)
+    limit = plan.get("whatsapp_monthly_limit", 0)
+    if limit == 0:
+        return False, "Tu plan no incluye envío por WhatsApp. Actualizá para enviar facturas al instante."
+    count = get_whatsapp_count(user_id)
+    if count >= limit:
+        return False, f"Límite de {limit} mensajes WhatsApp/mes alcanzado ({count}/{limit}). Actualizá tu plan."
+    return True, ""
+
+def log_whatsapp_send(user_id: str, factura_id: str = "", tipo: str = "factura"):
+    supabase.table("whatsapp_log").insert({
+        "user_id": user_id,
+        "factura_id": factura_id,
+        "tipo": tipo,
+    }).execute()

@@ -6,7 +6,8 @@ from app.db import supabase, _URL, _SERVICE_KEY
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
-from app.lemon import can_create_invoice, get_user_plan
+from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send
+from app.retry_queue import queue_factura
 import os
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
@@ -41,6 +42,28 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     if not ok:
         raise HTTPException(402, msg)
 
+    try:
+        result = await _crear_factura_interna(uid, req)
+        return result
+    except Exception as e:
+        queue_factura(
+            user_id=uid,
+            cliente_id=req.cliente_id,
+            tipo=req.tipo,
+            importe=req.importe or 0,
+            descripcion=req.descripcion,
+            detalles=[d.model_dump() for d in req.detalles] if req.detalles else [],
+            recurrente=req.recurrente,
+            error=str(e),
+        )
+        return {
+            "factura": None,
+            "pendiente": True,
+            "mensaje": "ARCA no respondió. Tu factura está en cola y se emitirá automáticamente cuando el servicio se recupere.",
+        }
+
+
+async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     plan = get_user_plan(uid)
     cliente = supabase.table("clientes").select("*").eq("id", req.cliente_id).eq("user_id", uid).single().execute()
     if not cliente.data:
@@ -134,15 +157,18 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     if plan["whatsapp"]:
         telefono = cliente.data.get("telefono", "")
         if telefono:
-            pdf_url = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
-            await enviar_factura_whatsapp(
-                telefono=telefono,
-                cliente=cliente.data["nombre"],
-                numero=factura["numero"],
-                total=factura["total"],
-                pdf_url=pdf_url,
-                fecha=factura["fecha"].split("T")[0],
-            )
+            wp_ok, wp_msg = can_send_whatsapp(uid)
+            if wp_ok:
+                pdf_url = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
+                await enviar_factura_whatsapp(
+                    telefono=telefono,
+                    cliente=cliente.data["nombre"],
+                    numero=factura["numero"],
+                    total=factura["total"],
+                    pdf_url=pdf_url,
+                    fecha=factura["fecha"].split("T")[0],
+                )
+                log_whatsapp_send(uid, factura["id"], "factura")
 
     return {"factura": {**factura, "pdf_url": html_url}}
 
