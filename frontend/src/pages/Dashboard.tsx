@@ -61,7 +61,7 @@ export default function Dashboard() {
       });
       setPlan(p.plan_actual || "Gratis");
       setClientesAnalytics(a.clientes || []);
-      setResumen(r);
+      setResumen(r && typeof r.mes_actual === "number" ? r : null);
       const user = me.user || me;
       setProfileComplete(!!(user.cuit && user.direccion));
       setPlanKey(user.plan_key || "free");
@@ -175,14 +175,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {resumen && resumen.mes_actual !== undefined && resumen.mes_actual !== null && (
+      {resumen && typeof resumen.mes_actual === "number" && (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/60 to-gray-900/30 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold text-gray-400 mb-3">Tu facturación</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <div className="text-3xl font-bold text-white">${resumen.mes_actual.toLocaleString()}</div>
-              <div className="text-sm text-gray-400 mt-1">Facturado en {resumen.mes_nombre}</div>
-              {resumen.mes_anterior > 0 && (
+              <div className="text-sm text-gray-400 mt-1">Facturado en {resumen.mes_nombre || ""}</div>
+              {(resumen.mes_anterior ?? 0) > 0 && (
                 <div className="text-xs text-gray-500 mt-1">
                   {resumen.mes_actual > resumen.mes_anterior ? "↗" : resumen.mes_actual < resumen.mes_anterior ? "↘" : "="}{" "}
                   {resumen.mes_actual > resumen.mes_anterior
@@ -195,7 +195,7 @@ export default function Dashboard() {
               )}
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">${resumen.anio.toLocaleString()}</div>
+              <div className="text-3xl font-bold text-white">${(resumen.anio ?? 0).toLocaleString()}</div>
               <div className="text-sm text-gray-400 mt-1">Total del año</div>
             </div>
             <div>
