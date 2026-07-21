@@ -16,6 +16,12 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    password: str
+
 def get_user_id(authorization: str = ""):
     token = authorization.replace("Bearer ", "").strip()
     if not token:
@@ -54,6 +60,23 @@ def login(req: LoginRequest):
         "refresh_token": res.session.refresh_token,
         "user": {"id": res.user.id, "email": res.user.email},
     }
+
+@router.post("/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+    supabase.auth.reset_password_for_email(
+        req.email,
+        redirect_to=f"{base_url}/reset-password",
+    )
+    return {"ok": True, "mensaje": "Si el email existe, recibiste un link para restablecer tu contraseña."}
+
+@router.post("/reset-password")
+def reset_password(req: ResetPasswordRequest, authorization: str = Header("")):
+    token = authorization.replace("Bearer ", "").strip()
+    if not token:
+        raise HTTPException(401, "Token requerido")
+    supabase.auth.update_user(token, {"password": req.password})
+    return {"ok": True, "mensaje": "Contraseña actualizada"}
 
 @router.get("/me")
 def me(authorization: str = Header("")):

@@ -33,6 +33,9 @@ export default function Login() {
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
           <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-blue-400">¿Olvidaste tu contraseña?</Link>
+          </div>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
             Ingresar
