@@ -334,8 +334,16 @@ def factura_pdf(factura_id: str):
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
     from app.pdf import generar_html_factura
     html = generar_html_factura(f.data, f.data.get("clientes") or {}, emisor)
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse(html)
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html).write_pdf()
+        from fastapi.responses import Response
+        return Response(content=pdf_bytes, media_type="application/pdf",
+                       headers={"Content-Disposition": f"attachment; filename=factura-{f.data.get('numero', 'sin-numero')}.pdf"})
+    except Exception as e:
+        logger.error(f"Error generando PDF: {e}")
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(html)
 
 @router.get("/recordatorios")
 def enviar_recordatorios(secret: str = ""):
