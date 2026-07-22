@@ -18,10 +18,13 @@ def get_user_id(authorization: str = Header("")) -> str:
     token = authorization.replace("Bearer ", "").strip()
     if not token:
         raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    return res.user.id
+    try:
+        res = supabase.auth.get_user(token)
+        if not res.user:
+            raise HTTPException(401, "Token inválido")
+        return res.user.id
+    except Exception:
+        raise HTTPException(401, "Token inválido o expirado")
 
 @router.get("")
 def listar_clientes(authorization: str = Header("")):

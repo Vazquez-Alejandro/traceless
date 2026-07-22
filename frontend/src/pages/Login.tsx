@@ -16,8 +16,8 @@ export default function Login() {
       localStorage.setItem("token", res.token);
       localStorage.setItem("refresh_token", res.refresh_token);
       navigate("/dashboard");
-    } catch {
-      setError("Email o contraseña incorrectos");
+    } catch (err: any) {
+      setError(err.message || "Email o contraseña incorrectos");
     }
   };
 

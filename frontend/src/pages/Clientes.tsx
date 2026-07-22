@@ -19,7 +19,7 @@ export default function Clientes() {
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = () => api.clientes.list().then(res => setClientes(res.clientes || []));
+  const load = () => api.clientes.list().then(res => setClientes(res.clientes || [])).catch(() => {});
 
   useEffect(() => { load(); }, []);
 
@@ -38,10 +38,15 @@ export default function Clientes() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.clientes.create(form);
-    setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
-    setShowForm(false);
-    load();
+    try {
+      await api.clientes.create(form);
+      setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+      setShowForm(false);
+      setToast("Cliente creado");
+      load();
+    } catch (err: any) {
+      setToast("Error: " + (err.message || "desconocido"));
+    }
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +70,12 @@ export default function Clientes() {
         condicion_iva: "Responsable Inscripto",
       };
     });
-    await api.clientes.importBulk(data);
+    try {
+      await api.clientes.importBulk(data);
+      setToast(`Importados ${data.length} clientes`);
+    } catch (err: any) {
+      setToast("Error al importar: " + (err.message || "desconocido"));
+    }
     setImportando(false);
     load();
     if (fileRef.current) fileRef.current.value = "";

@@ -127,10 +127,13 @@ def get_user_id(authorization: str = ""):
     token = authorization.replace("Bearer ", "").strip()
     if not token:
         raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    return res.user.id
+    try:
+        res = supabase.auth.get_user(token)
+        if not res.user:
+            raise HTTPException(401, "Token inválido")
+        return res.user.id
+    except Exception:
+        raise HTTPException(401, "Token inválido o expirado")
 
 @router.post("/signup")
 def signup(req: SignupRequest):
@@ -266,9 +269,12 @@ def me(authorization: str = Header("")):
     token = authorization.replace("Bearer ", "").strip()
     if not token:
         raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
+    try:
+        res = supabase.auth.get_user(token)
+        if not res.user:
+            raise HTTPException(401, "Token inválido")
+    except Exception:
+        raise HTTPException(401, "Token inválido o expirado")
     perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).execute()
     perfil_data = perfil.data[0] if perfil.data else None
     if not perfil_data:

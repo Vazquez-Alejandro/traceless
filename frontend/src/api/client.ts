@@ -15,19 +15,22 @@ async function request(path: string, options: RequestInit = {}) {
   if (res.status === 401) {
     localStorage.removeItem("token");
     window.location.href = "/login";
-    return { error: "No autorizado" };
+    throw new Error("No autorizado");
   }
 
+  let data: any;
   try {
-    const data = await res.json();
-    if (!res.ok) {
-      return { error: data.detail || `Error ${res.status}` };
-    }
-    return data;
+    data = await res.json();
   } catch {
     const text = await res.text();
-    return { error: text || `Error ${res.status}` };
+    throw new Error(text || `Error ${res.status}`);
   }
+
+  if (!res.ok) {
+    throw new Error(data.detail || `Error ${res.status}`);
+  }
+
+  return data;
 }
 
 export const api = {
