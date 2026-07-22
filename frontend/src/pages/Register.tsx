@@ -14,6 +14,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
   const [searchParams] = useSearchParams();
@@ -21,10 +22,25 @@ export default function Register() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(planParam);
   const navigate = useNavigate();
 
+  const passwordChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+  };
+  const passwordValid = passwordChecks.length && passwordChecks.upper && passwordChecks.number;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!selectedPlan) return;
+    if (!passwordValid) {
+      setError("La contraseña no cumple los requisitos");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
     try {
       const signupRes = await api.auth.signup({ email, password, name });
       if (signupRes.error) {
@@ -123,8 +139,28 @@ export default function Register() {
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
-          <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          <div>
+            <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+            {password.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${passwordChecks.length ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                  {passwordChecks.length ? "✓" : "○"} 8+ caracteres
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${passwordChecks.upper ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                  {passwordChecks.upper ? "✓" : "○"} Mayúscula
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${passwordChecks.number ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                  {passwordChecks.number ? "✓" : "○"} Número
+                </span>
+              </div>
+            )}
+          </div>
+          <input type="password" placeholder="Repetir contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required
+            className={`w-full px-4 py-3 bg-gray-900 border rounded-xl text-sm focus:outline-none focus:border-blue-500 ${confirmPassword && password !== confirmPassword ? "border-red-500" : "border-gray-800"}`} />
+          {confirmPassword && password !== confirmPassword && (
+            <p className="text-red-400 text-[10px] -mt-2">Las contraseñas no coinciden</p>
+          )}
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
             {selectedPlan !== "free" ? "Crear cuenta y pagar" : "Empezar Gratis"}

@@ -4,10 +4,16 @@ from typing import Optional
 from supabase import Client
 from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY, get_user_id as _get_user_id
 from app.creditos import get_saldo
-import os, logging, jwt
+import os, logging, jwt, time
 from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 
 logger = logging.getLogger("auth")
+
+# Rate limiting para login
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+MAX_ATTEMPTS = 5
+LOCKOUT_SECONDS = 300
 
 # Resend config
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
@@ -129,8 +135,16 @@ def get_user_id(authorization: str = "") -> str:
 
 @router.post("/signup")
 def signup(req: SignupRequest):
-    import httpx
+    import httpx, re
     from datetime import datetime, timedelta, timezone
+
+    # Validar contraseña
+    if len(req.password) < 8:
+        raise HTTPException(400, "La contraseña debe tener al menos 8 caracteres")
+    if not re.search(r"[A-Z]", req.password):
+        raise HTTPException(400, "La contraseña debe contener al menos una mayúscula")
+    if not re.search(r"[0-9]", req.password):
+        raise HTTPException(400, "La contraseña debe contener al menos un número")
 
     # Crear usuario via admin API (bypassea rate limit de Supabase)
     r = httpx.post(
@@ -176,6 +190,14 @@ def signup(req: SignupRequest):
 @router.post("/login")
 def login(req: LoginRequest):
     import httpx
+
+    # Rate limiting
+    now = time.time()
+    email_key = req.email.lower().strip()
+    _login_attempts[email_key] = [t for t in _login_attempts[email_key] if now - t < LOCKOUT_SECONDS]
+    if len(_login_attempts[email_key]) >= MAX_ATTEMPTS:
+        raise HTTPException(429, "Demasiados intentos. Esperá 5 minutos e intentá de nuevo.")
+
     try:
         r = httpx.post(
             f"{_URL}/auth/v1/token?grant_type=password",
@@ -187,8 +209,13 @@ def login(req: LoginRequest):
         logger.error(f"Login connection error: {e}")
         raise HTTPException(502, "No se pudo conectar con el servidor de autenticación")
     if r.status_code != 200:
+        _login_attempts[email_key].append(now)
+        remaining = MAX_ATTEMPTS - len(_login_attempts[email_key])
+        if remaining <= 0:
+            raise HTTPException(429, "Demasiados intentos. Esperá 5 minutos e intentá de nuevo.")
         logger.error(f"Login error: {r.status_code} {r.text}")
         raise HTTPException(401, "Credenciales inválidas")
+    _login_attempts.pop(email_key, None)
     data = r.json()
     if not data.get("user", {}).get("email_confirmed_at"):
         raise HTTPException(403, "Tu email no fue verificado. Revisá tu casilla de correo.")
