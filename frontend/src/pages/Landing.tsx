@@ -178,7 +178,8 @@ export default function Landing() {
           <div className="flex items-center gap-4">
             <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
             <Link to="/privacidad" className="hover:text-gray-400">Privacidad</Link>
-            <span>hola@traceless.com.ar</span>
+            <Link to="/contact" className="hover:text-gray-400">Contacto</Link>
+            <span>soporte@traceless.com.ar</span>
           </div>
         </div>
       </footer>

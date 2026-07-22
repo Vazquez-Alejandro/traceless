@@ -31,6 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/facturas" className="text-sm text-gray-400 hover:text-white">Facturas</Link>
           </div>
           <div className="flex items-center gap-3">
+            <Link to="/contact" className="text-sm text-gray-400 hover:text-white">Soporte</Link>
             <Link to="/perfil" className="text-sm text-gray-400 hover:text-white">Mi Perfil</Link>
             <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Salir</button>
           </div>
@@ -43,7 +44,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
             <Link to="/privacidad" className="hover:text-gray-400">Privacidad</Link>
-            <span>Contacto: hola@traceless.com.ar</span>
+            <Link to="/contact" className="hover:text-gray-400">Contacto</Link>
+            <span>soporte@traceless.com.ar</span>
           </div>
         </div>
       </footer>
