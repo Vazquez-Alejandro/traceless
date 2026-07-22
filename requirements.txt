@@ -12,3 +12,4 @@ zeep
 openpyxl
 resend>=2.34.0
 qrcode[pil]>=7.4
+tenacity>=9.0

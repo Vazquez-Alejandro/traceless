@@ -407,6 +407,7 @@ def procesar_recurrentes(secret: str = ""):
         raise HTTPException(403, "No autorizado")
     hoy = datetime.now().strftime("%Y-%m-%d")
     emitidas = 0
+    errores = 0
     import httpx as _httpx
     import asyncio
     limit = 50
@@ -427,15 +428,21 @@ def procesar_recurrentes(secret: str = ""):
                 if not rec.get("activo"):
                     continue
                 if rec.get("proxima", "") <= hoy:
+                    uid = u["id"]
+                    error_msg = None
                     try:
-                        uid = u["id"]
                         cli = supabase.table("clientes").select("*").eq("id", rec["cliente_id"]).eq("user_id", uid).single().execute()
                         if not cli.data:
                             continue
                         perf = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
                         emisor = perf.data or {}
-                        from app.afip import _mock_generate
-                        res = _mock_generate(cli.data.get("cuit",""), rec["tipo"], rec["importe"], rec.get("descripcion",""), 0)
+                        from app.afip import generar_factura_afip
+                        res = generar_factura_afip(
+                            cli.data.get("cuit",""), cli.data.get("nombre",""),
+                            rec["tipo"], rec["importe"],
+                            cli.data.get("condicion_iva","Consumidor Final"),
+                            rec.get("descripcion",""), 0
+                        )
                         fd = {
                             "user_id": uid, "cliente_id": rec["cliente_id"],
                             "tipo": rec["tipo"], "numero": res["numero"],
@@ -452,15 +459,28 @@ def procesar_recurrentes(secret: str = ""):
                         rec["proxima"] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
                         changed = True
                         emitidas += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        error_msg = str(e)[:200]
+                        errores += 1
+                        logger.error(f"Error factura recurrente user={uid} cliente={rec.get('cliente_id')}: {error_msg}")
+                        perf = supabase.table("perfiles").select("telefono").eq("id", uid).single().execute()
+                        telefono = (perf.data or {}).get("telefono", "").replace(/[^0-9]/g, "") if perf.data else ""
+                        if telefono:
+                            from app.whatsapp import enviar_whatsapp
+                            try:
+                                asyncio.run(enviar_whatsapp(
+                                    telefono,
+                                    f"⚠️ *Error en factura recurrente*\n\nNo pudimos emitir la factura para *{cli.data.get('nombre', '') if cli.data else 'Cliente'}* por ${rec['importe']:,.2f}.\n\nMotivo: {error_msg}\n\nPor favor, revisá la factura manualmente en TraceLess."
+                                ))
+                            except Exception:
+                                pass
             if changed:
                 meta["recurrentes"] = recs
                 _httpx.put(f"{_URL}/auth/v1/admin/users/{u['id']}",
                     headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
                     json={"app_metadata": meta})
         offset += limit
-    return {"ok": True, "emitidas": emitidas}
+    return {"ok": True, "emitidas": emitidas, "errores": errores}
 
 @router.get("/procesar-programadas")
 def procesar_programadas(secret: str = ""):

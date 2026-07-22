@@ -4,6 +4,7 @@ from pathlib import Path
 from lxml import etree
 import requests
 from requests.adapters import HTTPAdapter
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -120,6 +121,8 @@ def _ta_cache_save(ta: dict):
     except Exception:
         pass
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=20),
+       retry=retry_if_exception_type((RuntimeError, ConnectionError, TimeoutError)))
 def _login() -> dict:
     global _ta_cache
     now = datetime.now(timezone.utc)
@@ -240,6 +243,8 @@ def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: st
         "tipo": tipo,
     }
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=3, max=30),
+       retry=retry_if_exception_type((RuntimeError, ConnectionError, TimeoutError)))
 def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                      tipo: int, importe: float,
                      condicion_iva: str, descripcion: str,

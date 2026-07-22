@@ -15,7 +15,7 @@ PLANS = {
         "name": "Gratis",
         "price": 0,
         "price_label": "Gratis",
-        "invoices_per_month": 3,
+        "invoices_per_month": 5,
         "whatsapp": False,
         "whatsapp_monthly_limit": 0,
         "analytics": False,
