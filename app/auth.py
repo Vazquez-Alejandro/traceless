@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
-from app.db import supabase, admin_insert, _URL, _SERVICE_KEY
+from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY
 import os, logging, jwt
 from datetime import datetime, timedelta, timezone
 
@@ -183,15 +183,23 @@ def signup(req: SignupRequest):
 
 @router.post("/login")
 def login(req: LoginRequest):
-    res = supabase.auth.sign_in_with_password({"email": req.email, "password": req.password})
-    if not res.session:
+    import httpx
+    r = httpx.post(
+        f"{_URL}/auth/v1/token?grant_type=password",
+        json={"email": req.email, "password": req.password},
+        headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
+        timeout=15,
+    )
+    if r.status_code != 200:
+        logger.error(f"Login error: {r.status_code} {r.text}")
         raise HTTPException(401, "Credenciales inválidas")
-    if res.user and res.user.email_confirmed_at is None:
+    data = r.json()
+    if not data.get("user", {}).get("email_confirmed_at"):
         raise HTTPException(403, "Tu email no fue verificado. Revisá tu casilla de correo.")
     return {
-        "token": res.session.access_token,
-        "refresh_token": res.session.refresh_token,
-        "user": {"id": res.user.id, "email": res.user.email},
+        "token": data["access_token"],
+        "refresh_token": data["refresh_token"],
+        "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
     }
 
 @router.post("/forgot-password")
