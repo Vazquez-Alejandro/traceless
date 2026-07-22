@@ -264,6 +264,52 @@ def verify_email(req: VerifyRequest):
 
     return {"ok": True, "mensaje": "Email verificado correctamente"}
 
+@router.post("/resend-verification")
+def resend_verification(req: ForgotPasswordRequest):
+    email = req.email
+    import httpx
+    r = httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        params={"filter[email]": f"eq.{email}"},
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
+        timeout=10,
+    )
+    if r.status_code != 200 or not r.json().get("users"):
+        raise HTTPException(404, "Usuario no encontrado")
+    user = r.json()["users"][0]
+    if user.get("email_confirmed_at"):
+        return {"ok": True, "mensaje": "Email ya está verificado. Podés iniciar sesión."}
+    token = create_verify_token(email)
+    sent = send_verification_email(email, token)
+    if not sent:
+        raise HTTPException(500, "Error al enviar el email de verificación")
+    return {"ok": True, "mensaje": "Email de verificación reenviado. Revisá tu casilla."}
+
+@router.post("/confirm-email")
+def confirm_email_direct(req: ForgotPasswordRequest):
+    import httpx
+    r = httpx.get(
+        f"{_URL}/auth/v1/admin/users",
+        params={"filter[email]": f"eq.{req.email}"},
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
+        timeout=10,
+    )
+    if r.status_code != 200 or not r.json().get("users"):
+        raise HTTPException(404, "Usuario no encontrado")
+    user = r.json()["users"][0]
+    if user.get("email_confirmed_at"):
+        return {"ok": True, "mensaje": "Email ya está confirmado"}
+    now = datetime.now(timezone.utc).isoformat()
+    r2 = httpx.put(
+        f"{_URL}/auth/v1/admin/users/{user['id']}",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+        json={"email_confirmed_at": now},
+        timeout=10,
+    )
+    if r2.status_code != 200:
+        raise HTTPException(500, "Error al confirmar el email")
+    return {"ok": True, "mensaje": "Email confirmado correctamente. Ya podés iniciar sesión."}
+
 @router.get("/me")
 def me(authorization: str = Header("")):
     token = authorization.replace("Bearer ", "").strip()
