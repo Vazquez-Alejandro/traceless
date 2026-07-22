@@ -44,6 +44,7 @@ export default function Facturas() {
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
   const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean } }>({ invoices_limit: 3, invoices_used: 0, features: { recurrentes: false, analytics: false } });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
 
   const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
@@ -126,6 +127,33 @@ export default function Facturas() {
     setUsarItems(false);
     setShowForm(true);
     setToast("Datos copiados. Modificá lo que necesites y emití.");
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === facturas.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(facturas.map(f => f.id)));
+    }
+  };
+
+  const handleBulkWhatsApp = () => {
+    const seleccionadas = facturas.filter(f => selected.has(f.id));
+    if (seleccionadas.length === 0) return;
+    seleccionadas.forEach((f, i) => {
+      setTimeout(() => handleWhatsApp(f), i * 500);
+    });
+    setToast(`Abriendo ${seleccionadas.length} chats de WhatsApp...`);
+    setSelected(new Set());
   };
 
   const addItem = () => {
@@ -339,8 +367,25 @@ export default function Facturas() {
       )}
 
       <div className="space-y-3">
+        {facturas.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-gray-900/60 border border-gray-800/30">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                <input type="checkbox" checked={selected.size === facturas.length && facturas.length > 0} onChange={toggleSelectAll} className="rounded" />
+                Todas ({selected.size}/{facturas.length})
+              </label>
+            </div>
+            {selected.size > 0 && (
+              <button onClick={handleBulkWhatsApp} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg">
+                📨 Enviar {selected.size} por WhatsApp
+              </button>
+            )}
+          </div>
+        )}
         {facturas.map(f => (
-          <div key={f.id} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800/40 flex items-center justify-between">
+          <div key={f.id} className={`p-4 rounded-xl bg-gray-900/40 border flex items-center justify-between ${selected.has(f.id) ? "border-green-500/40 bg-green-900/10" : "border-gray-800/40"}`}>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleSelect(f.id)} className="rounded flex-shrink-0" />
             <div>
               <div className="font-medium">{f.numero || "—"} — ${f.total.toLocaleString()}</div>
               <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha} · {f.vencimiento ? `Vence: ${f.vencimiento}` : ""}</div>
@@ -366,6 +411,7 @@ export default function Facturas() {
                 {f.estado === "anulada" && <span>🗑️ Anulada</span>}
                 {f.mp_link && <span>💳 Link de pago</span>}
               </div>
+            </div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => handleClone(f)} title="Reemitir esta factura" className="text-xs text-gray-400 hover:text-white">Reemitir</button>
