@@ -2,24 +2,17 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
-from app.db import supabase, _URL, _SERVICE_KEY
+from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
 from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send, has_feature
 from app.retry_queue import queue_factura
-import os
+import os, logging
+
+logger = logging.getLogger("facturas")
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
-
-def get_user_id(authorization: str = ""):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    return res.user.id
 
 class DetalleItem(BaseModel):
     descripcion: str

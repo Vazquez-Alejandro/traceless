@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Header, HTTPException
-from app.db import supabase, _URL, _SERVICE_KEY
+from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
 import httpx
 
 logger = logging.getLogger("retry_queue")
@@ -112,13 +112,7 @@ def procesar_cola(secret: str = ""):
 
 @router.get("/pending")
 def listar_pendientes(authorization: str = ""):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    uid = res.user.id
+    uid = get_user_id(authorization)
     pendientes = supabase.table("facturas_pendientes") \
         .select("*, clientes(nombre, apellido)") \
         .eq("user_id", uid) \
@@ -130,13 +124,7 @@ def listar_pendientes(authorization: str = ""):
 
 @router.delete("/{factura_pendiente_id}")
 def cancelar_pendiente(factura_pendiente_id: str, authorization: str = ""):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
-    uid = res.user.id
+    uid = get_user_id(authorization)
     supabase.table("facturas_pendientes") \
         .update({"estado": "cancelado"}) \
         .eq("id", factura_pendiente_id) \

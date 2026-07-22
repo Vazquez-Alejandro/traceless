@@ -37,10 +37,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.auth import router as auth_router, get_user_id
+from app.auth import router as auth_router
 from app.clientes import router as clientes_router
 from app.facturas import router as facturas_router
-from app.db import supabase
+from app.db import supabase, get_user_id
 from app.lemon import handle_webhook, get_user_plan, PLANS, get_whatsapp_count
 from app.mercadopago import router as mp_router
 from app.retry_queue import router as retry_router

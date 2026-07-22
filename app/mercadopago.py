@@ -1,9 +1,9 @@
 import os
 import logging
 import httpx
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Request, HTTPException, Header
-from app.db import supabase, _URL, _SERVICE_KEY
+from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
 
 logger = logging.getLogger("mercadopago")
 
@@ -30,20 +30,15 @@ def _mp_headers():
 
 @router.post("/checkout")
 def crear_checkout(plan_key: str, authorization: str = Header("")):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
+    uid = get_user_id(authorization)
     if plan_key not in MP_PRICES:
         raise HTTPException(400, "Plan no válido")
     if not MP_TOKEN:
         raise HTTPException(500, "Mercado Pago no configurado (falta MP_ACCESS_TOKEN)")
 
     plan = MP_PRICES[plan_key]
-    email = res.user.email
-    uid = res.user.id
+    perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
+    email = perfil.data.get("email", "") if perfil.data else ""
 
     body = {
         "items": [
@@ -74,19 +69,15 @@ def crear_checkout(plan_key: str, authorization: str = Header("")):
 
 @router.post("/create-subscription")
 def crear_suscripcion(plan_key: str, authorization: str = Header("")):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    res = supabase.auth.get_user(token)
-    if not res.user:
-        raise HTTPException(401, "Token inválido")
+    uid = get_user_id(authorization)
     if plan_key not in MP_PRICES:
         raise HTTPException(400, "Plan no válido")
     if not MP_TOKEN:
         raise HTTPException(500, "Mercado Pago no configurado")
 
     plan = MP_PRICES[plan_key]
-    email = res.user.email
+    perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
+    email = perfil.data.get("email", "") if perfil.data else ""
 
     # Crear preaprobación para débito automático
     body = {

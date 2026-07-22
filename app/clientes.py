@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
-from app.db import supabase
+from app.db import supabase, get_user_id
 
 router = APIRouter(prefix="/api/clientes", tags=["clientes"])
 
@@ -13,18 +13,6 @@ class ClienteCreate(BaseModel):
     cuit: Optional[str] = ""
     direccion: Optional[str] = ""
     condicion_iva: str = "Responsable Inscripto"
-
-def get_user_id(authorization: str = Header("")) -> str:
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    try:
-        res = supabase.auth.get_user(token)
-        if not res.user:
-            raise HTTPException(401, "Token inválido")
-        return res.user.id
-    except Exception:
-        raise HTTPException(401, "Token inválido o expirado")
 
 @router.get("")
 def listar_clientes(authorization: str = Header("")):

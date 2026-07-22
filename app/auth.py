@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
-from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY
+from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY, get_user_id as _get_user_id
 import os, logging, jwt
 from datetime import datetime, timedelta, timezone
 
@@ -123,17 +123,8 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str
 
-def get_user_id(authorization: str = ""):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    try:
-        res = supabase.auth.get_user(token)
-        if not res.user:
-            raise HTTPException(401, "Token inválido")
-        return res.user.id
-    except Exception:
-        raise HTTPException(401, "Token inválido o expirado")
+def get_user_id(authorization: str = "") -> str:
+    return _get_user_id(authorization)
 
 @router.post("/signup")
 def signup(req: SignupRequest):
@@ -320,38 +311,27 @@ def confirm_email_direct(req: ForgotPasswordRequest):
 
 @router.get("/me")
 def me(authorization: str = Header("")):
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Token requerido")
-    try:
-        res = supabase.auth.get_user(token)
-        if not res.user:
-            raise HTTPException(401, "Token inválido")
-    except Exception:
-        raise HTTPException(401, "Token inválido o expirado")
-    perfil = supabase.table("perfiles").select("*").eq("id", res.user.id).execute()
+    uid = _get_user_id(authorization)
+    perfil = supabase.table("perfiles").select("*").eq("id", uid).execute()
     perfil_data = perfil.data[0] if perfil.data else None
+    email = perfil_data.get("email", "") if perfil_data else ""
     if not perfil_data:
         try:
-            admin_insert("perfiles", {
-                "id": res.user.id,
-                "email": res.user.email or "",
-                "nombre": "",
-            })
-            perfil_data = {"id": res.user.id, "email": res.user.email, "nombre": ""}
+            admin_insert("perfiles", {"id": uid, "email": email, "nombre": ""})
+            perfil_data = {"id": uid, "email": email, "nombre": ""}
         except Exception as e:
             logger.warning(f"Error creando perfil en me(): {e}")
     from app.lemon import get_user_plan, get_invoice_count, get_whatsapp_count
-    plan = get_user_plan(res.user.id)
-    invoices_used = get_invoice_count(res.user.id)
-    whatsapp_used = get_whatsapp_count(res.user.id)
+    plan = get_user_plan(uid)
+    invoices_used = get_invoice_count(uid)
+    whatsapp_used = get_whatsapp_count(uid)
     wp_token = os.getenv("WHATSAPP_TOKEN", "")
     wp_phone = os.getenv("WHATSAPP_PHONE_ID", "")
     whatsapp_ok = bool(wp_token and wp_phone)
     plan_key = _PLAN_NAME_TO_KEY.get(plan["name"], "free")
     return {
         "user": {
-            "id": res.user.id, "email": res.user.email,
+            "id": uid, "email": email,
             "nombre": perfil_data.get("nombre", "") if perfil_data else "",
             "plan": plan["name"],
             "plan_key": plan_key,
@@ -396,8 +376,8 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
     from app.mercadopago import MP_PRICES, MP_TOKEN
     if plan not in MP_PRICES:
         raise HTTPException(400, "Plan no válido")
-    res = supabase.auth.get_user(authorization.replace("Bearer ", "").strip())
-    email = res.user.email
+    perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
+    email = perfil.data.get("email", "") if perfil.data else ""
     import httpx
     body = {
         "items": [{
