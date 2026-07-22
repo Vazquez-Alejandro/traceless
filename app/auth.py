@@ -356,6 +356,8 @@ def me(authorization: str = Header("")):
             "whatsapp_used": whatsapp_used,
             "whatsapp_extra_cost": plan.get("whatsapp_extra_cost", 0),
             "creditos": get_saldo(uid),
+            "cbu": perfil_data.get("cbu", "") if perfil_data else "",
+            "alias_banco": perfil_data.get("alias_banco", "") if perfil_data else "",
         }
     }
 

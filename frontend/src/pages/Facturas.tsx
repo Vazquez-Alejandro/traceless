@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
@@ -45,7 +46,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number; cbu?: string; alias_banco?: string }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
 
@@ -55,7 +56,7 @@ export default function Facturas() {
     load();
     api.clientes.list().then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
-      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos });
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos, cbu: res.user.cbu, alias_banco: res.user.alias_banco });
     });
   }, []);
 
@@ -440,6 +441,9 @@ export default function Facturas() {
               <button onClick={() => handleClone(f)} title="Reemitir esta factura" className="text-xs text-gray-400 hover:text-white">Reemitir</button>
               {f.estado !== "programada" && (
                 <button onClick={() => handleWhatsApp(f)} title="Enviar por WhatsApp" className="text-xs text-green-400 hover:text-green-300">WhatsApp</button>
+              )}
+              {!userPlan.cbu && !userPlan.alias_banco && (
+                <Link to="/perfil" className="text-[10px] text-yellow-500 hover:text-yellow-400" title="Configurar CBU y alias para que aparezca el QR de pago">⚙️ Configurar CBU</Link>
               )}
               {copiado === f.id ? (
                 <span className="text-xs text-green-400">¡Link copiado!</span>
