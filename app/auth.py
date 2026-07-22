@@ -175,12 +175,16 @@ def signup(req: SignupRequest):
 @router.post("/login")
 def login(req: LoginRequest):
     import httpx
-    r = httpx.post(
-        f"{_URL}/auth/v1/token?grant_type=password",
-        json={"email": req.email, "password": req.password},
-        headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
-        timeout=15,
-    )
+    try:
+        r = httpx.post(
+            f"{_URL}/auth/v1/token?grant_type=password",
+            json={"email": req.email, "password": req.password},
+            headers={"apikey": _SERVICE_KEY, "Content-Type": "application/json"},
+            timeout=15,
+        )
+    except Exception as e:
+        logger.error(f"Login connection error: {e}")
+        raise HTTPException(502, "No se pudo conectar con el servidor de autenticación")
     if r.status_code != 200:
         logger.error(f"Login error: {r.status_code} {r.text}")
         raise HTTPException(401, "Credenciales inválidas")

@@ -12,7 +12,7 @@ async function request(path: string, options: RequestInit = {}) {
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
+  if (res.status === 401 && localStorage.getItem("token")) {
     localStorage.removeItem("token");
     window.location.href = "/login";
     throw new Error("No autorizado");

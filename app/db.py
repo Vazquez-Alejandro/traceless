@@ -22,7 +22,7 @@ def get_user_id(authorization: str) -> str:
     try:
         r = httpx.get(
             f"{_URL}/auth/v1/user",
-            headers={"apikey": _ANON_KEY, "Authorization": f"Bearer {token}"},
+            headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {token}"},
             timeout=10,
         )
         if r.status_code != 200 or not r.json().get("id"):
