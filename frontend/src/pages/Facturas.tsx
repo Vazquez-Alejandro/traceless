@@ -45,7 +45,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean }>({ invoices_limit: 3, invoices_used: 0, features: { recurrentes: false, analytics: false } });
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
 
@@ -55,7 +55,7 @@ export default function Facturas() {
     load();
     api.clientes.list().then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
-      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado });
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost });
     });
   }, []);
 
@@ -418,8 +418,15 @@ export default function Facturas() {
                 Todas ({selected.size}/{facturas.length})
               </label>
               <span className="text-[10px] text-gray-600">
-                {userPlan.whatsapp_configurado ? "🟢 API WhatsApp" : "🟡 wa.me (sin configurar)"}
+                {userPlan.whatsapp_configurado
+                  ? `🟢 WhatsApp API (${userPlan.whatsapp_used || 0}/${userPlan.whatsapp_limit || 0})`
+                  : "🟡 wa.me (sin configurar)"}
               </span>
+              {userPlan.whatsapp_configurado && (userPlan.whatsapp_used || 0) > (userPlan.whatsapp_limit || 0) && (
+                <span className="text-[10px] text-yellow-400">
+                  +${((userPlan.whatsapp_used || 0) - (userPlan.whatsapp_limit || 0)) * (userPlan.whatsapp_extra_cost || 70)} extra
+                </span>
+              )}
             </div>
             {selected.size > 0 && (
               <button onClick={handleBulkWhatsApp} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg">

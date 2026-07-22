@@ -349,10 +349,11 @@ def me(authorization: str = Header("")):
             "cuit": perfil_data.get("cuit", "") if perfil_data else "",
             "direccion": perfil_data.get("direccion", "") if perfil_data else "",
             "condicion_iva": perfil_data.get("condicion_iva", "Responsable Inscripto") if perfil_data else "Responsable Inscripto",
-            "invoices_limit": plan["invoices_per_month"],
+             "invoices_limit": plan["invoices_per_month"],
             "invoices_used": invoices_used,
             "whatsapp_limit": plan.get("whatsapp_monthly_limit", 0),
             "whatsapp_used": whatsapp_used,
+            "whatsapp_extra_cost": plan.get("whatsapp_extra_cost", 0),
         }
     }
 

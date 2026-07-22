@@ -18,6 +18,7 @@ PLANS = {
         "invoices_per_month": 5,
         "whatsapp": False,
         "whatsapp_monthly_limit": 0,
+        "whatsapp_extra_cost": 0,
         "analytics": False,
         "recurrentes": False,
         "multi_user": False,
@@ -29,7 +30,8 @@ PLANS = {
         "price_label": "$15.000/mes",
         "invoices_per_month": None,
         "whatsapp": True,
-        "whatsapp_monthly_limit": 300,
+        "whatsapp_monthly_limit": 100,
+        "whatsapp_extra_cost": 70,
         "analytics": True,
         "recurrentes": True,
         "multi_user": False,
@@ -41,7 +43,8 @@ PLANS = {
         "price_label": "$29.000/mes",
         "invoices_per_month": None,
         "whatsapp": True,
-        "whatsapp_monthly_limit": 1000,
+        "whatsapp_monthly_limit": 250,
+        "whatsapp_extra_cost": 60,
         "analytics": True,
         "recurrentes": True,
         "multi_user": True,
@@ -198,8 +201,21 @@ def can_send_whatsapp(user_id: str) -> tuple[bool, str]:
         return False, "Tu plan no incluye envío por WhatsApp. Actualizá para enviar facturas al instante."
     count = get_whatsapp_count(user_id)
     if count >= limit:
-        return False, f"Límite de {limit} mensajes WhatsApp/mes alcanzado ({count}/{limit}). Actualizá tu plan."
+        extra = count - limit + 1
+        extra_cost = plan.get("whatsapp_extra_cost", 70) * extra
+        return True, f"Usando mensajes extra (${plan.get('whatsapp_extra_cost', 70)}/msg). Total extra este mes: ${extra_cost}"
     return True, ""
+
+def get_whatsapp_extra_cost(user_id: str) -> int:
+    plan = get_user_plan(user_id)
+    limit = plan.get("whatsapp_monthly_limit", 0)
+    if limit == 0:
+        return 0
+    count = get_whatsapp_count(user_id)
+    if count <= limit:
+        return 0
+    extra = count - limit
+    return plan.get("whatsapp_extra_cost", 70) * extra
 
 def has_feature(user_id: str, feature: str) -> bool:
     plan = get_user_plan(user_id)
