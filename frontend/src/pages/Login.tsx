@@ -69,6 +69,9 @@ export default function Login() {
         <p className="text-center text-sm text-gray-500 mt-6">
           ¿No tenés cuenta? <Link to="/register" className="text-blue-400 hover:underline">Crear cuenta</Link>
         </p>
+        <p className="text-center text-xs text-gray-600 mt-2">
+          <Link to="/contact" className="hover:text-blue-400">Contacto y soporte</Link>
+        </p>
       </div>
     </div>
   );

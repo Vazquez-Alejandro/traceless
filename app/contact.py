@@ -1,0 +1,53 @@
+import os, logging
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+logger = logging.getLogger("contact")
+router = APIRouter(prefix="/api/contact", tags=["contact"])
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "soporte@traceless.com.ar")
+
+
+class ContactForm(BaseModel):
+    nombre: str
+    email: str
+    asunto: str
+    mensaje: str
+
+
+@router.post("")
+def enviar_contacto(req: ContactForm):
+    if not RESEND_API_KEY:
+        raise HTTPException(500, "Servicio de correo no configurado")
+
+    import resend
+    resend.api_key = RESEND_API_KEY
+
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e40af;">Nuevo mensaje de contacto - TraceLess</h2>
+      <hr style="border: 1px solid #e5e7eb;">
+      <p><strong>Nombre:</strong> {req.nombre}</p>
+      <p><strong>Email:</strong> {req.email}</p>
+      <p><strong>Asunto:</strong> {req.asunto}</p>
+      <hr style="border: 1px solid #e5e7eb;">
+      <p style="white-space: pre-wrap;">{req.mensaje}</p>
+      <hr style="border: 1px solid #e5e7eb;">
+      <p style="color: #6b7280; font-size: 12px;">Este mensaje fue enviado desde el formulario de contacto de TraceLess.</p>
+    </div>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": f"TraceLess Contacto <onboarding@resend.dev>",
+            "to": [CONTACT_EMAIL],
+            "reply_to": req.email,
+            "subject": f"[TraceLess] {req.asunto}",
+            "html": html,
+        })
+    except Exception as e:
+        logger.error(f"Error enviando mail de contacto: {e}")
+        raise HTTPException(500, "Error al enviar el mensaje")
+
+    return {"ok": True, "mensaje": "Mensaje enviado correctamente. Te responderemos a la brevedad."}
