@@ -64,7 +64,11 @@ export default function Contact() {
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          <Link to="/login" className="text-blue-400 hover:underline">Volver al login</Link>
+          {localStorage.getItem("token") ? (
+            <Link to="/dashboard" className="text-blue-400 hover:underline">Volver al dashboard</Link>
+          ) : (
+            <Link to="/login" className="text-blue-400 hover:underline">Volver al login</Link>
+          )}
         </p>
       </div>
     </div>
