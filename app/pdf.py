@@ -96,6 +96,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   {cbu_section}
   {mp_section}
   <div class="cae">CAE: {factura['cae']} — Vence: {factura.get('cae_vencimiento', '')}</div>
+  <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
 """
 

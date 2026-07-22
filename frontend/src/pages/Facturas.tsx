@@ -104,7 +104,7 @@ export default function Facturas() {
   const handleWhatsApp = async (f: Factura) => {
     const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
     const url = `${window.location.origin}/api/facturas/public/${f.id}`;
-    const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}`);
+    const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}\n\n⚡ Facturación automática con TraceLess`);
     const waUrl = telefono ? `https://wa.me/54${telefono}?text=${msg}` : `https://wa.me/?text=${msg}`;
     window.open(waUrl, "_blank");
   };
