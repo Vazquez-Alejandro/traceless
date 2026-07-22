@@ -17,15 +17,16 @@ app = FastAPI(title="TraceLess API")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    if isinstance(exc, HTTPException):
-        raise exc
-    from fastapi.responses import JSONResponse
-    import traceback
+    import traceback, logging
     logger = logging.getLogger("main")
     logger.error(f"Unhandled error: {traceback.format_exc()}")
+    from fastapi.responses import JSONResponse
+    from starlette.responses import Response
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     return JSONResponse(
         status_code=500,
-        content={"detail": "Error interno del servidor"},
+        content={"detail": str(exc)},
     )
 
 app.add_middleware(
