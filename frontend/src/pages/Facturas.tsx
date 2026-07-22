@@ -149,24 +149,20 @@ export default function Facturas() {
   };
 
   const handleBulkWhatsApp = async () => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-    setLoading(true);
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${BASE_URL}/api/facturas/enviar-whatsapp`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ factura_ids: ids }),
-    }).then(r => r.json());
-    setLoading(false);
-    setSelected(new Set());
-    if (res.errores?.length > 0) {
-      const msgs = res.errores.map((e: any) => e.error).join("; ");
-      setToast(`Enviados: ${res.enviados || 0}. Errores: ${msgs}`);
-    } else {
-      setToast(`${res.enviados || 0} facturas enviadas por WhatsApp ✅`);
+    const seleccionadas = facturas.filter(f => selected.has(f.id));
+    if (seleccionadas.length === 0) return;
+
+    if (seleccionadas.some(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""))) {
+      const sinTelefono = seleccionadas.filter(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""));
+      if (!confirm(`${sinTelefono.length} factura(s) sin teléfono del cliente. Se abrieron las demás. ¿Continuar?`)) return;
     }
-    setTimeout(() => setToast(""), 6000);
+
+    const conTelefono = seleccionadas.filter(f => f.clientes?.telefono?.replace(/[^0-9]/g, ""));
+    conTelefono.forEach((f, i) => {
+      setTimeout(() => handleWhatsApp(f), i * 400);
+    });
+    setToast(`Abriendo ${conTelefono.length} chats de WhatsApp`);
+    setSelected(new Set());
   };
 
   const addItem = () => {
