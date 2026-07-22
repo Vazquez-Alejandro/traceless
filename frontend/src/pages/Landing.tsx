@@ -62,11 +62,8 @@ export default function Landing() {
             <Link to="/register" className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-xl shadow-blue-600/25 text-sm">
               Empezar Gratis — Sin tarjeta
             </Link>
-            <Link to="/register?plan=pro" className="w-full sm:w-auto px-6 py-3 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-xl border border-gray-700/50 text-sm">
-              Probar Pro 7 días gratis
-            </Link>
           </div>
-          <p className="text-[10px] text-gray-600 mt-3">Sin tarjeta de crédito. Cancelá cuando quieras.</p>
+          <p className="text-[10px] text-gray-600 mt-3">5 facturas por mes. Sin tarjeta de crédito.</p>
         </div>
       </section>
 
@@ -120,7 +117,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Planes simples, sin sorpresas</h2>
           <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
-            Probá Pro gratis por 7 días. Después elegí el plan que mejor se adapte a vos.
+            Empezá gratis. Upgrade cuando necesités más.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {PLANS.map((p) => (
