@@ -259,7 +259,7 @@ def verify_email(req: VerifyRequest):
     r2 = httpx.put(
         f"{_URL}/auth/v1/admin/users/{user['id']}",
         headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-        json={"email_confirmed_at": now},
+        json={"email_confirm": True},
         timeout=10,
     )
     if r2.status_code != 200:
@@ -302,11 +302,10 @@ def confirm_email_direct(req: ForgotPasswordRequest):
     user = r.json()["users"][0]
     if user.get("email_confirmed_at"):
         return {"ok": True, "mensaje": "Email ya está confirmado"}
-    now = datetime.now(timezone.utc).isoformat()
     r2 = httpx.put(
         f"{_URL}/auth/v1/admin/users/{user['id']}",
         headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-        json={"email_confirmed_at": now},
+        json={"email_confirm": True},
         timeout=10,
     )
     if r2.status_code != 200:
