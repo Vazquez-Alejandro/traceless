@@ -15,3 +15,8 @@ facturas/
 .env*
 backend/
 
+
+# Secrets
+.lemon-*
+.lemon-api-key
+.lemon-webhook-secret
