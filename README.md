@@ -5,16 +5,27 @@ App para monotributistas que facilita la facturación electrónica y el seguimie
 ## Features
 
 ### Facturación Electrónica con ARCA
-Emisión de facturas (A, B, C, E) conectadas directamente al Web Service de ARCA (AFIP). Se obtiene el CAE en tiempo real, se guarda el comprobante y se genera el PDF automáticamente.
+Emisión de facturas (A, B, C) conectadas directamente al Web Service de ARCA (AFIP). Se obtiene el CAE en tiempo real, se guarda el comprobante y se genera el PDF automáticamente. Si ARCA no responde, la factura queda en cola y se emite automáticamente cuando vuelva.
 
-### Envío por WhatsApp
-Las facturas se envían automáticamente por WhatsApp al cliente al emitirlas. Incluye el PDF y un mensaje con el número de factura, el total y el vencimiento del CAE.
+### Envío por WhatsApp (Dual)
+Las facturas se envían por WhatsApp al cliente al emitirlas. Dos modos:
+- **wa.me (por defecto):** Sin configuración. Abre el chat de WhatsApp con el mensaje y PDF listo para enviar.
+- **API Cloud (opcional):** Envío directo desde la app sin redirigir. Requiere configurar credenciales de Meta.
+
+### Envío Masivo de Facturas
+Selección múltiple de facturas con tildes. Un solo botón envía todas las seleccionadas a sus clientes correspondientes. Funciona con ambos modos de WhatsApp.
+
+### Links de Pago MercadoPago
+Cada factura genera automáticamente un link de pago de MercadoPago. El cliente puede pagar online con tarjeta o transferencia. Los pagos se registran automáticamente via webhook.
+
+### QR para Pago Presencial
+Cuando el usuario configura CBU y alias en su perfil, se genera un código QR en la factura con los datos para transferencia bancaria. El cliente escanea y paga desde su app de banco.
 
 ### Dashboard de Ingresos
 Resumen amigable de lo que facturás: total del mes, comparación con el mes anterior, total del año y cantidad de facturas emitidas. Sin juzgar, solo informar.
 
 ### Historial de Clientes
-Registro de clientes con datos fiscales (CUIT, condición de IVA, dirección). Historial de facturas por cliente con seguimiento de pagos: cuánto paga, si paga a tiempo o con atraso.
+Registro de clientes con datos fiscales (CUIT, condición de IVA, dirección). Historial de facturas por cliente con seguimiento de pagos: cuánto paga, si paga a tiempo o con atraso. Creación rápida de clientes desde el formulario de facturas.
 
 ### Recordatorios de Cobro
 Cada lunes se envían recordatorios por WhatsApp a clientes con facturas impagas. A los 30 días se intensifica el mensaje y la factura pasa a estado "vencida".
@@ -25,24 +36,37 @@ El día 20 de cada mes se envía un recordatorio por WhatsApp a usuarios con pla
 ### Facturas Recurrentes
 Generación automática de facturas periódicas. Se configura una factura recurrente y se emite automáticamente según la frecuencia definida.
 
-### Exportación a Excel
-Exportación de facturas a formato .xlsx para tener un respaldo local o compartir con un contador.
+### Facturas Programadas
+Al crear una factura, se puede programar el envío para una fecha futura. La factura se guarda como "programada" y se emite automáticamente en la fecha seleccionada (respetando el límite de ±10 días de ARCA).
 
-### Planes y Pagos con Lemon Squeezy
-Sistema de planes (Free, Basic, Pro, PyME, Corporate) con límites de facturación y acceso a WhatsApp. Los planes se pagan a través de Lemon Squeezy con checkout externo y activación automática por webhook.
+### Factura Pública (HTML)
+Cada factura tiene un link público que muestra la factura en formato HTML limpio, con datos del emisor, detalle de items, totales, QR de pago y link de MercadoPago. Ideal para compartir con clientes.
+
+### Exportación a Excel
+Exportación de facturas a formato .xlsx para tener un respaldo local o compartir con un contador. Filtros por rango de fechas.
+
+### Retry Queue (Cola de Reintentos)
+Si ARCA no responde al emitir una factura, queda en cola automáticamente. Se reintenta cada cierto tiempo hasta que se apruebe. El usuario puede cerrar la app tranquilo.
+
+### Analytics de Clientes
+Dashboard con estadísticas por cliente: facturas emitidas, montos totales, frecuencia de pago, ranking de mejores clientes.
+
+### Verificación de Email
+Flujo completo de registro con verificación de email vía Resend. Incluye reenvío de verificación y reseteo de contraseña.
+
+### Planes y Pagos con MercadoPago
+Sistema de planes (Gratis, Profesional, Equipo) con límites de facturación y acceso a features premium. Los planes se pagan a través de MercadoPago con checkout y activación automática por webhook.
 
 ### Planes
 
-| Plan | Precio | Facturas/mes | WhatsApp |
-|------|--------|-------------|----------|
-| Free | $0 | 3 | No |
-| Basic | $9/mes | 50 | Sí |
-| Pro | $19/mes | Ilimitadas | Sí |
-| PyME | $29/mes | Ilimitadas | Sí |
-| Corporate | $99/mes | Ilimitadas | Sí |
+| Plan | Precio | Facturas/mes | WhatsApp | Recurrentes | Analytics |
+|------|--------|-------------|----------|-------------|-----------|
+| Gratis | $0 | 3 | wa.me | No | No |
+| Profesional | $15.000/mes | Ilimitado | API + wa.me | Sí | Sí |
+| Equipo | $29.000/mes | Ilimitado | API + wa.me | Sí | Sí |
 
 ### Perfil de Usuario
-Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, teléfono. Estos datos se usan automáticamente al emitir facturas.
+Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, teléfono. Datos de cuenta bancaria (CBU, alias) para QR de pago. Estos datos se usan automáticamente al emitir facturas.
 
 ## Stack
 
@@ -50,8 +74,9 @@ Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, t
 - **Backend:** FastAPI (Python 3.12)
 - **Base de datos:** Supabase (PostgreSQL)
 - **Facturación:** ARCA WSFEv1 (zeep)
-- **Pagos:** Lemon Squeezy
-- **WhatsApp:** Meta Cloud API
+- **Pagos:** MercadoPago
+- **Email:** Resend
+- **WhatsApp:** Meta Cloud API / wa.me
 - **Deploy:** Vercel
 
 ## Variables de Entorno
@@ -59,6 +84,7 @@ Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, t
 ### Supabase
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_KEY`
+- `SUPABASE_ANON_KEY`
 
 ### ARCA (Facturación Electrónica)
 - `ARCA_ENV` (produccion / homologacion)
@@ -67,19 +93,20 @@ Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, t
 - `ARCA_KEY_B64` (clave privada en base64)
 - `ARCA_PUNTO_VENTA`
 
-### Lemon Squeezy (Pagos)
-- `LEMON_SQUEEZY_API_KEY`
-- `LEMON_SQUEEZY_WEBHOOK_SECRET`
-- `LEMON_STORE_ID`
-- `LEMON_VARIANT_BASIC`
-- `LEMON_VARIANT_PRO`
-- `LEMON_VARIANT_PYME`
-- `LEMON_VARIANT_CORPORATE`
+### MercadoPago (Pagos)
+- `MP_ACCESS_TOKEN`
+- `MP_WEBHOOK_SECRET`
 
-### WhatsApp
+### WhatsApp (Opcional)
 - `WHATSAPP_TOKEN`
 - `WHATSAPP_PHONE_ID`
 
+### Resend (Email)
+- `RESEND_API_KEY`
+- `RESEND_FROM`
+
 ### Otros
-- `CRON_SECRET` (para crons de Vercel)
+- `JWT_SECRET`
+- `VERIFY_SECRET`
+- `CRON_SECRET`
 - `BASE_URL`
