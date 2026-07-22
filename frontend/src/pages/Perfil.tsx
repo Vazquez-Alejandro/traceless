@@ -138,7 +138,7 @@ export default function Perfil() {
             <h2 className="text-sm font-semibold text-gray-400 mb-3">Tu plan</h2>
             <p className="text-2xl font-bold text-white mb-1">{user.plan || "Gratis"}</p>
             <p className="text-xs text-gray-500">
-              {user.whatsapp_configurado ? "✅ WhatsApp configurado" : "⏳ WhatsApp pendiente"}
+              {user.whatsapp_configurado ? "🟢 Envío directo por API" : "🟡 Envío por wa.me (sin configurar)"}
             </p>
           </div>
 
