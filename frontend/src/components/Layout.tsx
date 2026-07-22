@@ -1,13 +1,24 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import Onboarding from "./Onboarding";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const done = localStorage.getItem("onboarding_done");
+    if (!done) setShowOnboarding(true);
+  }, []);
+
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("onboarding_done");
     window.location.href = "/login";
   };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+      {showOnboarding && <Onboarding onComplete={() => setShowOnboarding(false)} />}
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-full mx-auto flex items-center justify-between h-14 px-6">
           <div className="flex items-center gap-6">

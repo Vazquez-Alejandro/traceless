@@ -333,10 +333,9 @@ def factura_pdf(factura_id: str):
 def enviar_recordatorios(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
-    from app.whatsapp import enviar_whatsapp
+    from app.whatsapp import enviar_recordatorio_whatsapp
     import asyncio
     now = datetime.now()
-    # Recordatorios semanales: facturas emitidas hace 7+ días
     vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (now - timedelta(days=7)).strftime("%Y-%m-%d")).execute()
     enviados = 0
     for f in vencidas.data:
@@ -348,15 +347,8 @@ def enviar_recordatorios(secret: str = ""):
         num = f.get("numero", "")
         dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
         if dias >= 30:
-            msg = f"⚠️ *{cli.get('nombre','')}*, la factura *{num}* por ${total:,.2f} tiene más de 30 días impaga. Te notificamos que se sumará a la próxima factura si no se cancela antes."
             supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
-        else:
-            msg = f"📋 *Recordatorio:* La factura *{num}* por ${total:,.2f} a nombre de {cli.get('nombre','')} está pendiente de pago ({dias} días)."
-        pdf = f.get("pdf_url", "")
-        if pdf:
-            base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
-            msg += f"\nPodés verla acá: {base_url}{pdf}"
-        asyncio.create_task(enviar_whatsapp(telefono, msg))
+        asyncio.create_task(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias))
         enviados += 1
     return {"ok": True, "recordatorios_enviados": enviados}
 
@@ -364,7 +356,7 @@ def enviar_recordatorios(secret: str = ""):
 def recordatorio_monotributo(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
-    from app.whatsapp import enviar_whatsapp
+    from app.whatsapp import enviar_recordatorio_monotributo_whatsapp
     import asyncio
     from app.db import supabase as _sb
     import httpx as _httpx
@@ -390,14 +382,7 @@ def recordatorio_monotributo(secret: str = ""):
         nombre = perfil.get("nombre", "")
         if not tel:
             continue
-        cat = meta.get("monotributo_categoria", "")
-        msg = f"Hola {nombre}! " if nombre else "Hola! "
-        msg += "Recordá que pronto vence la cuota del monotributo."
-        if cat:
-            msg += f"\nTu categoria: {cat}"
-        msg += "\n\nNo te olvides de pagarlo para mantener todo en regla."
-        msg += "\n\n* Hecho con TraceLess -- traceless.com.ar"
-        asyncio.create_task(enviar_whatsapp(tel, msg))
+        asyncio.create_task(enviar_recordatorio_monotributo_whatsapp(tel, nombre or "Usuario"))
         enviados += 1
     return {"ok": True, "enviados": enviados}
 
