@@ -120,6 +120,7 @@ export default function Facturas() {
       importe: String(f.total),
       descripcion: desc,
       recurrente: false,
+      scheduled_send: "",
     });
     setDetalles([]);
     setUsarItems(false);
@@ -377,7 +378,10 @@ export default function Facturas() {
                 <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Copiar link</button>
               )}
               {f.mp_link && (
-                <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline">💳 Pagar</a>
+                <div className="flex items-center gap-1">
+                  <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline">💳 Pagar</a>
+                  <button onClick={async () => { await navigator.clipboard.writeText(f.mp_link!); setToast("Link de pago copiado"); }} className="text-xs text-gray-500 hover:text-white" title="Copiar link de pago">📋</button>
+                </div>
               )}
               {f.estado !== "programada" && (
                 <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>

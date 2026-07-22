@@ -1,10 +1,57 @@
 from pathlib import Path
 import tempfile
+import base64
 
 TMP = Path(tempfile.gettempdir()) / "traceless_facturas"
 FACTURAS_DIR = TMP
 
+def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: str) -> str:
+    if not cbu and not alias_banco:
+        return ""
+    try:
+        import qrcode
+        import qrcode.constants
+        lineas = []
+        if cbu:
+            lineas.append(f"CBU: {cbu}")
+        if alias_banco:
+            lineas.append(f"Alias: {alias_banco}")
+        lineas.append(f"Monto: ${monto:,.2f}")
+        lineas.append(f"Beneficiario: {emisor_nombre}")
+        texto = "\n".join(lineas)
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=6, border=2)
+        qr.add_data(texto)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        import io
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return f'<img src="data:image/png;base64,{b64}" style="width:160px;height:160px" />'
+    except Exception:
+        return ""
+
 def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
+    cbu = emisor.get("cbu", "")
+    alias_banco = emisor.get("alias_banco", "")
+    qr_html = _generar_qr_pago(factura["total"], cbu, alias_banco, emisor.get("nombre", ""))
+
+    mp_link = factura.get("mp_link", "")
+    mp_section = ""
+    if mp_link:
+        mp_section = f'<div style="margin-top:20px;text-align:center"><a href="{mp_link}" style="display:inline-block;padding:10px 24px;background:#009ee3;color:white;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">💳 Pagar online con MercadoPago</a></div>'
+
+    cbu_section = ""
+    if cbu or alias_banco:
+        cbu_lines = ""
+        if cbu:
+            cbu_lines += f"<div><strong>CBU:</strong> <span style='font-family:monospace'>{cbu}</span></div>"
+        if alias_banco:
+            cbu_lines += f"<div><strong>Alias:</strong> <span style='font-family:monospace'>{alias_banco}</span></div>"
+        cbu_lines += "<div style='margin-top:4px;font-size:11px;color:#666'>Transferí a esta cuenta</div>"
+        qr_cell = f'<div style="text-align:center">{qr_html}</div>' if qr_html else ""
+        cbu_section = f'<div style="margin-top:24px;padding:16px;border:1px solid #ddd;border-radius:10px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:8px;color:#333">Datos para transferencia bancaria</div><div style="display:flex;gap:20px;align-items:center">{cbu_lines} {qr_cell}</div></div>'
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
@@ -29,7 +76,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     </div>
     <div style="text-align:right">
       <h1>Factura {factura.get('tipo_nombre', 'B')}</h1>
-      <div class="datos">NÂ° {factura['numero']}<br>{factura['fecha']}</div>
+      <div class="datos">N° {factura['numero']}<br>{factura['fecha']}</div>
     </div>
   </div>
   <div class="datos">
@@ -46,7 +93,9 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     <tr><td>IVA</td><td style="text-align:right">${factura.get('iva', 0):,.2f}</td></tr>
     <tr class="final"><td>Total</td><td style="text-align:right">${factura['total']:,.2f}</td></tr>
   </table>
-  <div class="cae">CAE: {factura['cae']} â€” Vence: {factura.get('cae_vencimiento', '')}</div>
+  {cbu_section}
+  {mp_section}
+  <div class="cae">CAE: {factura['cae']} — Vence: {factura.get('cae_vencimiento', '')}</div>
 </body></html>
 """
 

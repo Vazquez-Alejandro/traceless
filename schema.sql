@@ -10,6 +10,8 @@ create table if not exists perfiles (
   direccion text default '',
   condicion_iva text default 'Responsable Inscripto',
   telefono text default '',
+  cbu text default '',
+  alias_banco text default '',
   created_at timestamptz default now()
 );
 
@@ -80,9 +82,8 @@ create policy "Usuarios pueden actualizar sus facturas"
   on facturas for update using (auth.uid() = user_id);
 
 -- Migraciones para programación y link de pago
-alter table facturas add column if not exists scheduled_send text;
-alter table facturas add column if not exists mp_link text;
-alter table facturas add column if not exists fecha_pago text;
+alter table perfiles add column if not exists cbu text default '';
+alter table perfiles add column if not exists alias_banco text default '';
 
 -- Indices
 create index if not exists idx_clientes_user on clientes(user_id);

@@ -362,6 +362,8 @@ class ProfileUpdate(BaseModel):
     direccion: Optional[str] = None
     condicion_iva: Optional[str] = None
     telefono: Optional[str] = None
+    cbu: Optional[str] = None
+    alias_banco: Optional[str] = None
 
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):

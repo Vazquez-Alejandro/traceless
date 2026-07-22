@@ -11,7 +11,7 @@ const PLANS_LIST = [
 export default function Perfil() {
   const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
-  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "" });
+  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "" });
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function Perfil() {
     }).then(r => r.json()).then(d => {
       const u = d.user || d;
       setUser(u);
-      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto" });
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "" });
     });
   }, []);
 
@@ -108,6 +108,20 @@ export default function Perfil() {
                   <option>Exento</option>
                 </select>
               ) : <p className="text-white mt-0.5">{user.condicion_iva || "—"}</p>}
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs">CBU (para transferencia)</label>
+              {edit ? (
+                <input value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} placeholder="Ej: 0000000000000000000000"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              ) : <p className="text-white mt-0.5 font-mono">{user.cbu || "—"}</p>}
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs">Alias CBU</label>
+              {edit ? (
+                <input value={form.alias_banco} onChange={e => setForm({...form, alias_banco: e.target.value})} placeholder="Ej: mi.alias"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              ) : <p className="text-white mt-0.5 font-mono">{user.alias_banco || "—"}</p>}
             </div>
             {edit && (
               <div className="md:col-span-2">
