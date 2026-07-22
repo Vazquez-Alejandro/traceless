@@ -180,7 +180,7 @@ def login(req: LoginRequest):
         r = httpx.post(
             f"{_URL}/auth/v1/token?grant_type=password",
             json={"email": req.email, "password": req.password},
-            headers={"apikey": _SERVICE_KEY, "Content-Type": "application/json"},
+            headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
             timeout=15,
         )
     except Exception as e:
