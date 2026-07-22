@@ -120,15 +120,22 @@ async def mp_webhook(request: Request):
     data_id = body.get("data", {}).get("id", "")
 
     if event_type == "payment":
-        # Consultar el pago
         r = httpx.get(f"{MP_BASE}/v1/payments/{data_id}", headers=_mp_headers(), timeout=15)
         if r.status_code == 200:
             payment = r.json()
             status = payment.get("status", "")
             external_ref = payment.get("external_reference", "")
             if status == "approved" and external_ref:
-                _set_user_plan_mp(external_ref, "pro")
-                logger.info(f"Payment approved for user {external_ref}")
+                if external_ref.startswith("factura_"):
+                    factura_id = external_ref.replace("factura_", "")
+                    try:
+                        supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
+                        logger.info(f"Factura {factura_id} pagada via MP")
+                    except Exception as e:
+                        logger.error(f"Error actualizando factura {factura_id}: {e}")
+                else:
+                    _set_user_plan_mp(external_ref, "pro")
+                    logger.info(f"Payment approved for user {external_ref}")
 
     elif event_type == "subscription_preapproval":
         r = httpx.get(f"{MP_BASE}/preapproval/{data_id}", headers=_mp_headers(), timeout=15)
@@ -142,6 +149,32 @@ async def mp_webhook(request: Request):
                 _set_user_plan_mp(external_ref, "free")
 
     return {"ok": True}
+
+
+def crear_link_pago_factura(monto: float, descripcion: str, factura_id: str, email_cliente: str = "") -> str:
+    if not MP_TOKEN:
+        return ""
+    body = {
+        "items": [{
+            "title": f"Factura {descripcion}" if descripcion else "Factura",
+            "quantity": 1,
+            "unit_price": monto,
+            "currency_id": "ARS",
+        }],
+        "external_reference": f"factura_{factura_id}",
+        "expires": True,
+        "expiration_date_from": datetime.now(timezone.utc).isoformat(),
+        "expiration_date_to": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+        "back_urls": {"success": "https://www.traceless.com.ar/facturas"},
+        "auto_return": "approved",
+    }
+    if email_cliente:
+        body["payer"] = {"email": email_cliente}
+    r = httpx.post(f"{MP_BASE}/checkout/preferences", json=body, headers=_mp_headers(), timeout=15)
+    if r.status_code not in (200, 201):
+        logger.error(f"Error creando link pago factura: {r.status_code} {r.text}")
+        return ""
+    return r.json()["init_point"]
 
 
 def _set_user_plan_mp(user_id: str, plan_key: str):

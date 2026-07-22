@@ -79,6 +79,11 @@ create policy "Usuarios pueden crear facturas"
 create policy "Usuarios pueden actualizar sus facturas"
   on facturas for update using (auth.uid() = user_id);
 
+-- Migraciones para programación y link de pago
+alter table facturas add column if not exists scheduled_send text;
+alter table facturas add column if not exists mp_link text;
+alter table facturas add column if not exists fecha_pago text;
+
 -- Indices
 create index if not exists idx_clientes_user on clientes(user_id);
 create index if not exists idx_facturas_user on facturas(user_id);

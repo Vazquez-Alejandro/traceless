@@ -33,6 +33,7 @@ class FacturaCreate(BaseModel):
     descripcion: str = "Honorarios"
     detalles: list[DetalleItem] = []
     recurrente: bool = False
+    scheduled_send: Optional[str] = None
 
 @router.post("")
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
@@ -88,6 +89,30 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         else:
             descripcion_final = req.descripcion
 
+    # Si es programada para futuro, guardamos sin emitir en ARCA
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    es_programada = bool(req.scheduled_send and req.scheduled_send > hoy)
+
+    if es_programada:
+        factura_data = {
+            "user_id": uid,
+            "cliente_id": req.cliente_id,
+            "tipo": req.tipo,
+            "numero": "",
+            "cae": "",
+            "cae_vencimiento": "",
+            "neto": 0,
+            "iva": 0,
+            "total": importe_total,
+            "descripcion": descripcion_final,
+            "fecha": req.scheduled_send,
+            "vencimiento": "",
+            "estado": "programada",
+            "scheduled_send": req.scheduled_send,
+        }
+        res = supabase.table("facturas").insert(factura_data).execute()
+        return {"factura": {**res.data[0]}}
+
     last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
     ultimo_numero = 0
     if last.data:
@@ -117,7 +142,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         "iva": afip_result["iva"],
         "total": afip_result["total"],
         "descripcion": descripcion_final,
-        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "fecha": hoy,
         "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
         "estado": "emitida",
     }
@@ -149,13 +174,27 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     res = supabase.table("facturas").insert(factura_data).execute()
     factura = res.data[0]
 
+    # Generar link de pago MP
+    mp_link = ""
+    from app.mercadopago import crear_link_pago_factura
+    try:
+        email_cliente = cliente.data.get("email", "")
+        mp_link = crear_link_pago_factura(
+            monto=importe_total,
+            descripcion=req.descripcion,
+            factura_id=factura["id"],
+            email_cliente=email_cliente,
+        )
+    except Exception:
+        pass
+
     html_url = guardar_factura_html(
         factura={**factura_data, "id": factura["id"], "tipo_nombre": _tipo_nombre(req.tipo)},
         cliente=cliente.data,
         emisor=emisor,
     )
 
-    supabase.table("facturas").update({"pdf_url": html_url}).eq("id", factura["id"]).execute()
+    supabase.table("facturas").update({"pdf_url": html_url, "mp_link": mp_link}).eq("id", factura["id"]).execute()
 
     if plan["whatsapp"]:
         telefono = cliente.data.get("telefono", "")
@@ -170,10 +209,11 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
                     total=factura["total"],
                     pdf_url=pdf_url,
                     fecha=factura["fecha"].split("T")[0],
+                    mp_link=mp_link,
                 )
                 log_whatsapp_send(uid, factura["id"], "factura")
 
-    return {"factura": {**factura, "pdf_url": html_url}}
+    return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}}
 
 @router.get("")
 def listar_facturas(authorization: str = Header("")):
@@ -384,6 +424,104 @@ def procesar_recurrentes(secret: str = ""):
                     json={"app_metadata": meta})
         offset += limit
     return {"ok": True, "emitidas": emitidas}
+
+@router.get("/procesar-programadas")
+def procesar_programadas(secret: str = ""):
+    if secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(403, "No autorizado")
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    procesadas = 0
+    errores = 0
+
+    res = supabase.table("facturas").select("*, clientes!inner(nombre, apellido, cuit, telefono, email, condicion_iva)").eq("estado", "programada").lte("scheduled_send", hoy).execute()
+    for f in res.data:
+        uid = f["user_id"]
+        try:
+            cli = f.get("clientes") or {}
+            perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+            emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
+            import json as _json
+            desc_raw = f.get("descripcion", "")
+            try:
+                parsed = _json.loads(desc_raw)
+                desc = parsed.get("d", "Honorarios")
+                detalles = parsed.get("i", [])
+            except Exception:
+                desc = desc_raw
+                detalles = []
+
+            last = supabase.table("facturas").select("numero").eq("user_id", uid).neq("estado", "programada").order("created_at", desc=True).limit(1).execute()
+            ultimo_numero = 0
+            if last.data:
+                try:
+                    ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
+                except (ValueError, IndexError):
+                    ultimo_numero = 0
+
+            from app.afip import generar_factura_afip
+            afip_result = generar_factura_afip(
+                cliente_cuit=cli.get("cuit", ""),
+                cliente_nombre=f"{cli.get('nombre', '')} {cli.get('apellido', '')}",
+                tipo=f.get("tipo", 6),
+                importe=f["total"],
+                condicion_iva=cli.get("condicion_iva", "Consumidor Final"),
+                descripcion=desc,
+                ultimo_numero=ultimo_numero,
+            )
+
+            from app.mercadopago import crear_link_pago_factura
+            mp_link = ""
+            try:
+                email_cliente = cli.get("email", "")
+                mp_link = crear_link_pago_factura(monto=f["total"], descripcion=desc, factura_id=f["id"], email_cliente=email_cliente)
+            except Exception:
+                pass
+
+            supabase.table("facturas").update({
+                "numero": afip_result["numero"],
+                "cae": afip_result["cae"],
+                "cae_vencimiento": afip_result["cae_vencimiento"],
+                "neto": afip_result["neto"],
+                "iva": afip_result["iva"],
+                "fecha": hoy,
+                "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+                "estado": "emitida",
+                "mp_link": mp_link,
+            }).eq("id", f["id"]).execute()
+
+            from app.pdf import guardar_factura_html
+            html_url = guardar_factura_html(
+                factura={**f, "id": f["id"], "numero": afip_result["numero"], "cae": afip_result["cae"], "tipo_nombre": _tipo_nombre(f.get("tipo", 6))},
+                cliente=cli,
+                emisor=emisor,
+            )
+            supabase.table("facturas").update({"pdf_url": html_url}).eq("id", f["id"]).execute()
+
+            plan = get_user_plan(uid)
+            if plan["whatsapp"]:
+                telefono = cli.get("telefono", "")
+                if telefono:
+                    wp_ok, _ = can_send_whatsapp(uid)
+                    if wp_ok:
+                        base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+                        pdf_url = f"{base_url}{html_url}"
+                        import asyncio
+                        asyncio.create_task(enviar_factura_whatsapp(
+                            telefono=telefono,
+                            cliente=cli.get("nombre", ""),
+                            numero=afip_result["numero"],
+                            total=f["total"],
+                            pdf_url=pdf_url,
+                            fecha=hoy,
+                            mp_link=mp_link,
+                        ))
+                        log_whatsapp_send(uid, f["id"], "factura")
+            procesadas += 1
+        except Exception as e:
+            logger.error(f"Error procesando factura programada {f['id']}: {e}")
+            errores += 1
+
+    return {"ok": True, "procesadas": procesadas, "errores": errores}
 
 @router.get("/estadisticas")
 def estadisticas(authorization: str = Header("")):

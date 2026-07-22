@@ -20,6 +20,8 @@ interface Factura {
   descripcion?: string;
   clientes: Cliente;
   pdf_url?: string;
+  mp_link?: string;
+  scheduled_send?: string;
 }
 
 interface DetalleItem {
@@ -32,7 +34,7 @@ export default function Facturas() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
+  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
   const [copiado, setCopiado] = useState("");
@@ -144,7 +146,7 @@ export default function Facturas() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo };
+    const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo, scheduled_send: form.scheduled_send || undefined };
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
     }
@@ -158,7 +160,7 @@ export default function Facturas() {
     if (res.pendiente) {
       setToast("⏳ ARCA está tomando un café. Dejanos la factura acá, nos encargamos de aprobarla y enviarla por WhatsApp apenas vuelva. Podés cerrar la app tranquilo.");
       setTimeout(() => setToast(""), 8000);
-      setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
+      setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
       setDetalles([]);
       setUsarItems(false);
       setShowForm(false);
@@ -169,7 +171,7 @@ export default function Facturas() {
     const id = res?.factura?.id;
     const link = id ? `${window.location.origin}/api/facturas/public/${id}` : "";
     setUltimoLink(link);
-    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false });
+    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
     setDetalles([]);
     setUsarItems(false);
     setShowForm(false);
@@ -265,7 +267,7 @@ export default function Facturas() {
               className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           </div>
 
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-4 flex-wrap">
             <label className="flex items-center gap-2 text-xs text-gray-400">
               <input type="checkbox" checked={usarItems} onChange={e => setUsarItems(e.target.checked)} />
               Desglosar por items
@@ -273,10 +275,26 @@ export default function Facturas() {
             {userPlan.features.recurrentes ? (
               <label className="flex items-center gap-2 text-xs text-gray-400">
                 <input type="checkbox" checked={form.recurrente} onChange={e => setForm({ ...form, recurrente: e.target.checked })} />
-                Factura recurrente (se repite cada mes)
+                Factura recurrente
               </label>
             ) : (
-              <span className="text-xs text-gray-600 italic">Facturas recurrentes · <button type="button" onClick={() => window.location.href = '/perfil'} className="text-blue-400 hover:underline not-italic">Mejorá tu plan</button></span>
+              <span className="text-xs text-gray-600 italic">Recurrentes · <button type="button" onClick={() => window.location.href = '/perfil'} className="text-blue-400 hover:underline not-italic">Mejorá tu plan</button></span>
+            )}
+            <label className="flex items-center gap-2 text-xs text-gray-400">
+              <input type="checkbox" checked={!!form.scheduled_send} onChange={e => {
+                if (!e.target.checked) setForm({ ...form, scheduled_send: "" });
+                else {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 7);
+                  setForm({ ...form, scheduled_send: d.toISOString().split("T")[0] });
+                }
+              }} />
+              Programar envío
+            </label>
+            {form.scheduled_send && (
+              <input type="date" value={form.scheduled_send} onChange={e => setForm({ ...form, scheduled_send: e.target.value })}
+                min={new Date().toISOString().split("T")[0]}
+                className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs" />
             )}
           </div>
 
@@ -303,7 +321,7 @@ export default function Facturas() {
           )}
 
           <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
-            {loading ? "Emitiendo..." : "Emitir Factura"}
+            {loading ? "Guardando..." : form.scheduled_send ? "Programar Factura" : "Emitir Factura"}
           </button>
         </form>
       )}
@@ -323,16 +341,20 @@ export default function Facturas() {
         {facturas.map(f => (
           <div key={f.id} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800/40 flex items-center justify-between">
             <div>
-              <div className="font-medium">{f.numero} — ${f.total.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha} · Vence: {f.vencimiento || "—"}</div>
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="font-medium">{f.numero || "—"} — ${f.total.toLocaleString()}</div>
+              <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha} · {f.vencimiento ? `Vence: ${f.vencimiento}` : ""}</div>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full ${
                   f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
                   f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
-                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-blue-900/40 text-blue-400"
+                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" :
+                  f.estado === "programada" ? "bg-purple-900/40 text-purple-400" : "bg-blue-900/40 text-blue-400"
                 }`}>
-                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
+                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "programada" ? "Programada" : "Emitida"}
                 </span>
+                {f.scheduled_send && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">📅 {f.scheduled_send}</span>
+                )}
                 {(f as any).recurrente && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">Recurrente</span>
                 )}
@@ -341,17 +363,25 @@ export default function Facturas() {
                 <span>📄 {f.fecha}</span>
                 {f.fecha_pago && <span>💚 {f.fecha_pago}</span>}
                 {f.estado === "anulada" && <span>🗑️ Anulada</span>}
+                {f.mp_link && <span>💳 Link de pago</span>}
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => handleClone(f)} title="Reemitir esta factura" className="text-xs text-gray-400 hover:text-white">Reemitir</button>
-              <button onClick={() => handleWhatsApp(f)} title="Enviar por WhatsApp" className="text-xs text-green-400 hover:text-green-300">WhatsApp</button>
+              {f.estado !== "programada" && (
+                <button onClick={() => handleWhatsApp(f)} title="Enviar por WhatsApp" className="text-xs text-green-400 hover:text-green-300">WhatsApp</button>
+              )}
               {copiado === f.id ? (
                 <span className="text-xs text-green-400">¡Link copiado!</span>
               ) : (
                 <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Copiar link</button>
               )}
-              <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
+              {f.mp_link && (
+                <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline">💳 Pagar</a>
+              )}
+              {f.estado !== "programada" && (
+                <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
+              )}
               {f.estado === "emitida" && (
                 <>
                   <button onClick={() => handlePay(f.id)} className="text-xs text-green-400 hover:underline">Pagada</button>

@@ -31,7 +31,7 @@ MESES = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
 
-async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, total: float, pdf_url: str, fecha: str = "") -> dict:
+async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, total: float, pdf_url: str, fecha: str = "", mp_link: str = "") -> dict:
     mes = ""
     if fecha:
         try:
@@ -51,4 +51,6 @@ async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, tota
         f"Total: *${total:,.2f}*\n\n"
         f"PDF: {pdf_url}"
     )
+    if mp_link:
+        mensaje += f"\n\n💳 *Pagá online:* {mp_link}"
     return await enviar_whatsapp(telefono, mensaje)
