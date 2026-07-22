@@ -102,26 +102,11 @@ export default function Facturas() {
   };
 
   const handleWhatsApp = async (f: Factura) => {
-    if (userPlan.whatsapp_configurado) {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${BASE_URL}/api/facturas/enviar-whatsapp`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ factura_ids: [f.id] }),
-      }).then(r => r.json());
-      if (res.errores?.length > 0) {
-        setToast(`Error: ${res.errores[0].error}`);
-      } else {
-        setToast("Factura enviada por WhatsApp ✅");
-      }
-      setTimeout(() => setToast(""), 4000);
-    } else {
-      const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
-      const url = `${window.location.origin}/api/facturas/public/${f.id}`;
-      const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}`);
-      const waUrl = telefono ? `https://wa.me/54${telefono}?text=${msg}` : `https://wa.me/?text=${msg}`;
-      window.open(waUrl, "_blank");
-    }
+    const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
+    const url = `${window.location.origin}/api/facturas/public/${f.id}`;
+    const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}`);
+    const waUrl = telefono ? `https://wa.me/54${telefono}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    window.open(waUrl, "_blank");
   };
 
   const handleClone = (f: Factura) => {
@@ -167,36 +152,16 @@ export default function Facturas() {
     const seleccionadas = facturas.filter(f => selected.has(f.id));
     if (seleccionadas.length === 0) return;
 
-    if (userPlan.whatsapp_configurado) {
-      const ids = seleccionadas.map(f => f.id);
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${BASE_URL}/api/facturas/enviar-whatsapp`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ factura_ids: ids }),
-      }).then(r => r.json());
-      setLoading(false);
-      setSelected(new Set());
-      if (res.errores?.length > 0) {
-        const msgs = res.errores.map((e: any) => e.error).join("; ");
-        setToast(`Enviados: ${res.enviados || 0}. Errores: ${msgs}`);
-      } else {
-        setToast(`${res.enviados || 0} facturas enviadas por WhatsApp ✅`);
-      }
-      setTimeout(() => setToast(""), 6000);
-    } else {
-      const sinTelefono = seleccionadas.filter(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""));
-      if (sinTelefono.length > 0) {
-        if (!confirm(`${sinTelefono.length} factura(s) sin teléfono del cliente. Se abrieron las demás. ¿Continuar?`)) return;
-      }
-      const conTelefono = seleccionadas.filter(f => f.clientes?.telefono?.replace(/[^0-9]/g, ""));
-      conTelefono.forEach((f, i) => {
-        setTimeout(() => handleWhatsApp(f), i * 400);
-      });
-      setToast(`Abriendo ${conTelefono.length} chats de WhatsApp`);
-      setSelected(new Set());
+    const sinTelefono = seleccionadas.filter(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""));
+    if (sinTelefono.length > 0) {
+      if (!confirm(`${sinTelefono.length} factura(s) sin teléfono del cliente. Se abrieron las demás. ¿Continuar?`)) return;
     }
+    const conTelefono = seleccionadas.filter(f => f.clientes?.telefono?.replace(/[^0-9]/g, ""));
+    conTelefono.forEach((f, i) => {
+      setTimeout(() => handleWhatsApp(f), i * 400);
+    });
+    setToast(`Abriendo ${conTelefono.length} chats de WhatsApp`);
+    setSelected(new Set());
   };
 
   const addItem = () => {
@@ -427,31 +392,11 @@ export default function Facturas() {
                 Todas ({selected.size}/{facturas.length})
               </label>
               <span className="text-[10px] text-gray-600">
-                {userPlan.whatsapp_configurado
-                  ? `🟢 WhatsApp API (${userPlan.whatsapp_used || 0}/${userPlan.whatsapp_limit || 0})`
-                  : "🟡 wa.me (sin configurar)"}
+                📱 WhatsApp wa.me
               </span>
-              {userPlan.whatsapp_configurado && (
-                <span className="text-[10px] text-gray-500">
-                  💳 ${(userPlan.creditos || 0).toLocaleString()} créditos
-                </span>
-              )}
-              {userPlan.whatsapp_configurado && (
-                <button onClick={async () => {
-                  const monto = prompt("Monto de créditos a comprar (mínimo $500):", "1000");
-                  if (!monto) return;
-                  const res = await fetch("/api/creditos/comprar", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-                    body: JSON.stringify({ monto: parseFloat(monto) }),
-                  });
-                  const data = await res.json();
-                  if (data.url) window.location.href = data.url;
-                  else alert(data.detail || "Error");
-                }} className="text-[10px] text-blue-400 hover:text-blue-300 underline">
-                  + Comprar
-                </button>
-              )}
+              <span className="text-[10px] text-gray-600">
+                🚀 API: Próximamente
+              </span>
             </div>
             {selected.size > 0 && (
               <button onClick={handleBulkWhatsApp} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg">
