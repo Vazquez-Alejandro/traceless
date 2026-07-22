@@ -377,6 +377,10 @@ def me(authorization: str = Header("")):
             "cuit": perfil_data.get("cuit", "") if perfil_data else "",
             "direccion": perfil_data.get("direccion", "") if perfil_data else "",
             "condicion_iva": perfil_data.get("condicion_iva", "Responsable Inscripto") if perfil_data else "Responsable Inscripto",
+            "empresa": perfil_data.get("empresa", "") if perfil_data else "",
+            "logo_url": perfil_data.get("logo_url", "") if perfil_data else "",
+            "email_fiscal": perfil_data.get("email_fiscal", "") if perfil_data else "",
+            "condiciones_venta": perfil_data.get("condiciones_venta", "") if perfil_data else "",
              "invoices_limit": plan["invoices_per_month"],
             "invoices_used": invoices_used,
             "whatsapp_limit": plan.get("whatsapp_monthly_limit", 0),
@@ -396,6 +400,10 @@ class ProfileUpdate(BaseModel):
     telefono: Optional[str] = None
     cbu: Optional[str] = None
     alias_banco: Optional[str] = None
+    empresa: Optional[str] = None
+    logo_url: Optional[str] = None
+    email_fiscal: Optional[str] = None
+    condiciones_venta: Optional[str] = None
 
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):

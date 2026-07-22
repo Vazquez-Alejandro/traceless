@@ -11,7 +11,7 @@ const PLANS_LIST = [
 export default function Perfil() {
   const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
-  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "" });
+  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "" });
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function Perfil() {
     }).then(r => r.json()).then(d => {
       const u = d.user || d;
       setUser(u);
-      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "" });
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "" });
     });
   }, []);
 
@@ -122,6 +122,37 @@ export default function Perfil() {
                 <input value={form.alias_banco} onChange={e => setForm({...form, alias_banco: e.target.value})} placeholder="Ej: mi.alias"
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
               ) : <p className="text-white mt-0.5 font-mono">{user.alias_banco || "—"}</p>}
+            </div>
+            <div className="md:col-span-2 mt-4 pt-4 border-t border-gray-800">
+              <h3 className="text-sm font-semibold text-gray-400 mb-3">Datos de empresa (opcional)</h3>
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs">Nombre de empresa</label>
+              {edit ? (
+                <input value={form.empresa} onChange={e => setForm({...form, empresa: e.target.value})} placeholder="Aparece en las facturas"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              ) : <p className="text-white mt-0.5">{user.empresa || "—"}</p>}
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs">Logo (URL de imagen)</label>
+              {edit ? (
+                <input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..."
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              ) : <p className="text-white mt-0.5 text-xs break-all">{user.logo_url || "—"}</p>}
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs">Email fiscal</label>
+              {edit ? (
+                <input value={form.email_fiscal} onChange={e => setForm({...form, email_fiscal: e.target.value})} placeholder="facturacion@empresa.com"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              ) : <p className="text-white mt-0.5">{user.email_fiscal || "—"}</p>}
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-gray-500 text-xs">Condiciones de venta (aparece en la factura)</label>
+              {edit ? (
+                <textarea value={form.condiciones_venta} onChange={e => setForm({...form, condiciones_venta: e.target.value})} rows={2} placeholder="Ej: Pago a 30 días, transferencia bancaria, etc."
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1 resize-none" />
+              ) : <p className="text-white mt-0.5">{user.condiciones_venta || "—"}</p>}
             </div>
             {edit && (
               <div className="md:col-span-2">

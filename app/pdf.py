@@ -52,6 +52,24 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
         qr_cell = f'<div style="text-align:center">{qr_html}</div>' if qr_html else ""
         cbu_section = f'<div style="margin-top:24px;padding:16px;border:1px solid #ddd;border-radius:10px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:8px;color:#333">Datos para transferencia bancaria</div><div style="display:flex;gap:20px;align-items:center">{cbu_lines} {qr_cell}</div></div>'
 
+    logo_url = emisor.get("logo_url", "")
+    empresa = emisor.get("empresa", "")
+    email_fiscal = emisor.get("email_fiscal", "")
+    condiciones_venta = emisor.get("condiciones_venta", "")
+    nombre_emisor = empresa or emisor.get('nombre', 'TraceLess')
+
+    logo_html = ""
+    if logo_url:
+        logo_html = f'<img src="{logo_url}" style="height:60px;object-fit:contain;margin-bottom:8px" />'
+
+    email_section = ""
+    if email_fiscal:
+        email_section = f"<br>Email: {email_fiscal}"
+
+    condiciones_section = ""
+    if condiciones_venta:
+        condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{condiciones_venta}</div></div>'
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
@@ -71,8 +89,9 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
 </style></head><body>
   <div class="header">
     <div>
-      <h1>{emisor.get('nombre', 'TraceLess')}</h1>
-      <div class="datos">CUIT: {emisor.get('cuit', '')}<br>{emisor.get('direccion', '')}</div>
+      {logo_html}
+      <h1>{nombre_emisor}</h1>
+      <div class="datos">CUIT: {emisor.get('cuit', '')}<br>{emisor.get('direccion', '')}{email_section}</div>
     </div>
     <div style="text-align:right">
       <h1>Factura {factura.get('tipo_nombre', 'B')}</h1>
@@ -95,6 +114,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   </table>
   {cbu_section}
   {mp_section}
+  {condiciones_section}
   <div class="cae">CAE: {factura['cae']} — Vence: {factura.get('cae_vencimiento', '')}</div>
   <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
