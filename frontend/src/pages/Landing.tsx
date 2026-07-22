@@ -31,48 +31,48 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between h-16 px-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-4">
           <span className="flex items-center gap-2">
-            <img src="/favicon.svg" alt="TraceLess" className="w-8 h-8 rounded-lg" />
-            <span className="font-bold text-xl">TraceLess</span>
+            <img src="/favicon.svg" alt="TraceLess" className="w-7 h-7 rounded-lg" />
+            <span className="font-bold text-lg">TraceLess</span>
           </span>
-          <div className="flex items-center gap-4">
-            <Link to="/login" className="text-sm text-gray-400 hover:text-white">Iniciar Sesión</Link>
-            <Link to="/register" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">Comenzar Gratis</Link>
+          <div className="flex items-center gap-3">
+            <Link to="/login" className="text-xs text-gray-400 hover:text-white">Iniciar Sesión</Link>
+            <Link to="/register" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Comenzar</Link>
           </div>
         </div>
       </nav>
 
-      <section className="flex items-center justify-center px-6 pt-28 pb-20">
+      <section className="flex items-center justify-center px-4 pt-16 pb-12">
         <div className="text-center max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs font-medium text-blue-400 mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-medium text-blue-400 mb-6">
             🇦🇷 Hecho para freelancers argentinos
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-4">
             Cobrá más rápido.{" "}
             <span className="bg-gradient-to-r from-blue-300 to-blue-500 bg-clip-text text-transparent">
               Facturá sin papel.
             </span>
           </h1>
-          <p className="text-lg text-gray-400 leading-relaxed mb-10 max-w-xl mx-auto">
+          <p className="text-sm sm:text-lg text-gray-400 leading-relaxed mb-6 max-w-xl mx-auto">
             Emití facturas con validez ARCA, envialas por WhatsApp al instante y recibí alertas
-            cuando un cliente no paga. Una herramienta simple que te ahorra tiempo y dinero.
+            cuando un cliente no paga.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register" className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link to="/register" className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-xl shadow-blue-600/25 text-sm">
               Empezar Gratis — Sin tarjeta
             </Link>
-            <Link to="/register?plan=pro" className="w-full sm:w-auto px-8 py-3.5 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-2xl border border-gray-700/50">
+            <Link to="/register?plan=pro" className="w-full sm:w-auto px-6 py-3 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium rounded-xl border border-gray-700/50 text-sm">
               Probar Pro 7 días gratis
             </Link>
           </div>
-          <p className="text-xs text-gray-600 mt-4">Sin tarjeta de crédito. Cancelá cuando quieras.</p>
+          <p className="text-[10px] text-gray-600 mt-3">Sin tarjeta de crédito. Cancelá cuando quieras.</p>
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-16">Cómo funciona</h2>
+      <section className="py-12 sm:py-20">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10">Cómo funciona</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: "1", title: "Creá tu cliente", desc: "Cargá sus datos una vez. Nombre, CUIT, teléfono. Después facturás en segundos." },
@@ -91,10 +91,10 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-20 bg-gray-900/20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Todo lo que necesitás para facturar bien</h2>
-          <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
+      <section className="py-12 sm:py-20 bg-gray-900/20">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Todo lo que necesitás para facturar bien</h2>
+          <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
             No es un ERP enorme. Es justo lo que un freelancer necesita para emitir, enviar y cobrar.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
@@ -116,10 +116,10 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="precios" className="py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Planes simples, sin sorpresas</h2>
-          <p className="text-gray-400 text-center mb-12 max-w-lg mx-auto">
+      <section id="precios" className="py-12 sm:py-20">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Planes simples, sin sorpresas</h2>
+          <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
             Probá Pro gratis por 7 días. Después elegí el plan que mejor se adapte a vos.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
@@ -163,20 +163,20 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-20 bg-gradient-to-b from-gray-900/20 to-gray-950">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-4">Dejá de perseguir facturas</h2>
-          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+      <section className="py-12 sm:py-20 bg-gradient-to-b from-gray-900/20 to-gray-950">
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Dejá de perseguir facturas</h2>
+          <p className="text-gray-400 mb-6 max-w-md mx-auto text-sm">
             Probá TraceLess gratis. En 5 minutos tenés tu primera factura lista.
           </p>
-          <Link to="/register" className="inline-block px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-600/25">
+          <Link to="/register" className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-xl shadow-blue-600/25 text-sm">
             Probar Gratis
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-gray-800/30 py-8">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-gray-600">
+      <footer className="border-t border-gray-800/30 py-6">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-600">
           <span>TraceLess — © 2026</span>
           <div className="flex items-center gap-4">
             <Link to="/terminos" className="hover:text-gray-400">Términos</Link>
