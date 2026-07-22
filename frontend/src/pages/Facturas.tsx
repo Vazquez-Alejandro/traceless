@@ -277,7 +277,16 @@ export default function Facturas() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Facturas</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Facturas</h1>
+          {userPlan.invoices_limit !== null && (
+            <p className="text-xs text-gray-500 mt-1">
+              {userPlan.invoices_limit - userPlan.invoices_used > 0
+                ? `Te quedan ${(userPlan.invoices_limit) - userPlan.invoices_used} facturas gratis este mes`
+                : `Límite alcanzado. Actualizá tu plan para seguir facturando.`}
+            </p>
+          )}
+        </div>
         <div className="flex gap-2">
           <button onClick={() => {
             const t = localStorage.getItem("token");
