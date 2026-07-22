@@ -236,6 +236,45 @@ def pagar_factura(factura_id: str, authorization: str = Header("")):
     supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura marcada como pagada"}
 
+class BulkWhatsApp(BaseModel):
+    factura_ids: list[str]
+
+@router.post("/enviar-whatsapp")
+async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    if not req.factura_ids:
+        raise HTTPException(400, "Seleccioná al menos una factura")
+    enviados = 0
+    errores = []
+    for fid in req.factura_ids[:20]:
+        f = supabase.table("facturas").select("*, clientes(nombre, apellido, telefono)").eq("id", fid).eq("user_id", uid).single().execute()
+        if not f.data or not f.data.get("clientes"):
+            errores.append({"id": fid, "error": "Factura o cliente no encontrado"})
+            continue
+        telefono = (f.data["clientes"].get("telefono") or "").replace(/[^0-9]/g, "")
+        if not telefono:
+            errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
+            continue
+        pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/pdf"
+        mp_link = f.data.get("mp_link", "")
+        from app.lemon import can_send_whatsapp, log_whatsapp_send
+        wp_ok, wp_msg = can_send_whatsapp(uid)
+        if not wp_ok:
+            errores.append({"id": fid, "error": wp_msg})
+            continue
+        await enviar_factura_whatsapp(
+            telefono=telefono,
+            cliente=f.data["clientes"]["nombre"],
+            numero=f.data["numero"],
+            total=f.data["total"],
+            pdf_url=pdf_url,
+            fecha=f.data.get("fecha", ""),
+            mp_link=mp_link,
+        )
+        log_whatsapp_send(uid, fid, "factura")
+        enviados += 1
+    return {"ok": True, "enviados": enviados, "errores": errores}
+
 @router.get("/export")
 def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = "", token: str = ""):
     auth = authorization or f"Bearer {token}"

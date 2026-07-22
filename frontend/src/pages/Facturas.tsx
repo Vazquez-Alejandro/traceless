@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
+const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
+
 interface Cliente {
   id: string;
   nombre: string;
@@ -146,14 +148,25 @@ export default function Facturas() {
     }
   };
 
-  const handleBulkWhatsApp = () => {
-    const seleccionadas = facturas.filter(f => selected.has(f.id));
-    if (seleccionadas.length === 0) return;
-    seleccionadas.forEach((f, i) => {
-      setTimeout(() => handleWhatsApp(f), i * 500);
-    });
-    setToast(`Abriendo ${seleccionadas.length} chats de WhatsApp...`);
+  const handleBulkWhatsApp = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/api/facturas/enviar-whatsapp`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ factura_ids: ids }),
+    }).then(r => r.json());
+    setLoading(false);
     setSelected(new Set());
+    if (res.errores?.length > 0) {
+      const msgs = res.errores.map((e: any) => e.error).join("; ");
+      setToast(`Enviados: ${res.enviados || 0}. Errores: ${msgs}`);
+    } else {
+      setToast(`${res.enviados || 0} facturas enviadas por WhatsApp ✅`);
+    }
+    setTimeout(() => setToast(""), 6000);
   };
 
   const addItem = () => {
