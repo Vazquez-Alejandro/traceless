@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /clientes
+Disallow: /facturas
+Disallow: /perfil
+
+Sitemap: https://www.traceless.com.ar/sitemap.xml
