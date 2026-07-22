@@ -251,7 +251,8 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
         if not f.data or not f.data.get("clientes"):
             errores.append({"id": fid, "error": "Factura o cliente no encontrado"})
             continue
-        telefono = (f.data["clientes"].get("telefono") or "").replace(/[^0-9]/g, "")
+        import re
+        telefono = re.sub(r'[^0-9]', '', (f.data["clientes"].get("telefono") or ""))
         if not telefono:
             errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
             continue
@@ -449,7 +450,8 @@ def procesar_recurrentes(secret: str = ""):
                         errores += 1
                         logger.error(f"Error factura recurrente user={uid} cliente={rec.get('cliente_id')}: {error_msg}")
                         perf = supabase.table("perfiles").select("telefono").eq("id", uid).single().execute()
-                        telefono = (perf.data or {}).get("telefono", "").replace(/[^0-9]/g, "") if perf.data else ""
+                        import re
+                        telefono = re.sub(r'[^0-9]', '', (perf.data or {}).get("telefono", "")) if perf.data else ""
                         if telefono:
                             from app.whatsapp import enviar_whatsapp
                             try:
