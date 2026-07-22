@@ -45,7 +45,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
 
@@ -55,7 +55,7 @@ export default function Facturas() {
     load();
     api.clientes.list().then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
-      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost });
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos });
     });
   }, []);
 
@@ -431,10 +431,26 @@ export default function Facturas() {
                   ? `🟢 WhatsApp API (${userPlan.whatsapp_used || 0}/${userPlan.whatsapp_limit || 0})`
                   : "🟡 wa.me (sin configurar)"}
               </span>
-              {userPlan.whatsapp_configurado && (userPlan.whatsapp_used || 0) > (userPlan.whatsapp_limit || 0) && (
-                <span className="text-[10px] text-yellow-400">
-                  +${((userPlan.whatsapp_used || 0) - (userPlan.whatsapp_limit || 0)) * (userPlan.whatsapp_extra_cost || 70)} extra
+              {userPlan.whatsapp_configurado && (
+                <span className="text-[10px] text-gray-500">
+                  💳 ${(userPlan.creditos || 0).toLocaleString()} créditos
                 </span>
+              )}
+              {userPlan.whatsapp_configurado && (
+                <button onClick={async () => {
+                  const monto = prompt("Monto de créditos a comprar (mínimo $500):", "1000");
+                  if (!monto) return;
+                  const res = await fetch("/api/creditos/comprar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    body: JSON.stringify({ monto: parseFloat(monto) }),
+                  });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                  else alert(data.detail || "Error");
+                }} className="text-[10px] text-blue-400 hover:text-blue-300 underline">
+                  + Comprar
+                </button>
               )}
             </div>
             {selected.size > 0 && (

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
 from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY, get_user_id as _get_user_id
+from app.creditos import get_saldo
 import os, logging, jwt
 from datetime import datetime, timedelta, timezone
 
@@ -354,6 +355,7 @@ def me(authorization: str = Header("")):
             "whatsapp_limit": plan.get("whatsapp_monthly_limit", 0),
             "whatsapp_used": whatsapp_used,
             "whatsapp_extra_cost": plan.get("whatsapp_extra_cost", 0),
+            "creditos": get_saldo(uid),
         }
     }
 

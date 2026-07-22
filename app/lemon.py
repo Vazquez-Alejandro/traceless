@@ -201,9 +201,12 @@ def can_send_whatsapp(user_id: str) -> tuple[bool, str]:
         return False, "Tu plan no incluye envío por WhatsApp. Actualizá para enviar facturas al instante."
     count = get_whatsapp_count(user_id)
     if count >= limit:
-        extra = count - limit + 1
-        extra_cost = plan.get("whatsapp_extra_cost", 70) * extra
-        return True, f"Usando mensajes extra (${plan.get('whatsapp_extra_cost', 70)}/msg). Total extra este mes: ${extra_cost}"
+        from app.creditos import get_saldo
+        costo_msg = plan.get("whatsapp_extra_cost", 70)
+        saldo = get_saldo(user_id)
+        if saldo < costo_msg:
+            return False, f"Sin créditos para mensajes extra. Necesitás ${costo_msg} por mensaje. Comprá créditos."
+        return True, ""
     return True, ""
 
 def get_whatsapp_extra_cost(user_id: str) -> int:

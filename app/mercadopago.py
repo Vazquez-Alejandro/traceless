@@ -124,6 +124,15 @@ async def mp_webhook(request: Request):
                         logger.info(f"Factura {factura_id} pagada via MP")
                     except Exception as e:
                         logger.error(f"Error actualizando factura {factura_id}: {e}")
+                elif external_ref.startswith("credito_"):
+                    user_id = external_ref.replace("credito_", "")
+                    amount = payment.get("transaction_amount", 0)
+                    try:
+                        from app.creditos import agregar_credito
+                        agregar_credito(user_id, amount)
+                        logger.info(f"Crédito ${amount:,.0f} acreditado a usuario {user_id}")
+                    except Exception as e:
+                        logger.error(f"Error acreditando crédito a {user_id}: {e}")
                 else:
                     _set_user_plan_mp(external_ref, "pro")
                     logger.info(f"Payment approved for user {external_ref}")

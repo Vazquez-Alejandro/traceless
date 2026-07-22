@@ -258,7 +258,8 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
             continue
         pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/pdf"
         mp_link = f.data.get("mp_link", "")
-        from app.lemon import can_send_whatsapp, log_whatsapp_send
+        from app.lemon import can_send_whatsapp, log_whatsapp_send, get_whatsapp_count, get_user_plan
+        from app.creditos import descontar_credito
         wp_ok, wp_msg = can_send_whatsapp(uid)
         if not wp_ok:
             errores.append({"id": fid, "error": wp_msg})
@@ -273,6 +274,12 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
             mp_link=mp_link,
         )
         log_whatsapp_send(uid, fid, "factura")
+        plan = get_user_plan(uid)
+        count = get_whatsapp_count(uid)
+        limit = plan.get("whatsapp_monthly_limit", 0)
+        if count > limit:
+            costo = plan.get("whatsapp_extra_cost", 70)
+            descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
         enviados += 1
     return {"ok": True, "enviados": enviados, "errores": errores}
 

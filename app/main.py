@@ -45,6 +45,7 @@ from app.lemon import handle_webhook, get_user_plan, PLANS, get_whatsapp_count
 from app.mercadopago import router as mp_router
 from app.retry_queue import router as retry_router
 from app.whatsapp_webhook import router as wa_webhook_router
+from app.creditos import router as creditos_router
 
 app.include_router(auth_router)
 app.include_router(clientes_router)
@@ -52,6 +53,7 @@ app.include_router(facturas_router)
 app.include_router(mp_router)
 app.include_router(retry_router)
 app.include_router(wa_webhook_router)
+app.include_router(creditos_router)
 
 @app.get("/")
 def root():
