@@ -53,6 +53,7 @@ PLANS = {
 }
 
 DEFAULT_PLAN = "free"
+ADMIN_EMAILS = {"vazquezale82@gmail.com"}
 
 def _variant_id(plan_key: str) -> Optional[str]:
     return os.getenv(f"LEMON_VARIANT_{plan_key.upper()}") or None
@@ -160,8 +161,12 @@ def get_user_plan(user_id: str) -> dict:
             },
         )
         if r.status_code == 200:
-            meta = r.json().get("app_metadata", {})
+            user_data = r.json()
+            meta = user_data.get("app_metadata", {})
             plan_key = meta.get("plan", DEFAULT_PLAN)
+            email = user_data.get("email", "")
+            if email in ADMIN_EMAILS:
+                return PLANS["team"]
             trial_end = meta.get("trial_end")
             if trial_end:
                 from datetime import datetime
