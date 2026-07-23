@@ -185,6 +185,14 @@ def signup(req: SignupRequest):
     token = create_verify_token(req.email)
     send_verification_email(req.email, token)
 
+    # Notificar por Telegram
+    try:
+        from app.telegram_notify import notify_user_registered
+        import asyncio
+        asyncio.create_task(notify_user_registered("traceless", req.email, req.name))
+    except Exception:
+        pass
+
     return {"user": {"email": req.email, "needs_verification": True}}
 
 @router.post("/login")
