@@ -187,9 +187,16 @@ def signup(req: SignupRequest):
 
     # Notificar por Telegram
     try:
-        from app.telegram_notify import notify_user_registered
-        import asyncio
-        asyncio.create_task(notify_user_registered("traceless", req.email, req.name))
+        import httpx
+        httpx.post(
+            "https://telegram-notifier-pmcs.onrender.com/notify",
+            json={
+                "app": "traceless",
+                "event": "👤 Nuevo registro",
+                "message": f"Email: {req.email}\nNombre: {req.name}",
+            },
+            timeout=10,
+        )
     except Exception:
         pass
 
