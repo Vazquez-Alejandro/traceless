@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel
 from typing import Optional
 from app.db import supabase, get_user_id
@@ -15,10 +15,11 @@ class ClienteCreate(BaseModel):
     condicion_iva: str = "Responsable Inscripto"
 
 @router.get("")
-def listar_clientes(authorization: str = Header("")):
+def listar_clientes(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     uid = get_user_id(authorization)
-    res = supabase.table("clientes").select("*").eq("user_id", uid).order("created_at", desc=True).execute()
-    return {"clientes": res.data}
+    total = supabase.table("clientes").select("id", count="exact").eq("user_id", uid).execute()
+    res = supabase.table("clientes").select("*").eq("user_id", uid).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    return {"clientes": res.data, "total": total.count}
 
 @router.post("")
 def crear_cliente(req: ClienteCreate, authorization: str = Header("")):

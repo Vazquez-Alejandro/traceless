@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
@@ -33,8 +33,11 @@ interface DetalleItem {
   precio_unitario: number;
 }
 
+const PAGE_SIZE = 20;
+
 export default function Facturas() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [total, setTotal] = useState(0);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
@@ -49,12 +52,45 @@ export default function Facturas() {
   const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number; cbu?: string; alias_banco?: string }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const [filterCliente, setFilterCliente] = useState("");
+  const [filterEstado, setFilterEstado] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = () => api.facturas.list().then(res => setFacturas(res.facturas || []));
+  const load = useCallback(async (reset = true) => {
+    const newOffset = reset ? 0 : offset;
+    if (reset) setOffset(0);
+    const filters: { cliente_id?: string; estado?: string } = {};
+    if (filterCliente) filters.cliente_id = filterCliente;
+    if (filterEstado) filters.estado = filterEstado;
+    const res = await api.facturas.list(PAGE_SIZE, newOffset, filters);
+    if (reset) {
+      setFacturas(res.facturas || []);
+    } else {
+      setFacturas(prev => [...prev, ...(res.facturas || [])]);
+    }
+    setTotal(res.total || 0);
+  }, [filterCliente, filterEstado, offset]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    const nextOffset = offset + PAGE_SIZE;
+    setOffset(nextOffset);
+    const filters: { cliente_id?: string; estado?: string } = {};
+    if (filterCliente) filters.cliente_id = filterCliente;
+    if (filterEstado) filters.estado = filterEstado;
+    const res = await api.facturas.list(PAGE_SIZE, nextOffset, filters);
+    setFacturas(prev => [...prev, ...(res.facturas || [])]);
+    setTotal(res.total || 0);
+    setLoadingMore(false);
+  };
 
   useEffect(() => {
-    load();
-    api.clientes.list().then(res => setClientes(res.clientes || []));
+    load(true);
+  }, [filterCliente, filterEstado]);
+
+  useEffect(() => {
+    api.clientes.list(100, 0).then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
       if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos, cbu: res.user.cbu, alias_banco: res.user.alias_banco });
     });
@@ -75,9 +111,20 @@ export default function Facturas() {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setToast("Factura anulada correctamente");
-      load();
+      load(true);
     } catch {
       alert("Error al anular la factura");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar esta factura programada?")) return;
+    try {
+      await api.facturas.delete(id);
+      setToast("Factura eliminada");
+      load(true);
+    } catch {
+      alert("Error al eliminar la factura");
     }
   };
 
@@ -88,7 +135,7 @@ export default function Facturas() {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setToast("Factura marcada como pagada");
-      load();
+      load(true);
     } catch {
       alert("Error al marcar como pagada");
     }
@@ -203,7 +250,7 @@ export default function Facturas() {
       setUsarItems(false);
       setShowForm(false);
       setLoading(false);
-      load();
+      load(true);
       return;
     }
     const id = res?.factura?.id;
@@ -215,7 +262,7 @@ export default function Facturas() {
     setShowForm(false);
     setToast("Factura creada ✅ Compartila con tu cliente");
     setLoading(false);
-    load();
+    load(true);
   };
 
   const crearClienteRapido = async () => {
@@ -230,7 +277,7 @@ export default function Facturas() {
     const nuevo = res.cliente;
     setNuevoCliente(false);
     setCliForm({ nombre: "", apellido: "", telefono: "", cuit: "" });
-    const list = await api.clientes.list();
+    const list = await api.clientes.list(100, 0);
     setClientes(list.clientes || []);
     if (nuevo?.id) {
       setForm({ ...form, cliente_id: nuevo.id });
@@ -239,6 +286,8 @@ export default function Facturas() {
     setLoading(false);
     setTimeout(() => setToast(""), 3000);
   };
+
+  const hasMore = facturas.length < total;
 
   return (
     <div>
@@ -393,6 +442,27 @@ export default function Facturas() {
         </div>
       )}
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <select value={filterCliente} onChange={e => setFilterCliente(e.target.value)}
+            className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm appearance-none cursor-pointer">
+            <option value="">Todos los clientes</option>
+            {clientes.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
+            ))}
+          </select>
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {["", "emitida", "pagada", "vencida", "programada", "anulada"].map(estado => (
+            <button key={estado} onClick={() => setFilterEstado(estado)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === estado ? "bg-blue-600 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"}`}>
+              {estado === "" ? "Todas" : estado === "emitida" ? "Emitidas" : estado === "pagada" ? "Pagadas" : estado === "vencida" ? "Vencidas" : estado === "programada" ? "Programadas" : "Anuladas"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-3">
         {facturas.length > 0 && (
           <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-gray-900/60 border border-gray-800/30">
@@ -402,10 +472,7 @@ export default function Facturas() {
                 Todas ({selected.size}/{facturas.length})
               </label>
               <span className="text-[10px] text-gray-600">
-                📱 WhatsApp wa.me
-              </span>
-              <span className="text-[10px] text-gray-600">
-                🚀 API: Próximamente
+                {total > 0 && `Mostrando ${facturas.length} de ${total}`}
               </span>
             </div>
             {selected.size > 0 && (
@@ -471,10 +538,19 @@ export default function Facturas() {
                   <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>
                 </>
               )}
+              {f.estado === "programada" && (
+                <button onClick={() => handleDelete(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Eliminar</button>
+              )}
             </div>
           </div>
         ))}
-        {facturas.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No hay facturas aún.</p>}
+        {hasMore && (
+          <button onClick={loadMore} disabled={loadingMore}
+            className="w-full py-3 text-sm text-blue-400 hover:text-blue-300 bg-gray-900/40 border border-gray-800/40 rounded-xl transition-all disabled:opacity-50">
+            {loadingMore ? "Cargando..." : `Cargar más (${facturas.length} de ${total})`}
+          </button>
+        )}
+        {facturas.length === 0 && !loading && <p className="text-gray-500 text-sm text-center py-8">No hay facturas{filterCliente || filterEstado ? " con estos filtros" : " aún"}.</p>}
       </div>
     </div>
   );

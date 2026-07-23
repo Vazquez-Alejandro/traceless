@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
@@ -225,10 +225,16 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}}
 
 @router.get("")
-def listar_facturas(authorization: str = Header("")):
+def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), cliente_id: Optional[str] = None, estado: Optional[str] = None):
     uid = get_user_id(authorization)
-    res = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit)").eq("user_id", uid).order("created_at", desc=True).execute()
-    return {"facturas": res.data}
+    q = supabase.table("facturas").select("*, clientes!inner(id, nombre, apellido, telefono)", count="exact").eq("user_id", uid)
+    if cliente_id:
+        q = q.eq("cliente_id", cliente_id)
+    if estado:
+        q = q.eq("estado", estado)
+    total = q.execute().count
+    res = q.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    return {"facturas": res.data, "total": total}
 
 @router.put("/{factura_id}/anular")
 def anular_factura(factura_id: str, authorization: str = Header("")):
@@ -240,6 +246,17 @@ def anular_factura(factura_id: str, authorization: str = Header("")):
         raise HTTPException(400, "La factura ya está anulada")
     supabase.table("facturas").update({"estado": "anulada"}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura anulada correctamente. Recordá emitir la nota de crédito correspondiente ante ARCA."}
+
+@router.delete("/{factura_id}")
+def eliminar_factura(factura_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
+    if not factura.data:
+        raise HTTPException(404, "Factura no encontrada")
+    if factura.data["estado"] != "programada":
+        raise HTTPException(400, "Solo se pueden eliminar facturas programadas. Para emitidas, usá Anular.")
+    supabase.table("facturas").delete().eq("id", factura_id).execute()
+    return {"ok": True, "mensaje": "Factura eliminada"}
 
 @router.put("/{factura_id}/pagar")
 def pagar_factura(factura_id: str, authorization: str = Header("")):

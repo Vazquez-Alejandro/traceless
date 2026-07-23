@@ -11,15 +11,30 @@ interface Cliente {
   cuit: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
   const [importando, setImportando] = useState(false);
   const [toast, setToast] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = () => api.clientes.list().then(res => setClientes(res.clientes || [])).catch(() => {});
+  const load = async (reset = true) => {
+    const newOffset = reset ? 0 : offset;
+    if (reset) setOffset(0);
+    const res = await api.clientes.list(PAGE_SIZE, newOffset);
+    if (reset) {
+      setClientes(res.clientes || []);
+    } else {
+      setClientes(prev => [...prev, ...(res.clientes || [])]);
+    }
+    setTotal(res.total || 0);
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -30,10 +45,31 @@ export default function Clientes() {
     }
   }, [toast]);
 
+  const loadMore = async () => {
+    setLoadingMore(true);
+    const nextOffset = offset + PAGE_SIZE;
+    setOffset(nextOffset);
+    const res = await api.clientes.list(PAGE_SIZE, nextOffset);
+    setClientes(prev => [...prev, ...(res.clientes || [])]);
+    setTotal(res.total || 0);
+    setLoadingMore(false);
+  };
+
   const copiar = (c: Cliente) => {
     const txt = `${c.nombre} ${c.apellido} - CUIT: ${c.cuit || "—"} - Tel: ${c.telefono || "—"}`;
     navigator.clipboard.writeText(txt);
     setToast("Datos copiados: " + txt.slice(0, 40) + "...");
+  };
+
+  const handleDelete = async (c: Cliente) => {
+    if (!confirm(`¿Eliminar a ${c.nombre} ${c.apellido}? Se perderá todo su historial.`)) return;
+    try {
+      await api.clientes.delete(c.id);
+      setToast(`${c.nombre} eliminado`);
+      load(true);
+    } catch {
+      alert("Error al eliminar el cliente");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +79,7 @@ export default function Clientes() {
       setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
       setShowForm(false);
       setToast("Cliente creado");
-      load();
+      load(true);
     } catch (err: any) {
       setToast("Error: " + (err.message || "desconocido"));
     }
@@ -77,14 +113,19 @@ export default function Clientes() {
       setToast("Error al importar: " + (err.message || "desconocido"));
     }
     setImportando(false);
-    load();
+    load(true);
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  const hasMore = clientes.length < total;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Clientes</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Clientes</h1>
+          {total > 0 && <p className="text-xs text-gray-500 mt-1">{total} clientes</p>}
+        </div>
         <div className="flex gap-2">
           <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             {importando ? "Importando..." : "Importar CSV"}
@@ -131,9 +172,16 @@ export default function Clientes() {
             <div className="flex items-center gap-2">
               <Link to={`/clientes/${c.id}`} className="text-xs text-blue-400 hover:underline">Ver historial</Link>
               <button onClick={() => copiar(c)} className="text-xs text-gray-400 hover:text-white">Copiar</button>
+              <button onClick={() => handleDelete(c)} className="text-xs text-red-400 hover:text-red-300">Eliminar</button>
             </div>
           </div>
         ))}
+        {hasMore && (
+          <button onClick={loadMore} disabled={loadingMore}
+            className="w-full py-3 text-sm text-blue-400 hover:text-blue-300 bg-gray-900/40 border border-gray-800/40 rounded-xl transition-all disabled:opacity-50">
+            {loadingMore ? "Cargando..." : `Cargar más (${clientes.length} de ${total})`}
+          </button>
+        )}
         {clientes.length === 0 && <p className="text-gray-500 text-sm text-center py-8">No tenés clientes aún. Creá tu primero o importá un CSV.</p>}
       </div>
     </div>

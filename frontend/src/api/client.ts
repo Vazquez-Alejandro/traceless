@@ -121,7 +121,7 @@ export const api = {
       request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   },
   clientes: {
-    list: () => request("/clientes"),
+    list: (limit = 20, offset = 0) => request(`/clientes?limit=${limit}&offset=${offset}`),
     create: (data: any) =>
       request("/clientes", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
@@ -132,10 +132,17 @@ export const api = {
       request("/clientes/import", { method: "POST", body: JSON.stringify(data) }),
   },
   facturas: {
-    list: () => request("/facturas"),
+    list: (limit = 20, offset = 0, filters?: { cliente_id?: string; estado?: string }) => {
+      let url = `/facturas?limit=${limit}&offset=${offset}`;
+      if (filters?.cliente_id) url += `&cliente_id=${filters.cliente_id}`;
+      if (filters?.estado) url += `&estado=${filters.estado}`;
+      return request(url);
+    },
     create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string }) =>
       request("/facturas", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request(`/facturas/${id}`),
+    delete: (id: string) =>
+      request(`/facturas/${id}`, { method: "DELETE" }),
   },
   notificaciones: {
     list: (limit = 50, offset = 0) => request(`/notificaciones?limit=${limit}&offset=${offset}`),
