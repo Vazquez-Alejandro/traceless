@@ -38,6 +38,7 @@ class FacturaCreate(BaseModel):
     detalles: list[DetalleItem] = []
     recurrente: bool = False
     scheduled_send: Optional[str] = None
+    canal: str = "whatsapp"
 
 @router.post("")
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
@@ -203,26 +204,47 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
 
     supabase.table("facturas").update({"pdf_url": html_url, "mp_link": mp_link}).eq("id", factura["id"]).execute()
 
-    if plan["whatsapp"]:
+    pdf_url_full = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
+    fallback_wa_me = False
+    enviado_por = ""
+
+    if req.canal == "email":
+        email_cliente = cliente.data.get("email", "")
+        if email_cliente:
+            from app.email_sender import enviar_factura_email
+            ok = enviar_factura_email(
+                email_cliente=email_cliente,
+                nombre_cliente=cliente.data.get("nombre", ""),
+                numero=factura["numero"],
+                total=factura["total"],
+                pdf_url=pdf_url_full,
+                mp_link=mp_link,
+                emisor_nombre=emisor.get("nombre", ""),
+            )
+            enviado_por = "email" if ok else ""
+    elif req.canal == "whatsapp" and plan["whatsapp"]:
         telefono = cliente.data.get("telefono", "")
         if telefono:
             wp_ok, wp_msg = can_send_whatsapp(uid)
             if wp_ok:
-                pdf_url = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
                 await enviar_factura_whatsapp(
                     telefono=telefono,
                     cliente=cliente.data["nombre"],
                     numero=factura["numero"],
                     total=factura["total"],
-                    pdf_url=pdf_url,
+                    pdf_url=pdf_url_full,
                     fecha=factura["fecha"].split("T")[0],
                     mp_link=mp_link,
                 )
                 log_whatsapp_send(uid, factura["id"], "factura")
                 from app.creditos import verificar_creditos_bajos
                 verificar_creditos_bajos(uid)
+                enviado_por = "whatsapp_api"
+            else:
+                fallback_wa_me = True
+                enviado_por = "wa_me"
 
-    return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}}
+    return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}, "enviado_por": enviado_por, "fallback_wa_me": fallback_wa_me}
 
 @router.get("")
 def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), cliente_id: Optional[str] = None, estado: Optional[str] = None):
@@ -271,6 +293,7 @@ def pagar_factura(factura_id: str, authorization: str = Header("")):
 
 class BulkWhatsApp(BaseModel):
     factura_ids: list[str]
+    canal: str = "whatsapp"
 
 @router.post("/enviar-whatsapp")
 async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header("")):
@@ -279,45 +302,70 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
         raise HTTPException(400, "Seleccioná al menos una factura")
     enviados = 0
     errores = []
+    fallback_wa_me_ids = []
+    enviados_email = []
     for fid in req.factura_ids[:20]:
-        f = supabase.table("facturas").select("*, clientes(nombre, apellido, telefono)").eq("id", fid).eq("user_id", uid).single().execute()
+        f = supabase.table("facturas").select("*, clientes(nombre, apellido, telefono, email)").eq("id", fid).eq("user_id", uid).single().execute()
         if not f.data or not f.data.get("clientes"):
             errores.append({"id": fid, "error": "Factura o cliente no encontrado"})
             continue
-        import re
-        telefono = re.sub(r'[^0-9]', '', (f.data["clientes"].get("telefono") or ""))
-        if not telefono:
-            errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
-            continue
         pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/pdf"
         mp_link = f.data.get("mp_link", "")
-        from app.lemon import can_send_whatsapp, log_whatsapp_send, get_whatsapp_count, get_user_plan
-        from app.creditos import descontar_credito
-        wp_ok, wp_msg = can_send_whatsapp(uid)
-        if not wp_ok:
-            errores.append({"id": fid, "error": wp_msg})
-            continue
-        await enviar_factura_whatsapp(
-            telefono=telefono,
-            cliente=f.data["clientes"]["nombre"],
-            numero=f.data["numero"],
-            total=f.data["total"],
-            pdf_url=pdf_url,
-            fecha=f.data.get("fecha", ""),
-            mp_link=mp_link,
-        )
-        log_whatsapp_send(uid, fid, "factura")
-        plan = get_user_plan(uid)
-        count = get_whatsapp_count(uid)
-        limit = plan.get("whatsapp_monthly_limit", 0)
-        if count > limit:
-            costo = plan.get("whatsapp_extra_cost", 70)
-            descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
-        enviados += 1
+
+        if req.canal == "email":
+            email_cliente = f.data["clientes"].get("email", "")
+            if not email_cliente:
+                errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin email"})
+                continue
+            from app.email_sender import enviar_factura_email
+            perfil = supabase.table("perfiles").select("nombre").eq("id", uid).single().execute()
+            ok = enviar_factura_email(
+                email_cliente=email_cliente,
+                nombre_cliente=f.data["clientes"]["nombre"],
+                numero=f.data["numero"],
+                total=f.data["total"],
+                pdf_url=pdf_url,
+                mp_link=mp_link,
+                emisor_nombre=(perfil.data or {}).get("nombre", ""),
+            )
+            if ok:
+                enviados += 1
+                enviados_email.append(f.data["clientes"]["nombre"])
+            else:
+                errores.append({"id": fid, "error": "Error al enviar email"})
+        else:
+            import re
+            telefono = re.sub(r'[^0-9]', '', (f.data["clientes"].get("telefono") or ""))
+            if not telefono:
+                errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
+                continue
+            from app.lemon import can_send_whatsapp, log_whatsapp_send, get_whatsapp_count, get_user_plan
+            from app.creditos import descontar_credito
+            wp_ok, wp_msg = can_send_whatsapp(uid)
+            if not wp_ok:
+                fallback_wa_me_ids.append(fid)
+                continue
+            await enviar_factura_whatsapp(
+                telefono=telefono,
+                cliente=f.data["clientes"]["nombre"],
+                numero=f.data["numero"],
+                total=f.data["total"],
+                pdf_url=pdf_url,
+                fecha=f.data.get("fecha", ""),
+                mp_link=mp_link,
+            )
+            log_whatsapp_send(uid, fid, "factura")
+            plan = get_user_plan(uid)
+            count = get_whatsapp_count(uid)
+            limit = plan.get("whatsapp_monthly_limit", 0)
+            if count > limit:
+                costo = plan.get("whatsapp_extra_cost", 70)
+                descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
+            enviados += 1
     if enviados > 0:
         from app.creditos import verificar_creditos_bajos
         verificar_creditos_bajos(uid)
-    return {"ok": True, "enviados": enviados, "errores": errores}
+    return {"ok": True, "enviados": enviados, "errores": errores, "fallback_wa_me_ids": fallback_wa_me_ids, "enviados_email": enviados_email}
 
 @router.get("/export")
 def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = "", token: str = ""):

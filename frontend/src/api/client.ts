@@ -138,7 +138,7 @@ export const api = {
       if (filters?.estado) url += `&estado=${filters.estado}`;
       return request(url);
     },
-    create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string }) =>
+    create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string; canal?: string }) =>
       request("/facturas", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request(`/facturas/${id}`),
     delete: (id: string) =>
