@@ -21,7 +21,7 @@
   
   <!-- Logo icon -->
   <rect x="520" y="120" width="160" height="160" rx="32" fill="url(#blue)"/>
-  <text x="600" y="225" font-family="system-ui, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">⚡</text>
+  <text x="600" y="235" font-family="system-ui, sans-serif" font-size="96" font-weight="bold" fill="white" text-anchor="middle">T</text>
   
   <!-- Title -->
   <text x="600" y="340" font-family="system-ui, sans-serif" font-size="64" font-weight="bold" fill="white" text-anchor="middle">TraceLess</text>
