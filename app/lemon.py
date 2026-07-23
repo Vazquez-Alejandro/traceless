@@ -122,6 +122,9 @@ def _set_user_plan(email: str, plan_key: str):
         json={"app_metadata": meta},
     )
     logger.info(f"Plan {plan_key} set for {email}")
+    from app.notifications import crear_notificacion
+    plan_names = {"free": "Gratis", "pro": "Profesional", "team": "Equipo"}
+    crear_notificacion(uid, "plan_renovado", f"Plan {plan_names.get(plan_key, plan_key)} activado", "Tu plan ha sido actualizado", "/perfil")
 
 def handle_webhook(payload: bytes, signature: str) -> dict:
     if not _verify_signature(payload, signature):

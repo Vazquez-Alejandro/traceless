@@ -137,4 +137,11 @@ export const api = {
       request("/facturas", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request(`/facturas/${id}`),
   },
+  notificaciones: {
+    list: (limit = 50, offset = 0) => request(`/notificaciones?limit=${limit}&offset=${offset}`),
+    count: () => request("/notificaciones/count"),
+    markRead: (id: string) => request(`/notificaciones/${id}/read`, { method: "PUT" }),
+    markAllRead: () => request("/notificaciones/read-all", { method: "PUT" }),
+    delete: (id: string) => request(`/notificaciones/${id}`, { method: "DELETE" }),
+  },
 };

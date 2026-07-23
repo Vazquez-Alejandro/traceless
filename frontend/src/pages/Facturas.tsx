@@ -279,7 +279,10 @@ export default function Facturas() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
+        <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
+          <button type="button" onClick={() => setShowForm(false)} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div className="flex gap-2">
               <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required

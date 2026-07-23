@@ -8,6 +8,7 @@ from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
 from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send, has_feature
 from app.retry_queue import queue_factura
+from app.notifications import crear_notificacion
 import os, logging, threading
 
 logger = logging.getLogger("facturas")
@@ -389,6 +390,9 @@ async def enviar_recordatorios(secret: str = ""):
         dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
         if dias >= 30:
             supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
+            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} vencida hace {dias} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} lleva {dias} días sin pagar", "/facturas")
+        elif dias >= 7:
+            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} con {dias} días de atraso", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} tiene {dias} días de atraso", "/facturas")
         tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias))
         enviados += 1
     if tasks:
@@ -429,6 +433,7 @@ async def recordatorio_monotributo(secret: str = ""):
         if not tel:
             continue
         tasks.append(enviar_recordatorio_monotributo_whatsapp(tel, nombre or "Usuario"))
+        crear_notificacion(u["id"], "recordatorio", "Recordatorio de monotributo", "Hoy es día 20, acordate de pagar el monotributo", "")
         enviados += 1
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -492,10 +497,12 @@ async def procesar_recurrentes(secret: str = ""):
                         rec["proxima"] = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
                         changed = True
                         emitidas += 1
+                        crear_notificacion(uid, "factura_programada", f"Factura recurrente #{res['numero']} emitida", f"Se generó la factura a {cli.data.get('nombre', '')} por ${rec['importe']:,.2f}", "/facturas")
                     except Exception as e:
                         error_msg = str(e)[:200]
                         errores += 1
                         logger.error(f"Error factura recurrente user={uid} cliente={rec.get('cliente_id')}: {error_msg}")
+                        crear_notificacion(uid, "error", "Error en factura recurrente", f"No se pudo generar la factura a {cli.data.get('nombre', '') if cli.data else 'Cliente'} por ${rec['importe']:,.2f}. Motivo: {error_msg}", "/facturas")
                         perf = supabase.table("perfiles").select("telefono").eq("id", uid).single().execute()
                         import re
                         telefono = re.sub(r'[^0-9]', '', (perf.data or {}).get("telefono", "")) if perf.data else ""
@@ -609,6 +616,7 @@ async def procesar_programadas(secret: str = ""):
                         ))
                         log_whatsapp_send(uid, f["id"], "factura")
             procesadas += 1
+            crear_notificacion(uid, "factura_programada", f"Factura programada #{afip_result['numero']} procesada", f"Se emitió la factura a {cli.get('nombre', '')} por ${f['total']:,.2f}", "/facturas")
         except Exception as e:
             logger.error(f"Error procesando factura programada {f['id']}: {e}")
             errores += 1

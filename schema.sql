@@ -150,3 +150,31 @@ create policy "Usuarios pueden ver sus creditos"
 
 create policy "Sistema puede insertar creditos"
   on creditos for insert with check (true);
+
+-- Notificaciones in-app
+create table if not exists notificaciones (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  tipo text not null,
+  titulo text not null,
+  mensaje text not null default '',
+  leida boolean default false,
+  enlace text default '',
+  created_at timestamptz default now()
+);
+
+alter table notificaciones enable row level security;
+
+create policy "Usuarios pueden ver sus notificaciones"
+  on notificaciones for select using (auth.uid() = user_id);
+
+create policy "Usuarios pueden actualizar sus notificaciones"
+  on notificaciones for update using (auth.uid() = user_id);
+
+create policy "Usuarios pueden eliminar sus notificaciones"
+  on notificaciones for delete using (auth.uid() = user_id);
+
+create policy "Sistema puede insertar notificaciones"
+  on notificaciones for insert with check (true);
+
+create index if not exists idx_notificaciones_user on notificaciones(user_id, created_at desc);

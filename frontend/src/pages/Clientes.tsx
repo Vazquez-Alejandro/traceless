@@ -97,7 +97,10 @@ export default function Clientes() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6 grid md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6 grid md:grid-cols-2 gap-4">
+          <button type="button" onClick={() => setShowForm(false)} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
           <input placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           <input placeholder="Apellido" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required

@@ -75,9 +75,12 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Factura {html_mod.escape(str(factura['numero']))}</title>
 <style>
   body {{ font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #111; }}
+  .back-btn {{ display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; margin-bottom: 20px; background: #f3f4f6; border: 1px solid #ddd; border-radius: 8px; color: #333; text-decoration: none; font-size: 13px; font-weight: 500; cursor: pointer; }}
+  .back-btn:hover {{ background: #e5e7eb; }}
   h1 {{ font-size: 22px; color: #1a56db; margin-bottom: 4px; }}
   .header {{ display: flex; justify-content: space-between; margin-bottom: 30px; }}
   .datos {{ font-size: 13px; color: #444; line-height: 1.6; }}
@@ -89,6 +92,10 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   .final {{ font-weight: bold; font-size: 16px; border-top: 2px solid #111; }}
   .cae {{ font-size: 11px; color: #888; text-align: center; margin-top: 40px; }}
 </style></head><body>
+  <a href="javascript:history.back()" class="back-btn">
+    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Volver
+  </a>
   <div class="header">
     <div>
       {logo_html}

@@ -15,6 +15,7 @@ import Facturas from "./pages/Facturas";
 import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
 import Perfil from "./pages/Perfil";
+import Notificaciones from "./pages/Notificaciones";
 import Layout from "./components/Layout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/clientes/:id" element={<ProtectedRoute><ClienteHistorial /></ProtectedRoute>} />
       <Route path="/facturas" element={<ProtectedRoute><Facturas /></ProtectedRoute>} />
       <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+      <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
       <Route path="/terminos" element={<Terminos />} />
       <Route path="/privacidad" element={<Privacidad />} />
     </Routes>

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from app.db import supabase, get_user_id
 from app.lemon import get_user_plan
+from app.notifications import crear_notificacion
 
 logger = logging.getLogger("creditos")
 router = APIRouter(prefix="/api/creditos", tags=["creditos"])
@@ -57,7 +58,7 @@ def agregar_credito(user_id: str, monto: float, descripcion: str = "Compra de cr
 
 
 def verificar_creditos_bajos(user_id: str):
-    """Envía alerta por email si el usuario tiene menos de 10 créditos."""
+    """Envía alerta por email y notificación in-app si el usuario tiene menos de 10 créditos."""
     from app.lemon import get_whatsapp_count, get_user_plan
     plan = get_user_plan(user_id)
     limit = plan.get("whatsapp_monthly_limit", 0)
@@ -67,41 +68,7 @@ def verificar_creditos_bajos(user_id: str):
     remaining = max(0, limit - count)
     if remaining >= 10:
         return
-    perfil = supabase.table("perfiles").select("email, nombre").eq("id", user_id).single().execute()
-    if not perfil.data:
-        return
-    email = perfil.data.get("email", "")
-    nombre = perfil.data.get("nombre", "")
-    if not email:
-        return
-    saldo = get_saldo(user_id)
-    try:
-        import resend
-        RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-        RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <noreply@traceless.com.ar>")
-        if not RESEND_API_KEY:
-            return
-        resend.api_key = RESEND_API_KEY
-        resend.Emails.send({
-            "from": RESEND_FROM,
-            "to": email,
-            "subject": f"Te quedan {remaining} mensajes de WhatsApp",
-            "html": f"""
-                <div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px;">
-                    <h2 style="color:#1e293b;">Tus créditos se están agotando</h2>
-                    <p>Hola {nombre},</p>
-                    <p>Te quedan <strong>{remaining} mensajes</strong> de WhatsApp incluidos en tu plan {plan['name']} este mes.</p>
-                    <p>Si necesitás enviar más, podés comprar créditos adicionales desde tu perfil.</p>
-                    <p style="margin:24px 0;">
-                        <a href="https://www.traceless.com.ar/perfil" style="background:#3b82f6;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Comprar créditos</a>
-                    </p>
-                    <p style="color:#64748b;font-size:12px;">Saldo actual: ${saldo:,.0f} en créditos</p>
-                </div>
-            """,
-        })
-        logger.info(f"Alerta de créditos bajos enviada a {email}: {remaining} restantes")
-    except Exception as e:
-        logger.error(f"Error enviando alerta de créditos bajos: {e}")
+    crear_notificacion(user_id, "credito_bajo", f"Te quedan {remaining} mensajes WhatsApp", f"Tu plan {plan['name']} tiene pocos mensajes restantes este mes", "/perfil")
 
 
 @router.get("")

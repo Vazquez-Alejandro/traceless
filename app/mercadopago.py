@@ -6,6 +6,7 @@ import hmac
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Request, HTTPException, Header
 from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
+from app.notifications import crear_notificacion
 
 logger = logging.getLogger("mercadopago")
 
@@ -138,6 +139,12 @@ async def mp_webhook(request: Request):
                     try:
                         supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
                         logger.info(f"Factura {factura_id} pagada via MP")
+                        try:
+                            f_data = supabase.table("facturas").select("numero, total, user_id").eq("id", factura_id).single().execute()
+                            if f_data.data:
+                                crear_notificacion(f_data.data["user_id"], "pago_recibido", f"Factura #{f_data.data['numero']} pagada", f"Se recibió el pago de ${f_data.data['total']:,.2f} vía MercadoPago", "/facturas")
+                        except Exception:
+                            pass
                     except Exception as e:
                         logger.error(f"Error actualizando factura {factura_id}: {e}")
                 elif external_ref.startswith("credito_"):
@@ -147,11 +154,13 @@ async def mp_webhook(request: Request):
                         from app.creditos import agregar_credito
                         agregar_credito(user_id, amount)
                         logger.info(f"Crédito ${amount:,.0f} acreditado a usuario {user_id}")
+                        crear_notificacion(user_id, "pago_recibido", f"Créditos ${amount:,.0f} acreditados", "Se acreditaron los créditos en tu cuenta", "/perfil")
                     except Exception as e:
                         logger.error(f"Error acreditando crédito a {user_id}: {e}")
                 else:
                     _set_user_plan_mp(external_ref, "pro")
                     logger.info(f"Payment approved for user {external_ref}")
+                    crear_notificacion(external_ref, "plan_renovado", "Plan Profesional activado", "Tu plan ha sido activado exitosamente", "/perfil")
 
     elif event_type == "subscription_preapproval":
         r = httpx.get(f"{MP_BASE}/preapproval/{data_id}", headers=_mp_headers(), timeout=15)
@@ -161,8 +170,10 @@ async def mp_webhook(request: Request):
             external_ref = sub.get("external_reference", "")
             if status == "authorized" and external_ref:
                 _set_user_plan_mp(external_ref, "pro")
+                crear_notificacion(external_ref, "plan_renovado", "Suscripción activada", "Tu suscripción está activa", "/perfil")
             elif status in ("cancelled", "paused") and external_ref:
                 _set_user_plan_mp(external_ref, "free")
+                crear_notificacion(external_ref, "plan_cancelado", "Suscripción cancelada", "Tu plan ha vuelto a Gratis", "/perfil")
 
     return {"ok": True}
 
