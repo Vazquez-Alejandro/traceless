@@ -5,7 +5,7 @@ import { api } from "../api/client";
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANES = [
-  { key: "free", name: "Gratis", price: "$0", desc: "3 facturas/mes", color: "border-gray-600" },
+  { key: "free", name: "Gratis", price: "$0", desc: "5 facturas/mes", color: "border-gray-600" },
   { key: "pro", name: "Profesional", price: "$15.000/mes", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
   { key: "team", name: "Equipo", price: "$29.000/mes", desc: "Hasta 5 usuarios", color: "border-yellow-500" },
 ];
@@ -177,7 +177,7 @@ export default function Register() {
         <p className="text-center text-[11px] text-gray-600 mt-4">
           {selectedPlan !== "free"
             ? "Pagás con Mercado Pago. Cancelá cuando quieras."
-            : "3 facturas por mes. Sin tarjeta."}
+            : "5 facturas por mes. Sin tarjeta."}
         </p>
         <p className="text-center text-sm text-gray-500 mt-4">
           ¿Ya tenés cuenta? <Link to="/login" className="text-blue-400 hover:underline">Iniciar sesión</Link>

@@ -98,7 +98,7 @@ export default function Dashboard() {
         <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">Plan Gratis</p>
-            <p className="text-xs text-gray-400">3 facturas por mes · Sin WhatsApp</p>
+            <p className="text-xs text-gray-400">5 facturas por mes · Sin WhatsApp</p>
           </div>
           <button onClick={() => handleUpgrade("pro")} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Mejorar a Profesional</button>
         </div>
