@@ -25,7 +25,7 @@ Cada factura genera automáticamente un link de pago de MercadoPago. El cliente 
 Cuando el usuario configura CBU y alias en su perfil, se genera un código QR en la factura con los datos para transferencia bancaria. El cliente escanea y paga desde su app de banco. Recordatorio visible si no está configurado.
 
 ### Créditos Prepagos
-Sistema de créditos para mensajes extra de WhatsApp. El usuario compra créditos vía MercadoPago y se descuentan automáticamente al enviar mensajes fuera del límite de su plan.
+Sistema de créditos para mensajes extra de WhatsApp. El usuario compra créditos vía MercadoPago y se descuentan automáticamente al enviar mensajes fuera del límite de su plan. Se envía una alerta por email cuando quedan menos de 10 créditos disponibles.
 
 ### Dashboard de Ingresos
 Resumen amigable de lo que facturás: total del mes, comparación con el mes anterior, total del año y cantidad de facturas emitidas. Sin juzgar, solo informar.
@@ -34,10 +34,10 @@ Resumen amigable de lo que facturás: total del mes, comparación con el mes ant
 Registro de clientes con datos fiscales (CUIT, condición de IVA, dirección). Historial de facturas por cliente con seguimiento de pagos. Creación rápida de clientes desde el formulario de facturas. Importación masiva de clientes.
 
 ### Recordatorios de Cobro
-Cada lunes se envían recordatorios por WhatsApp a clientes con facturas impagas. A los 30 días se intensifica el mensaje y la factura pasa a estado "vencida".
+Cada lunes se envían recordatorios por WhatsApp a clientes con facturas impagas. A los 30 días se intensifica el mensaje y la factura pasa a estado "vencida". Los usuarios pueden activar/desactivar recordatorios desde su perfil, o responder "ALTO" en WhatsApp para desuscribirse.
 
 ### Recordatorio de Monotributo
-El día 20 de cada mes se envía un recordatorio por WhatsApp a usuarios con plan pagado para que no olviden pagar la cuota del monotributo.
+El día 20 de cada mes se envía un recordatorio por WhatsApp a usuarios con plan pagado para que no olviden pagar la cuota del monotributo. Configurable desde el perfil.
 
 ### Facturas Recurrentes
 Generación automática de facturas periódicas. Se configura una factura recurrente y se emite automáticamente según la frecuencia definida. Si falla, se envía alerta por WhatsApp.
@@ -79,6 +79,13 @@ La sesión del usuario se renueva automáticamente cuando el access token expira
 - HTML sanitizado en contact form y generación de PDF
 - Errores internos no se filtran al cliente
 - Locks por usuario para prevenir race conditions en facturas y créditos
+
+### Anti-Spam y Control de Recordatorios
+Los usuarios tienen control total sobre los recordatorios por WhatsApp:
+- **Opt-in:** Los recordatorios están activados por defecto, pero el usuario puede desactivarlos desde su perfil
+- **Opt-out por WhatsApp:** Responder "ALTO", "PARAR", "STOP" o "CANCELAR" a cualquier mensaje de recordatorio desactiva todos los recordatorios automáticamente
+- **Configuración granular:** Tres tipos de recordatorios independientes: cobro, monotributo y vencidas
+- **Límite de frecuencia:** Máximo 1 recordatorio por semana por factura
 
 ### Planes y Pagos con MercadoPago
 Sistema de planes (Gratis, Profesional, Equipo) con límites de facturación y acceso a features premium. Los planes se pagan a través de MercadoPago con checkout y activación automática por webhook.

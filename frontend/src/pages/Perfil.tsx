@@ -11,7 +11,7 @@ const PLANS_LIST = [
 export default function Perfil() {
   const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
-  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "" });
+  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: true, recordatorio_monotributo: true, recordatorio_vencidas: true });
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function Perfil() {
     }).then(r => r.json()).then(d => {
       const u = d.user || d;
       setUser(u);
-      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "" });
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: u.recordatorios_whatsapp !== false, recordatorio_monotributo: u.recordatorio_monotributo !== false, recordatorio_vencidas: u.recordatorio_vencidas !== false });
     });
   }, []);
 
@@ -199,6 +199,44 @@ export default function Perfil() {
                 </div>
               ))}
             </div>
+          </div>
+          <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
+            <h2 className="text-sm font-semibold text-gray-400 mb-3">Recordatorios por WhatsApp</h2>
+            <p className="text-xs text-gray-500 mb-4">Elegí qué recordatorios querés recibir. Podés desactivarlos en cualquier momento, o respondé "ALTO" en WhatsApp.</p>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.recordatorios_whatsapp}
+                  onChange={e => setForm({...form, recordatorios_whatsapp: e.target.checked})}
+                  className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500" />
+                <div>
+                  <div className="text-sm">Recordatorios de cobro</div>
+                  <div className="text-xs text-gray-500">Facturas impagas (cada lunes)</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.recordatorio_monotributo}
+                  onChange={e => setForm({...form, recordatorio_monotributo: e.target.checked})}
+                  className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500" />
+                <div>
+                  <div className="text-sm">Recordatorio de monotributo</div>
+                  <div className="text-xs text-gray-500">Día 20 de cada mes</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.recordatorio_vencidas}
+                  onChange={e => setForm({...form, recordatorio_vencidas: e.target.checked})}
+                  className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500" />
+                <div>
+                  <div className="text-sm">Alertas de facturas vencidas</div>
+                  <div className="text-xs text-gray-500">Cuando una factura pasa de 30 días</div>
+                </div>
+              </label>
+            </div>
+            {edit && (
+              <button onClick={handleSave} className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+                Guardar preferencias
+              </button>
+            )}
           </div>
         </div>
       </div>

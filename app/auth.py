@@ -371,8 +371,11 @@ def me(authorization: str = Header("")):
             "whatsapp_used": whatsapp_used,
             "whatsapp_extra_cost": plan.get("whatsapp_extra_cost", 0),
             "creditos": get_saldo(uid),
-            "cbu": perfil_data.get("cbu", "") if perfil_data else "",
+             "cbu": perfil_data.get("cbu", "") if perfil_data else "",
             "alias_banco": perfil_data.get("alias_banco", "") if perfil_data else "",
+            "recordatorios_whatsapp": perfil_data.get("recordatorios_whatsapp", True) if perfil_data else True,
+            "recordatorio_monotributo": perfil_data.get("recordatorio_monotributo", True) if perfil_data else True,
+            "recordatorio_vencidas": perfil_data.get("recordatorio_vencidas", True) if perfil_data else True,
         }
     }
 
@@ -388,6 +391,9 @@ class ProfileUpdate(BaseModel):
     logo_url: Optional[str] = None
     email_fiscal: Optional[str] = None
     condiciones_venta: Optional[str] = None
+    recordatorios_whatsapp: Optional[bool] = None
+    recordatorio_monotributo: Optional[bool] = None
+    recordatorio_vencidas: Optional[bool] = None
 
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):

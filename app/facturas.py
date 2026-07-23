@@ -218,6 +218,8 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
                     mp_link=mp_link,
                 )
                 log_whatsapp_send(uid, factura["id"], "factura")
+                from app.creditos import verificar_creditos_bajos
+                verificar_creditos_bajos(uid)
 
     return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}}
 
@@ -294,6 +296,9 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
             costo = plan.get("whatsapp_extra_cost", 70)
             descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
         enviados += 1
+    if enviados > 0:
+        from app.creditos import verificar_creditos_bajos
+        verificar_creditos_bajos(uid)
     return {"ok": True, "enviados": enviados, "errores": errores}
 
 @router.get("/export")
@@ -373,6 +378,12 @@ async def enviar_recordatorios(secret: str = ""):
         telefono = cli.get("telefono", "")
         if not telefono:
             continue
+        perfil = supabase.table("perfiles").select("recordatorios_whatsapp, recordatorio_vencidas").eq("id", f["user_id"]).single().execute()
+        prefs = perfil.data or {}
+        if not prefs.get("recordatorios_whatsapp", True):
+            continue
+        if not prefs.get("recordatorio_vencidas", True):
+            continue
         total = f.get("total", 0)
         num = f.get("numero", "")
         dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
@@ -409,8 +420,10 @@ async def recordatorio_monotributo(secret: str = ""):
         plan = meta.get("plan", "free")
         if plan == "free":
             continue
-        perfil_r = _sb.table("perfiles").select("telefono, nombre").eq("id", u["id"]).execute()
+        perfil_r = _sb.table("perfiles").select("telefono, nombre, recordatorio_monotributo").eq("id", u["id"]).execute()
         perfil = perfil_r.data[0] if perfil_r.data else {}
+        if not perfil.get("recordatorio_monotributo", True):
+            continue
         tel = perfil.get("telefono", "")
         nombre = perfil.get("nombre", "")
         if not tel:
