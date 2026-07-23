@@ -57,4 +57,19 @@ def enviar_contacto(req: ContactForm):
         logger.error(f"Error enviando mail de contacto: {e}")
         raise HTTPException(500, "Error al enviar el mensaje")
 
+    # Notificar por Telegram
+    try:
+        import httpx
+        httpx.post(
+            "https://telegram-notifier-pmcs.onrender.com/notify",
+            json={
+                "app": "traceless",
+                "event": "📩 Soporte - TraceLess",
+                "message": f"Nombre: {req.nombre}\nEmail: {req.email}\nAsunto: {req.asunto}\n\n{req.mensaje[:200]}{'...' if len(req.mensaje) > 200 else ''}",
+            },
+            timeout=10,
+        )
+    except Exception as e:
+        logger.error(f"Telegram notification error: {e}")
+
     return {"ok": True, "mensaje": "Mensaje enviado correctamente. Te responderemos a la brevedad."}
