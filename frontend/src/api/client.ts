@@ -1,5 +1,52 @@
 const BASE_URL = import.meta.env.DEV ? "/api" : "/api";
 
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) return null;
+
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://yhulfvhdjezoyuxaxtpn.supabase.co";
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+    const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseKey,
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
+      return data.access_token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function request(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = {
@@ -13,7 +60,35 @@ async function request(path: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401 && localStorage.getItem("token")) {
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((newToken) => {
+        headers["Authorization"] = `Bearer ${newToken}`;
+        return fetch(`${BASE_URL}${path}`, { ...options, headers }).then((r) => r.json());
+      });
+    }
+
+    isRefreshing = true;
+
+    const newToken = await refreshAccessToken();
+    processQueue(null, newToken);
+
+    if (newToken) {
+      headers["Authorization"] = `Bearer ${newToken}`;
+      const retryRes = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+      isRefreshing = false;
+      if (!retryRes.ok) {
+        const errData = await retryRes.json().catch(() => ({}));
+        throw new Error(errData.detail || `Error ${retryRes.status}`);
+      }
+      return retryRes.json();
+    }
+
+    isRefreshing = false;
+    processQueue(new Error("Token refresh failed"), null);
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
     window.location.href = "/login";
     throw new Error("No autorizado");
   }

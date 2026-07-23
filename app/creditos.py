@@ -1,4 +1,4 @@
-import os, logging
+import os, logging, threading
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from app.db import supabase, get_user_id
@@ -6,6 +6,16 @@ from app.lemon import get_user_plan
 
 logger = logging.getLogger("creditos")
 router = APIRouter(prefix="/api/creditos", tags=["creditos"])
+
+# Lock per user for credit operations (prevents race conditions)
+_user_locks: dict[str, threading.Lock] = {}
+_user_locks_lock = threading.Lock()
+
+def _get_user_lock(user_id: str) -> threading.Lock:
+    with _user_locks_lock:
+        if user_id not in _user_locks:
+            _user_locks[user_id] = threading.Lock()
+        return _user_locks[user_id]
 
 
 def get_saldo(user_id: str) -> float:
@@ -21,17 +31,19 @@ def get_saldo(user_id: str) -> float:
 
 
 def descontar_credito(user_id: str, monto: float, descripcion: str = "") -> bool:
-    """Descuenta creditos. Retorna True si hay saldo suficiente."""
-    saldo = get_saldo(user_id)
-    if saldo < monto:
-        return False
-    supabase.table("creditos").insert({
-        "user_id": user_id,
-        "monto": monto,
-        "tipo": "consumo",
-        "descripcion": descripcion,
-    }).execute()
-    return True
+    """Descuenta creditos. Retorna True si hay saldo suficiente. Thread-safe."""
+    lock = _get_user_lock(user_id)
+    with lock:
+        saldo = get_saldo(user_id)
+        if saldo < monto:
+            return False
+        supabase.table("creditos").insert({
+            "user_id": user_id,
+            "monto": monto,
+            "tipo": "consumo",
+            "descripcion": descripcion,
+        }).execute()
+        return True
 
 
 def agregar_credito(user_id: str, monto: float, descripcion: str = "Compra de créditos"):

@@ -8,11 +8,21 @@ from app.pdf import generar_pdf_factura, guardar_factura_html
 from app.whatsapp import enviar_factura_whatsapp
 from app.lemon import can_create_invoice, get_user_plan, can_send_whatsapp, log_whatsapp_send, has_feature
 from app.retry_queue import queue_factura
-import os, logging
+import os, logging, threading
 
 logger = logging.getLogger("facturas")
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
+
+# Lock per user for invoice number generation (prevents race conditions)
+_user_locks: dict[str, threading.Lock] = {}
+_user_locks_lock = threading.Lock()
+
+def _get_user_lock(user_id: str) -> threading.Lock:
+    with _user_locks_lock:
+        if user_id not in _user_locks:
+            _user_locks[user_id] = threading.Lock()
+        return _user_locks[user_id]
 
 class DetalleItem(BaseModel):
     descripcion: str
@@ -106,13 +116,16 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         res = supabase.table("facturas").insert(factura_data).execute()
         return {"factura": {**res.data[0]}}
 
-    last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
-    ultimo_numero = 0
-    if last.data:
-        try:
-            ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
-        except (ValueError, IndexError):
-            ultimo_numero = 0
+    # Use per-user lock to prevent duplicate invoice numbers
+    user_lock = _get_user_lock(uid)
+    with user_lock:
+        last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
+        ultimo_numero = 0
+        if last.data:
+            try:
+                ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
+            except (ValueError, IndexError):
+                ultimo_numero = 0
 
     afip_result = generar_factura_afip(
         cliente_cuit=cliente.data.get("cuit", ""),
@@ -346,7 +359,7 @@ def factura_pdf(factura_id: str):
         return HTMLResponse(html)
 
 @router.get("/recordatorios")
-def enviar_recordatorios(secret: str = ""):
+async def enviar_recordatorios(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
     from app.whatsapp import enviar_recordatorio_whatsapp
@@ -354,6 +367,7 @@ def enviar_recordatorios(secret: str = ""):
     now = datetime.now()
     vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (now - timedelta(days=7)).strftime("%Y-%m-%d")).execute()
     enviados = 0
+    tasks = []
     for f in vencidas.data:
         cli = f.get("clientes") or {}
         telefono = cli.get("telefono", "")
@@ -364,12 +378,14 @@ def enviar_recordatorios(secret: str = ""):
         dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
         if dias >= 30:
             supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
-        asyncio.create_task(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias))
+        tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias))
         enviados += 1
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "recordatorios_enviados": enviados}
 
 @router.get("/recordatorio-monotributo")
-def recordatorio_monotributo(secret: str = ""):
+async def recordatorio_monotributo(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
     from app.whatsapp import enviar_recordatorio_monotributo_whatsapp
@@ -387,6 +403,7 @@ def recordatorio_monotributo(secret: str = ""):
     )
     users = r.json().get("users", [])
     enviados = 0
+    tasks = []
     for u in users:
         meta = u.get("app_metadata") or {}
         plan = meta.get("plan", "free")
@@ -398,12 +415,14 @@ def recordatorio_monotributo(secret: str = ""):
         nombre = perfil.get("nombre", "")
         if not tel:
             continue
-        asyncio.create_task(enviar_recordatorio_monotributo_whatsapp(tel, nombre or "Usuario"))
+        tasks.append(enviar_recordatorio_monotributo_whatsapp(tel, nombre or "Usuario"))
         enviados += 1
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "enviados": enviados}
 
 @router.get("/recurrentes")
-def procesar_recurrentes(secret: str = ""):
+async def procesar_recurrentes(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
     hoy = datetime.now().strftime("%Y-%m-%d")
@@ -470,10 +489,10 @@ def procesar_recurrentes(secret: str = ""):
                         if telefono:
                             from app.whatsapp import enviar_whatsapp
                             try:
-                                asyncio.run(enviar_whatsapp(
+                                await enviar_whatsapp(
                                     telefono,
                                     f"⚠️ *Error en factura recurrente*\n\nNo pudimos emitir la factura para *{cli.data.get('nombre', '') if cli.data else 'Cliente'}* por ${rec['importe']:,.2f}.\n\nMotivo: {error_msg}\n\nPor favor, revisá la factura manualmente en TraceLess."
-                                ))
+                                )
                             except Exception:
                                 pass
             if changed:
@@ -485,14 +504,16 @@ def procesar_recurrentes(secret: str = ""):
     return {"ok": True, "emitidas": emitidas, "errores": errores}
 
 @router.get("/procesar-programadas")
-def procesar_programadas(secret: str = ""):
+async def procesar_programadas(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")
     hoy = datetime.now().strftime("%Y-%m-%d")
     procesadas = 0
     errores = 0
+    import asyncio
 
     res = supabase.table("facturas").select("*, clientes!inner(nombre, apellido, cuit, telefono, email, condicion_iva)").eq("estado", "programada").lte("scheduled_send", hoy).execute()
+    tasks = []
     for f in res.data:
         uid = f["user_id"]
         try:
@@ -564,8 +585,7 @@ def procesar_programadas(secret: str = ""):
                     if wp_ok:
                         base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
                         pdf_url = f"{base_url}{html_url}"
-                        import asyncio
-                        asyncio.create_task(enviar_factura_whatsapp(
+                        tasks.append(enviar_factura_whatsapp(
                             telefono=telefono,
                             cliente=cli.get("nombre", ""),
                             numero=afip_result["numero"],
@@ -580,6 +600,8 @@ def procesar_programadas(secret: str = ""):
             logger.error(f"Error procesando factura programada {f['id']}: {e}")
             errores += 1
 
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "procesadas": procesadas, "errores": errores}
 
 @router.get("/estadisticas")
