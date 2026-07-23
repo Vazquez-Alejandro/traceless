@@ -222,24 +222,28 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
                 emisor_nombre=emisor.get("nombre", ""),
             )
             enviado_por = "email" if ok else ""
-    elif req.canal == "whatsapp" and plan["whatsapp"]:
+    elif req.canal == "whatsapp":
         telefono = cliente.data.get("telefono", "")
         if telefono:
-            wp_ok, wp_msg = can_send_whatsapp(uid)
-            if wp_ok:
-                await enviar_factura_whatsapp(
-                    telefono=telefono,
-                    cliente=cliente.data["nombre"],
-                    numero=factura["numero"],
-                    total=factura["total"],
-                    pdf_url=pdf_url_full,
-                    fecha=factura["fecha"].split("T")[0],
-                    mp_link=mp_link,
-                )
-                log_whatsapp_send(uid, factura["id"], "factura")
-                from app.creditos import verificar_creditos_bajos
-                verificar_creditos_bajos(uid)
-                enviado_por = "whatsapp_api"
+            if plan["whatsapp"]:
+                wp_ok, wp_msg = can_send_whatsapp(uid)
+                if wp_ok:
+                    await enviar_factura_whatsapp(
+                        telefono=telefono,
+                        cliente=cliente.data["nombre"],
+                        numero=factura["numero"],
+                        total=factura["total"],
+                        pdf_url=pdf_url_full,
+                        fecha=factura["fecha"].split("T")[0],
+                        mp_link=mp_link,
+                    )
+                    log_whatsapp_send(uid, factura["id"], "factura")
+                    from app.creditos import verificar_creditos_bajos
+                    verificar_creditos_bajos(uid)
+                    enviado_por = "whatsapp_api"
+                else:
+                    fallback_wa_me = True
+                    enviado_por = "wa_me"
             else:
                 fallback_wa_me = True
                 enviado_por = "wa_me"

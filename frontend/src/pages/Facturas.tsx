@@ -281,7 +281,7 @@ export default function Facturas() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo, scheduled_send: form.scheduled_send || undefined, canal: userPlan.invoices_limit !== null && userPlan.invoices_limit <= 5 ? "email" : "whatsapp" };
+    const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo, scheduled_send: form.scheduled_send || undefined, canal: "whatsapp" };
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
     }
