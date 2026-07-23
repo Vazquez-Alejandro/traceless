@@ -2,11 +2,10 @@
 Funciones para enviar notificaciones por Telegram.
 """
 
-import os
 import httpx
 from typing import Optional
 
-TELEGRAM_NOTIFIER_URL = os.getenv("TELEGRAM_NOTIFIER_URL", "https://telegram-notifier.onrender.com")
+TELEGRAM_NOTIFIER_URL = "https://telegram-notifier-pmcs.onrender.com"
 
 async def notify_telegram(app: str, event: str, message: str, details: Optional[dict] = None):
     """
