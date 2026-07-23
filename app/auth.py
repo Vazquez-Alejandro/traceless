@@ -188,7 +188,7 @@ def signup(req: SignupRequest):
     # Notificar por Telegram
     try:
         import httpx
-        httpx.post(
+        resp = httpx.post(
             "https://telegram-notifier-pmcs.onrender.com/notify",
             json={
                 "app": "traceless",
@@ -197,8 +197,9 @@ def signup(req: SignupRequest):
             },
             timeout=10,
         )
-    except Exception:
-        pass
+        logger.info(f"Telegram notification sent: {resp.status_code}")
+    except Exception as e:
+        logger.error(f"Telegram notification error: {e}")
 
     return {"user": {"email": req.email, "needs_verification": True}}
 
