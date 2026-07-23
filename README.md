@@ -19,7 +19,7 @@ Las facturas se envían por WhatsApp al cliente al emitirlas. Dos modos:
 Selección múltiple de facturas con tildes y "seleccionar todas". Un solo botón envía todas las seleccionadas a sus clientes correspondientes.
 
 ### Links de Pago MercadoPago
-Cada factura genera automáticamente un link de pago de MercadoPago. El cliente puede pagar online con tarjeta o transferencia. Los pagos se registran automáticamente via webhook.
+Cada factura genera automáticamente un link de pago de MercadoPago. El cliente puede pagar online con tarjeta o transferencia. Los pagos se registran automáticamente via webhook (con verificación HMAC).
 
 ### QR para Pago Presencial
 Cuando el usuario configura CBU y alias en su perfil, se genera un código QR en la factura con los datos para transferencia bancaria. El cliente escanea y paga desde su app de banco. Recordatorio visible si no está configurado.
@@ -31,7 +31,7 @@ Sistema de créditos para mensajes extra de WhatsApp. El usuario compra crédito
 Resumen amigable de lo que facturás: total del mes, comparación con el mes anterior, total del año y cantidad de facturas emitidas. Sin juzgar, solo informar.
 
 ### Historial de Clientes
-Registro de clientes con datos fiscales (CUIT, condición de IVA, dirección). Historial de facturas por cliente con seguimiento de pagos. Creación rápida de clientes desde el formulario de facturas.
+Registro de clientes con datos fiscales (CUIT, condición de IVA, dirección). Historial de facturas por cliente con seguimiento de pagos. Creación rápida de clientes desde el formulario de facturas. Importación masiva de clientes.
 
 ### Recordatorios de Cobro
 Cada lunes se envían recordatorios por WhatsApp a clientes con facturas impagas. A los 30 días se intensifica el mensaje y la factura pasa a estado "vencida".
@@ -40,7 +40,7 @@ Cada lunes se envían recordatorios por WhatsApp a clientes con facturas impagas
 El día 20 de cada mes se envía un recordatorio por WhatsApp a usuarios con plan pagado para que no olviden pagar la cuota del monotributo.
 
 ### Facturas Recurrentes
-Generación automática de facturas periódicas. Se configura una factura recurrente y se emite automáticamente según la frecuencia definida.
+Generación automática de facturas periódicas. Se configura una factura recurrente y se emite automáticamente según la frecuencia definida. Si falla, se envía alerta por WhatsApp.
 
 ### Facturas Programadas
 Al crear una factura, se puede programar el envío para una fecha futura. La factura se guarda como "programada" y se emite automáticamente en la fecha seleccionada (respetando el límite de ±10 días de ARCA).
@@ -52,22 +52,33 @@ Cada factura tiene un link público que muestra la factura en formato HTML limpi
 Exportación de facturas a formato .xlsx para tener un respaldo local o compartir con un contador. Filtros por rango de fechas.
 
 ### Analytics de Clientes
-Dashboard con estadísticas por cliente: facturas emitidas, montos totales, frecuencia de pago, ranking de mejores clientes.
+Dashboard con estadísticas por cliente: facturas emitidas, montos totales, frecuencia de pago, ranking de mejores clientes. Disponible en plan Profesional y Equipo.
 
 ### Formulario de Contacto
-Página de contacto pública (`/contact`) para que los usuarios envíen consultas o reporten problemas. Los mensajes llegan por email vía Resend.
+Página de contacto pública (`/contact`) para que los usuarios envíen consultas o reporten problemas. Los mensajes llegan por email vía Resend a soporte@traceless.com.ar.
 
 ### Verificación de Email
 Flujo completo de registro con verificación de email vía Resend. Incluye reenvío de verificación y reseteo de contraseña.
 
 ### Onboarding
-Overlay de bienvenida con 4 pasos visuales que se muestra una sola vez después del registro. Explica las features principales de la app.
+Overlay de bienvenida con 4 pasos visuales que se muestra una sola vez después del registro. Explica las features principales de la app. Solo se marca como completado cuando el usuario termina el tour.
+
+### PWA (Progressive Web App)
+Se puede instalar como app nativa desde el navegador. Funciona offline para assets estáticos. Manifest.json con íconos y colores de tema.
+
+### Token Refresh Automático
+La sesión del usuario se renueva automáticamente cuando el access token expira. Si el refresh falla, se redirige a login. Requests concurrentes durante el refresh se encolan y reintentan.
 
 ### Seguridad
 - Contraseña: mínimo 8 caracteres, 1 mayúscula, 1 número
-- Confirmación de contraseña en registro
+- Confirmación de contraseña en registro y reset
 - Rate limiting en login (5 intentos, bloqueo de 5 minutos)
-- Secretos fuera del repositorio
+- Webhook de MercadoPago con verificación HMAC
+- Webhook de LemonSqueezy rechazado si no hay secret configurado
+- CORS whitelist (solo orígenes permitidos)
+- HTML sanitizado en contact form y generación de PDF
+- Errores internos no se filtran al cliente
+- Locks por usuario para prevenir race conditions en facturas y créditos
 
 ### Planes y Pagos con MercadoPago
 Sistema de planes (Gratis, Profesional, Equipo) con límites de facturación y acceso a features premium. Los planes se pagan a través de MercadoPago con checkout y activación automática por webhook.
@@ -78,8 +89,14 @@ Sistema de planes (Gratis, Profesional, Equipo) con límites de facturación y a
 | Profesional | $15.000/mes | Ilimitado | Sí | 100 | $70 |
 | Equipo | $29.000/mes | Ilimitado | Sí | 250 | $60 |
 
+### Admin Bypass
+Los emails en `ADMIN_EMAILS` siempre obtienen plan Equipo sin pagar. Útil para testing y demostraciones.
+
 ### Perfil de Usuario
-Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, teléfono. Datos de cuenta bancaria (CBU, alias) para QR de pago. Estos datos se usan automáticamente al emitir facturas.
+Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, teléfono, empresa, logo, email fiscal, condiciones de venta. Datos de cuenta bancaria (CBU, alias) para QR de pago. Estos datos se usan automáticamente al emitir facturas.
+
+### Cache de Planes
+Los planes se cachean en memoria (5 min TTL) para evitar llamadas HTTP repetidas a Supabase. Mejora el rendimiento en endpoints que consultan el plan múltiples veces.
 
 ## Stack
 
@@ -126,3 +143,4 @@ Configuración del perfil fiscal: CUIT, nombre, dirección, condición de IVA, t
 - `CRON_SECRET`
 - `BASE_URL`
 - `CONTACT_EMAIL`
+- `CORS_ORIGINS` (separado por comas, default: `https://www.traceless.com.ar,https://traceless.com.ar`)
