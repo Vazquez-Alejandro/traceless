@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANS_LIST = [
-  { key: "free", name: "Gratis", price: "$0", desc: "3 facturas/mes" },
-  { key: "pro", name: "Profesional", price: "$15.000/mes", desc: "Ilimitado + WhatsApp" },
-  { key: "team", name: "Equipo", price: "$29.000/mes", desc: "Hasta 5 usuarios" },
+  { key: "free", name: "Gratis", price: "$0", desc: "5 facturas/mes, sin WhatsApp API" },
+  { key: "pro", name: "Profesional", price: "$15.000/mes", desc: "Ilimitado + 100 msg WhatsApp, $70/msg extra" },
+  { key: "team", name: "Equipo", price: "$29.000/mes", desc: "Ilimitado + 250 msg WhatsApp, $60/msg extra" },
 ];
 
 export default function Perfil() {

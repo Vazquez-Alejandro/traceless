@@ -6,7 +6,7 @@ const PLANS = [
     name: "Gratis",
     price: "Gratis",
     desc: "Para probar la plataforma",
-    features: ["3 facturas por mes", "Sin WhatsApp", "1 usuario"],
+    features: ["5 facturas por mes", "Sin WhatsApp API", "1 usuario"],
     highlighted: false,
   },
   {
@@ -14,7 +14,7 @@ const PLANS = [
     name: "Profesional",
     price: "$15.000/mes",
     desc: "Para freelancers y monotributistas",
-    features: ["Facturas ilimitadas", "WhatsApp incluido", "Analytics de pagos", "Facturas recurrentes", "1 usuario"],
+    features: ["Facturas ilimitadas", "100 msg WhatsApp incluidos", "$70/msg extra", "Analytics de pagos", "Facturas recurrentes"],
     highlighted: true,
   },
   {
@@ -22,7 +22,7 @@ const PLANS = [
     name: "Equipo",
     price: "$29.000/mes",
     desc: "Para estudios y PyMEs",
-    features: ["Todo del plan Profesional", "Hasta 5 usuarios", "Soporte prioritario", "Cola de reintentos ARCA"],
+    features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
   },
 ];

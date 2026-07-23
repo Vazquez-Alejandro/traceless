@@ -248,8 +248,14 @@ export default function Facturas() {
           {userPlan.invoices_limit !== null && (
             <p className="text-xs text-gray-500 mt-1">
               {userPlan.invoices_limit - userPlan.invoices_used > 0
-                ? `Te quedan ${(userPlan.invoices_limit) - userPlan.invoices_used} facturas gratis este mes`
-                : `Límite alcanzado. Actualizá tu plan para seguir facturando.`}
+                ? `${userPlan.invoices_used}/${userPlan.invoices_limit} facturas este mes`
+                : `Límite de ${userPlan.invoices_limit} facturas alcanzado. `}
+              {userPlan.invoices_limit - userPlan.invoices_used <= 0 && (
+                <Link to="/perfil" className="text-blue-400 hover:underline">Actualizá tu plan</Link>
+              )}
+              {userPlan.whatsapp_limit !== undefined && userPlan.whatsapp_limit > 0 && (
+                <span className="ml-2">· {userPlan.whatsapp_used}/{userPlan.whatsapp_limit} msgs WhatsApp</span>
+              )}
             </p>
           )}
         </div>
@@ -407,62 +413,59 @@ export default function Facturas() {
           </div>
         )}
         {facturas.map(f => (
-          <div key={f.id} className={`p-4 rounded-xl bg-gray-900/40 border flex items-center justify-between ${selected.has(f.id) ? "border-green-500/40 bg-green-900/10" : "border-gray-800/40"}`}>
-            <div className="flex items-center gap-3">
-              <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleSelect(f.id)} className="rounded flex-shrink-0" />
-            <div>
-              <div className="font-medium">{f.numero || "—"} — ${f.total.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha} · {f.vencimiento ? `Vence: ${f.vencimiento}` : ""}</div>
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full ${
-                  f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
-                  f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
-                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" :
-                  f.estado === "programada" ? "bg-purple-900/40 text-purple-400" : "bg-blue-900/40 text-blue-400"
-                }`}>
-                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "programada" ? "Programada" : "Emitida"}
-                </span>
-                {f.scheduled_send && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">📅 {f.scheduled_send}</span>
-                )}
-                {(f as any).recurrente && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">Recurrente</span>
-                )}
+          <div key={f.id} className={`p-4 rounded-xl bg-gray-900/40 border ${selected.has(f.id) ? "border-green-500/40 bg-green-900/10" : "border-gray-800/40"}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleSelect(f.id)} className="rounded flex-shrink-0 mt-1" />
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{f.numero || "—"} — ${f.total.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500 truncate">{f.clientes?.nombre} {f.clientes?.apellido} · {f.fecha}</div>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full ${
+                      f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
+                      f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
+                      f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" :
+                      f.estado === "programada" ? "bg-purple-900/40 text-purple-400" : "bg-blue-900/40 text-blue-400"
+                    }`}>
+                      {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "programada" ? "Programada" : "Emitida"}
+                    </span>
+                    {f.scheduled_send && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">📅 {f.scheduled_send}</span>
+                    )}
+                    {(f as any).recurrente && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">Recurrente</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1">
-                <span>📄 {f.fecha}</span>
-                {f.fecha_pago && <span>💚 {f.fecha_pago}</span>}
-                {f.estado === "anulada" && <span>🗑️ Anulada</span>}
-                {f.mp_link && <span>💳 Link de pago</span>}
+              <div className="flex-shrink-0 text-right">
+                <div className="text-sm font-semibold">${f.total.toLocaleString()}</div>
+                <div className="text-[10px] text-gray-500">{f.vencimiento ? `Vence: ${f.vencimiento}` : ""}</div>
               </div>
             </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => handleClone(f)} title="Reemitir esta factura" className="text-xs text-gray-400 hover:text-white">Reemitir</button>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-800/30 flex-wrap">
+              <button onClick={() => handleClone(f)} title="Reemitir" className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-gray-800/50 rounded-lg">Reemitir</button>
               {f.estado !== "programada" && (
-                <button onClick={() => handleWhatsApp(f)} title="Enviar por WhatsApp" className="text-xs text-green-400 hover:text-green-300">WhatsApp</button>
-              )}
-              {!userPlan.cbu && !userPlan.alias_banco && (
-                <Link to="/perfil" className="text-[10px] text-yellow-500 hover:text-yellow-400" title="Configurar CBU y alias para que aparezca el QR de pago">⚙️ Configurar CBU</Link>
+                <button onClick={() => handleWhatsApp(f)} title="WhatsApp" className="px-2 py-1 text-[11px] text-green-400 hover:text-green-300 bg-green-900/20 rounded-lg">WhatsApp</button>
               )}
               {copiado === f.id ? (
-                <span className="text-xs text-green-400">¡Link copiado!</span>
+                <span className="px-2 py-1 text-[11px] text-green-400">Copiado!</span>
               ) : (
-                <button onClick={() => handleShare(f.id)} className="text-xs text-gray-400 hover:text-white">Copiar link</button>
-              )}
-              {f.mp_link && (
-                <div className="flex items-center gap-1">
-                  <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 hover:underline">💳 Pagar</a>
-                  <button onClick={async () => { await navigator.clipboard.writeText(f.mp_link!); setToast("Link de pago copiado"); }} className="text-xs text-gray-500 hover:text-white" title="Copiar link de pago">📋</button>
-                </div>
+                <button onClick={() => handleShare(f.id)} className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-gray-800/50 rounded-lg">Copiar link</button>
               )}
               {f.estado !== "programada" && (
-                <a href={`/api/facturas/${f.id}/pdf`} className="text-xs text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">PDF</a>
+                <a href={`/api/facturas/${f.id}/pdf`} className="px-2 py-1 text-[11px] text-blue-400 hover:underline bg-blue-900/20 rounded-lg" target="_blank" rel="noopener noreferrer">PDF</a>
+              )}
+              {f.mp_link && (
+                <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="px-2 py-1 text-[11px] text-green-400 hover:underline bg-green-900/20 rounded-lg">Pagar</a>
+              )}
+              {!userPlan.cbu && !userPlan.alias_banco && (
+                <Link to="/perfil" className="px-2 py-1 text-[10px] text-yellow-500 hover:text-yellow-400 bg-yellow-900/20 rounded-lg">⚙️ CBU</Link>
               )}
               {f.estado === "emitida" && (
                 <>
-                  <button onClick={() => handlePay(f.id)} className="text-xs text-green-400 hover:underline">Pagada</button>
-                  <button onClick={() => handleCancel(f.id)} className="text-xs text-red-400 hover:underline">Anular</button>
+                  <button onClick={() => handlePay(f.id)} className="px-2 py-1 text-[11px] text-green-400 hover:underline">Pagada</button>
+                  <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>
                 </>
               )}
             </div>
