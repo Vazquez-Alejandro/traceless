@@ -15,6 +15,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,6 +41,10 @@ export default function Register() {
     }
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
+      return;
+    }
+    if (!acceptTerms) {
+      setError("Debés aceptar los Términos y Condiciones");
       return;
     }
     setLoading(true);
@@ -164,6 +169,25 @@ export default function Register() {
           {confirmPassword && password !== confirmPassword && (
             <p className="text-red-400 text-[10px] -mt-2">Las contraseñas no coinciden</p>
           )}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={e => setAcceptTerms(e.target.checked)}
+              disabled={loading}
+              className="mt-1 w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+            />
+            <span className="text-xs text-gray-400">
+              Acepto los{" "}
+              <Link to="/terminos" target="_blank" className="text-blue-400 hover:underline">
+                Términos y Condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link to="/privacidad" target="_blank" className="text-blue-400 hover:underline">
+                Política de Privacidad
+              </Link>
+            </span>
+          </label>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
             {loading ? (

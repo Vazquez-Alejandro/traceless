@@ -3,39 +3,68 @@ import { Link } from "react-router-dom";
 export default function Terminos() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto flex items-center justify-between h-16 px-6">
-          <Link to="/" className="font-bold text-xl">TraceLess</Link>
-          <Link to="/" className="text-sm text-gray-400 hover:text-white">Volver</Link>
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <Link to="/" className="text-2xl font-bold">TraceLess</Link>
+        
+        <h1 className="text-3xl font-bold mt-8 mb-6">Términos y Condiciones</h1>
+        <p className="text-sm text-gray-500 mb-8">Última actualización: 23 de julio de 2026</p>
+
+        <div className="space-y-6 text-sm text-gray-300 leading-relaxed">
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">1. Aceptación</h2>
+            <p>Al usar TraceLess, aceptás estos términos. Si no estás de acuerdo, no uses la plataforma.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">2. Descripción del servicio</h2>
+            <p>TraceLess es una plataforma de facturación electrónica para contribuyentes argentinos. Permite emitir facturas con validez ARCA, enviarlas por WhatsApp y gestionar cobranzas.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">3. Cuentas</h2>
+            <p>Te registrás con tu email y contraseña. Sos responsable de mantener la seguridad de tu cuenta. Cada cuenta es para uso personal o de tu negocio.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">4. Planes y pagos</h2>
+            <p>Los planes gratuitos y pagos se detallan en la página de precios. Los pagos se procesan a través de MercadoPago. Podés cancelar tu suscripción en cualquier momento.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">5. Uso aceptable</h2>
+            <p>No podés usar la plataforma para actividades ilegales, enviar spam, o intentar acceder a sistemas ajenos. Nos reservamos el derecho de suspender cuentas que violen estos términos.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">6. Datos y privacidad</h2>
+            <p>Tus datos de facturación se almacenan de forma segura. No compartimos tu información con terceros excepto cuando es necesario para prestar el servicio (ej: conexión con ARCA).</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">7. Disponibilidad</h2>
+            <p>Hacemos todo lo posible para que el servicio esté disponible 24/7, pero no garantizamos uptime absoluto. Mantenimientos programados se avisarán con anticipación.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">8. Limitación de responsabilidad</h2>
+            <p>TraceLess no es responsable por pérdidas derivadas del uso de la plataforma. La facturación electrónica depende de ARCA y puede tener intermitencias fuera de nuestro control.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">9. Cambios</h2>
+            <p>Podemos actualizar estos términos. Te avisaremos por email o en la plataforma si hay cambios importantes.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">10. Contacto</h2>
+            <p>Para consultas, escribinos a <a href="mailto:soporte@traceless.com.ar" className="text-blue-400 hover:underline">soporte@traceless.com.ar</a></p>
+          </section>
         </div>
-      </nav>
-      <main className="max-w-3xl mx-auto px-6 py-16 prose prose-invert">
-        <h1>Términos y Condiciones</h1>
-        <p className="text-gray-400">Última actualización: julio 2026</p>
 
-        <h2>1. Servicio</h2>
-        <p>TraceLess es una herramienta de facturación electrónica que permite generar comprobantes válidos ante ARCA y enviarlos por WhatsApp. El uso de la plataforma implica la aceptación de estos términos.</p>
-
-        <h2>2. Responsabilidad</h2>
-        <p>El usuario es el único responsable por la veracidad de los datos ingresados (CUIT, importes, condiciones fiscales). TraceLess actúa como intermediario técnico y no se responsabiliza por errores en la emisión de comprobantes.</p>
-
-        <h2>3. Facturación ante ARCA</h2>
-        <p>TraceLess utiliza los servicios web oficiales de ARCA (WSAA + WSFE) para la emisión de facturas electrónicas. No almacenamos ni retransmitimos datos sensibles de facturación más allá de lo necesario para el funcionamiento del servicio.</p>
-
-        <h2>4. Privacidad de datos</h2>
-        <p>Los datos personales de clientes y usuarios se almacenan en Supabase (proveedor cloud con certificación SOC 2). No compartimos datos con terceros ni utilizamos la información para fines publicitarios.</p>
-
-        <h2>5. Cancelaciones y reembolsos</h2>
-        <p>Las suscripciones se gestionan a través de Lemon Squeezy. Los reembolsos se rigen por la política de dicha plataforma. Ante cualquier inconveniente, contactanos por los canales habilitados.</p>
-
-        <h2>6. Limitación de responsabilidad</h2>
-        <p>TraceLess no se responsabiliza por daños directos o indirectos derivados del uso de la plataforma, incluyendo pero no limitado a multas fiscales por uso incorrecto del sistema.</p>
-      </main>
-      <footer className="border-t border-gray-800/30 py-8">
-        <div className="max-w-4xl mx-auto px-6 text-center text-sm text-gray-600">
-          TraceLess — © 2026
+        <div className="mt-12 pt-6 border-t border-gray-800">
+          <Link to="/register" className="text-blue-400 hover:underline text-sm">← Volver al registro</Link>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

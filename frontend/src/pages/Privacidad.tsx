@@ -3,53 +3,79 @@ import { Link } from "react-router-dom";
 export default function Privacidad() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto flex items-center justify-between h-16 px-6">
-          <Link to="/" className="font-bold text-xl">TraceLess</Link>
-          <Link to="/" className="text-sm text-gray-400 hover:text-white">Volver</Link>
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <Link to="/" className="text-2xl font-bold">TraceLess</Link>
+        
+        <h1 className="text-3xl font-bold mt-8 mb-6">Política de Privacidad</h1>
+        <p className="text-sm text-gray-500 mb-8">Última actualización: 23 de julio de 2026</p>
+
+        <div className="space-y-6 text-sm text-gray-300 leading-relaxed">
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">1. Información que recopilamos</h2>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Email y nombre (al registrarte)</li>
+              <li>Datos de tus clientes (nombre, CUIT, teléfono)</li>
+              <li>Información de facturación (montos, fechas, estados)</li>
+              <li>Datos de uso (qué funciones usás, frecuencia)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">2. Cómo usamos tu información</h2>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Para prestar el servicio (emitir facturas, enviar WhatsApp)</li>
+              <li>Para enviarte notificaciones importantes</li>
+              <li>Para mejorar la plataforma</li>
+              <li>Para procesar pagos (a través de MercadoPago)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">3. Compartición de datos</h2>
+            <p>No vendemos tu información. Compartimos datos solo cuando:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Es necesario para prestar el servicio (ej: conexión con ARCA)</li>
+              <li>Lo requiera la ley</li>
+              <li>Uses servicios de terceros integrados (MercadoPago, WhatsApp)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">4. Seguridad</h2>
+            <p>Usamos encriptación TLS, autenticación segura y acceso restringido. Ningún sistema es 100% seguro, pero tomamos todas las precauciones razonables.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">5. Retención de datos</h2>
+            <p>Mantenemos tus datos mientras tu cuenta esté activa. Si eliminás tu cuenta, borramos tus datos personales en 30 días. Algunos datos de facturación pueden retenerse por obligación legal.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">6. Tus derechos</h2>
+            <p>Podés:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Acceder a tus datos</li>
+              <li>Corregir información incorrecta</li>
+              <li>Solicitar la eliminación de tu cuenta</li>
+              <li>Exportar tus datos</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">7. Cookies</h2>
+            <p>Usamos cookies para mantener tu sesión activa. No usamos cookies de rastreo publicitario.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">8. Contacto</h2>
+            <p>Para consultas sobre privacidad, escribinos a <a href="mailto:soporte@traceless.com.ar" className="text-blue-400 hover:underline">soporte@traceless.com.ar</a></p>
+          </section>
         </div>
-      </nav>
-      <main className="max-w-3xl mx-auto px-6 py-16 prose prose-invert">
-        <h1>Política de Privacidad</h1>
-        <p className="text-gray-400">Última actualización: julio 2026</p>
 
-        <h2>1. Datos que recopilamos</h2>
-        <p>Recopilamos la siguiente información:</p>
-        <ul>
-          <li>Nombre, email y CUIT del usuario</li>
-          <li>Datos de clientes que el usuario registra (nombre, CUIT, teléfono, dirección)</li>
-          <li>Comprobantes electrónicos emitidos</li>
-        </ul>
-
-        <h2>2. Almacenamiento</h2>
-        <p>Todos los datos se almacenan en Supabase, plataforma cloud con servidores en Estados Unidos y certificación SOC 2. Los certificados digitales de ARCA se almacenan en variables de entorno cifradas en Vercel.</p>
-
-        <h2>3. Uso de datos</h2>
-        <p>Los datos se utilizan exclusivamente para:</p>
-        <ul>
-          <li>Generar facturas electrónicas ante ARCA</li>
-          <li>Enviar comprobantes por WhatsApp al cliente</li>
-          <li>Mantener un historial de facturación del usuario</li>
-        </ul>
-        <p>No utilizamos los datos para publicidad, machine learning ni los compartimos con terceros no esenciales para el servicio.</p>
-
-        <h2>4. WhatsApp</h2>
-        <p>Los números de teléfono registrados se utilizan únicamente para enviar comprobantes de facturación mediante WhatsApp Cloud API (Meta). No almacenamos conversaciones ni compartimos los números con Meta más allá del envío del mensaje.</p>
-
-        <h2>5. ARCA/AFIP</h2>
-        <p>Los datos de facturación se envían a los servicios web oficiales de ARCA para la emisión de comprobantes electrónicos, según lo requerido por la normativa fiscal argentina.</p>
-
-        <h2>6. Derechos del usuario</h2>
-        <p>Podés solicitar la exportación o eliminación de tus datos en cualquier momento escribiendo a nuestro contacto. Damos de baja los datos en un plazo máximo de 30 días hábiles.</p>
-
-        <h2>7. Retención de datos</h2>
-        <p>Conservamos los datos mientras la cuenta esté activa. Al cancelar la suscripción, los datos se conservan por 90 días antes de ser eliminados definitivamente.</p>
-      </main>
-      <footer className="border-t border-gray-800/30 py-8">
-        <div className="max-w-4xl mx-auto px-6 text-center text-sm text-gray-600">
-          TraceLess — © 2026
+        <div className="mt-12 pt-6 border-t border-gray-800">
+          <Link to="/register" className="text-blue-400 hover:underline text-sm">← Volver al registro</Link>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
