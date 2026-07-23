@@ -14,6 +14,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setResent(false);
+    setSending(true);
     try {
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
@@ -22,6 +23,7 @@ export default function Login() {
     } catch (err: any) {
       setError(err.message || "Email o contraseña incorrectos");
     }
+    setSending(false);
   };
 
   const resendVerification = async () => {
@@ -48,22 +50,27 @@ export default function Login() {
           <p className="text-gray-400 text-sm mt-2">Iniciar sesión</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
-          <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required disabled={sending}
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+          <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required disabled={sending}
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
           <div className="text-right">
             <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-blue-400">¿Olvidaste tu contraseña?</Link>
           </div>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           {error?.toLowerCase().includes("verificado") && !resent && (
             <button type="button" onClick={resendVerification} disabled={sending}
-              className="w-full text-xs text-blue-400 hover:underline text-center">
+              className="w-full text-xs text-blue-400 hover:underline text-center disabled:opacity-50">
               {sending ? "Enviando..." : "Reenviar verificación"}
             </button>
           )}
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
-            Ingresar
+          <button type="submit" disabled={sending} className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+            {sending ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Ingresando...
+              </>
+            ) : "Ingresar"}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">

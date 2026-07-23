@@ -6,16 +6,19 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
     const res = await api.auth.forgotPassword(email);
     if (res.error) {
       setError("Error al enviar el email");
     } else {
       setSent(true);
     }
+    setLoading(false);
   };
 
   if (sent) {
@@ -45,11 +48,16 @@ export default function ForgotPassword() {
           <p className="text-gray-400 text-sm mt-2">Recuperá tu contraseña</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="email" placeholder="Tu email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          <input type="email" placeholder="Tu email" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading}
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
           {error && <p className="text-red-400 text-xs">{error}</p>}
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
-            Enviar link de recuperación
+          <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Enviando...
+              </>
+            ) : "Enviar link de recuperación"}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">

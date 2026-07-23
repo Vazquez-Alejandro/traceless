@@ -17,6 +17,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const planParam = searchParams.get("plan");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(planParam);
@@ -41,6 +42,7 @@ export default function Register() {
       setError("Las contraseñas no coinciden");
       return;
     }
+    setLoading(true);
     try {
       const signupRes = await api.auth.signup({ email, password, name });
       if (signupRes.error) {
@@ -70,6 +72,7 @@ export default function Register() {
     } catch {
       setError("Error al crear la cuenta");
     }
+    setLoading(false);
   };
 
   if (verified) {
@@ -135,13 +138,13 @@ export default function Register() {
           <button onClick={() => setSelectedPlan(null)} className="text-xs text-blue-400 hover:underline mt-1">← Cambiar plan</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
-          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          <input type="text" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} required disabled={loading}
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading}
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
           <div>
-            <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+            <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading}
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
             {password.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${passwordChecks.length ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
@@ -156,14 +159,19 @@ export default function Register() {
               </div>
             )}
           </div>
-          <input type="password" placeholder="Repetir contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required
-            className={`w-full px-4 py-3 bg-gray-900 border rounded-xl text-sm focus:outline-none focus:border-blue-500 ${confirmPassword && password !== confirmPassword ? "border-red-500" : "border-gray-800"}`} />
+          <input type="password" placeholder="Repetir contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={loading}
+            className={`w-full px-4 py-3 bg-gray-900 border rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50 ${confirmPassword && password !== confirmPassword ? "border-red-500" : "border-gray-800"}`} />
           {confirmPassword && password !== confirmPassword && (
             <p className="text-red-400 text-[10px] -mt-2">Las contraseñas no coinciden</p>
           )}
           {error && <p className="text-red-400 text-xs">{error}</p>}
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all">
-            {selectedPlan !== "free" ? "Crear cuenta y pagar" : "Empezar Gratis"}
+          <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Creando cuenta...
+              </>
+            ) : selectedPlan !== "free" ? "Crear cuenta y pagar" : "Empezar Gratis"}
           </button>
         </form>
         <p className="text-center text-[11px] text-gray-600 mt-4">
