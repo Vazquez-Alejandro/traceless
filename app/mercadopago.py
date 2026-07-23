@@ -1,6 +1,8 @@
 import os
 import logging
 import httpx
+import hashlib
+import hmac
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Request, HTTPException, Header
 from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
@@ -104,11 +106,25 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
 
 @router.post("/webhook")
 async def mp_webhook(request: Request):
-    body = await request.json()
-    logger.info(f"MP webhook received: {body.get('type', 'unknown')}")
+    body = await request.body()
 
-    event_type = body.get("type", "")
-    data_id = body.get("data", {}).get("id", "")
+    # Verificar firma del webhook
+    if MP_WEBHOOK_SECRET:
+        signature = request.headers.get("x-signature", "")
+        if not signature:
+            logger.warning("MP webhook: missing signature")
+            raise HTTPException(401, "Firma requerida")
+        sig = hmac.HMAC(MP_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(f"sha256={sig}", signature):
+            logger.warning("MP webhook: invalid signature")
+            raise HTTPException(401, "Firma inválida")
+
+    import json
+    data = json.loads(body)
+    logger.info(f"MP webhook received: {data.get('type', 'unknown')}")
+
+    event_type = data.get("type", "")
+    data_id = data.get("data", {}).get("id", "")
 
     if event_type == "payment":
         r = httpx.get(f"{MP_BASE}/v1/payments/{data_id}", headers=_mp_headers(), timeout=15)

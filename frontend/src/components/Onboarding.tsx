@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const STEPS = [
   {
@@ -34,12 +34,13 @@ const STEPS = [
 export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
 
-  useEffect(() => {
-    localStorage.setItem("onboarding_done", "1");
-  }, []);
-
   const s = STEPS[step];
   const isLast = step === STEPS.length - 1;
+
+  const handleComplete = () => {
+    localStorage.setItem("onboarding_done", "1");
+    onComplete();
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -64,7 +65,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               </button>
             )}
             <button
-              onClick={() => isLast ? onComplete() : setStep(step + 1)}
+              onClick={() => isLast ? handleComplete() : setStep(step + 1)}
               className="flex-1 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition"
             >
               {isLast ? "Empezar a facturar" : "Siguiente"}
@@ -72,7 +73,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           </div>
 
           {!isLast && (
-            <button onClick={onComplete} className="mt-4 text-xs text-gray-600 hover:text-gray-400 transition">
+            <button onClick={handleComplete} className="mt-4 text-xs text-gray-600 hover:text-gray-400 transition">
               Saltar intro
             </button>
           )}

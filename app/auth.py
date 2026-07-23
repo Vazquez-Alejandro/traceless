@@ -233,9 +233,17 @@ def forgot_password(req: ForgotPasswordRequest):
 
 @router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest):
+    import re
     email = verify_reset_token(req.token)
     if not email:
         raise HTTPException(400, "Link inválido o expirado")
+
+    if len(req.password) < 8:
+        raise HTTPException(400, "La contraseña debe tener al menos 8 caracteres")
+    if not re.search(r"[A-Z]", req.password):
+        raise HTTPException(400, "La contraseña debe contener al menos una mayúscula")
+    if not re.search(r"[0-9]", req.password):
+        raise HTTPException(400, "La contraseña debe contener al menos un número")
 
     import httpx
     r = httpx.get(
@@ -315,30 +323,6 @@ def resend_verification(req: ForgotPasswordRequest):
     if not sent:
         raise HTTPException(500, "Error al enviar el email de verificación")
     return {"ok": True, "mensaje": "Email de verificación reenviado. Revisá tu casilla."}
-
-@router.post("/confirm-email")
-def confirm_email_direct(req: ForgotPasswordRequest):
-    import httpx
-    r = httpx.get(
-        f"{_URL}/auth/v1/admin/users",
-        params={"filter[email]": f"eq.{req.email}"},
-        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}"},
-        timeout=10,
-    )
-    if r.status_code != 200 or not r.json().get("users"):
-        raise HTTPException(404, "Usuario no encontrado")
-    user = r.json()["users"][0]
-    if user.get("email_confirmed_at"):
-        return {"ok": True, "mensaje": "Email ya está confirmado"}
-    r2 = httpx.put(
-        f"{_URL}/auth/v1/admin/users/{user['id']}",
-        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-        json={"email_confirm": True},
-        timeout=10,
-    )
-    if r2.status_code != 200:
-        raise HTTPException(500, "Error al confirmar el email")
-    return {"ok": True, "mensaje": "Email confirmado correctamente. Ya podés iniciar sesión."}
 
 @router.get("/me")
 def me(authorization: str = Header("")):

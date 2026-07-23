@@ -1,6 +1,7 @@
 from pathlib import Path
 import tempfile
 import base64
+import html as html_mod
 
 TMP = Path(tempfile.gettempdir()) / "traceless_facturas"
 FACTURAS_DIR = TMP
@@ -39,15 +40,16 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     mp_link = factura.get("mp_link", "")
     mp_section = ""
     if mp_link:
-        mp_section = f'<div style="margin-top:20px;text-align:center"><a href="{mp_link}" style="display:inline-block;padding:10px 24px;background:#009ee3;color:white;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">💳 Pagar online con MercadoPago</a></div>'
+        mp_link_escaped = html_mod.escape(mp_link)
+        mp_section = f'<div style="margin-top:20px;text-align:center"><a href="{mp_link_escaped}" style="display:inline-block;padding:10px 24px;background:#009ee3;color:white;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">💳 Pagar online con MercadoPago</a></div>'
 
     cbu_section = ""
     if cbu or alias_banco:
         cbu_lines = ""
         if cbu:
-            cbu_lines += f"<div><strong>CBU:</strong> <span style='font-family:monospace'>{cbu}</span></div>"
+            cbu_lines += f"<div><strong>CBU:</strong> <span style='font-family:monospace'>{html_mod.escape(cbu)}</span></div>"
         if alias_banco:
-            cbu_lines += f"<div><strong>Alias:</strong> <span style='font-family:monospace'>{alias_banco}</span></div>"
+            cbu_lines += f"<div><strong>Alias:</strong> <span style='font-family:monospace'>{html_mod.escape(alias_banco)}</span></div>"
         cbu_lines += "<div style='margin-top:4px;font-size:11px;color:#666'>Transferí a esta cuenta</div>"
         qr_cell = f'<div style="text-align:center">{qr_html}</div>' if qr_html else ""
         cbu_section = f'<div style="margin-top:24px;padding:16px;border:1px solid #ddd;border-radius:10px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:8px;color:#333">Datos para transferencia bancaria</div><div style="display:flex;gap:20px;align-items:center">{cbu_lines} {qr_cell}</div></div>'
@@ -60,20 +62,20 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
 
     logo_html = ""
     if logo_url:
-        logo_html = f'<img src="{logo_url}" style="height:60px;object-fit:contain;margin-bottom:8px" />'
+        logo_html = f'<img src="{html_mod.escape(logo_url)}" style="height:60px;object-fit:contain;margin-bottom:8px" />'
 
     email_section = ""
     if email_fiscal:
-        email_section = f"<br>Email: {email_fiscal}"
+        email_section = f"<br>Email: {html_mod.escape(email_fiscal)}"
 
     condiciones_section = ""
     if condiciones_venta:
-        condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{condiciones_venta}</div></div>'
+        condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{html_mod.escape(condiciones_venta)}</div></div>'
 
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
-<title>Factura {factura['numero']}</title>
+<title>Factura {html_mod.escape(str(factura['numero']))}</title>
 <style>
   body {{ font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #111; }}
   h1 {{ font-size: 22px; color: #1a56db; margin-bottom: 4px; }}
@@ -90,18 +92,18 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   <div class="header">
     <div>
       {logo_html}
-      <h1>{nombre_emisor}</h1>
-      <div class="datos">CUIT: {emisor.get('cuit', '')}<br>{emisor.get('direccion', '')}{email_section}</div>
+      <h1>{html_mod.escape(nombre_emisor)}</h1>
+      <div class="datos">CUIT: {html_mod.escape(emisor.get('cuit', ''))}<br>{html_mod.escape(emisor.get('direccion', ''))}{email_section}</div>
     </div>
     <div style="text-align:right">
-      <h1>Factura {factura.get('tipo_nombre', 'B')}</h1>
-      <div class="datos">N° {factura['numero']}<br>{factura['fecha']}</div>
+      <h1>Factura {html_mod.escape(factura.get('tipo_nombre', 'B'))}</h1>
+      <div class="datos">N° {html_mod.escape(str(factura['numero']))}<br>{html_mod.escape(str(factura['fecha']))}</div>
     </div>
   </div>
   <div class="datos">
-    <strong>Cliente:</strong> {cliente.get('nombre', '')} {cliente.get('apellido', '')}<br>
-    CUIT: {cliente.get('cuit', '-')}<br>
-    IVA: {cliente.get('condicion_iva', 'Consumidor Final')}
+    <strong>Cliente:</strong> {html_mod.escape(cliente.get('nombre', ''))} {html_mod.escape(cliente.get('apellido', ''))}<br>
+    CUIT: {html_mod.escape(cliente.get('cuit', '-'))}<br>
+    IVA: {html_mod.escape(cliente.get('condicion_iva', 'Consumidor Final'))}
   </div>
   <table>
     <tr><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit</th><th style="text-align:right">Importe</th></tr>
@@ -115,7 +117,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   {cbu_section}
   {mp_section}
   {condiciones_section}
-  <div class="cae">CAE: {factura['cae']} — Vence: {factura.get('cae_vencimiento', '')}</div>
+  <div class="cae">CAE: {html_mod.escape(str(factura['cae']))} — Vence: {html_mod.escape(str(factura.get('cae_vencimiento', '')))}</div>
   <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
 """

@@ -55,6 +55,10 @@ PLANS = {
 DEFAULT_PLAN = "free"
 ADMIN_EMAILS = {"vazquezale82@gmail.com"}
 
+# Cache de planes (user_id -> (plan_dict, timestamp))
+_plan_cache: dict[str, tuple[dict, float]] = {}
+PLAN_CACHE_TTL = 300  # 5 minutos
+
 def _variant_id(plan_key: str) -> Optional[str]:
     return os.getenv(f"LEMON_VARIANT_{plan_key.upper()}") or None
 
@@ -72,8 +76,8 @@ def checkout_url(plan_key: str, user_email: str) -> Optional[str]:
 
 def _verify_signature(payload: bytes, signature: str) -> bool:
     if not WEBHOOK_SECRET:
-        logger.warning("WEBHOOK_SECRET not set, skipping verification")
-        return True
+        logger.warning("WEBHOOK_SECRET not set, rejecting webhook")
+        return False
     sig = hmac.HMAC(WEBHOOK_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(f"sha256={sig}", signature)
 
@@ -152,6 +156,15 @@ def handle_webhook(payload: bytes, signature: str) -> dict:
 def get_user_plan(user_id: str) -> dict:
     import httpx
     from app.db import _URL, _SERVICE_KEY
+    import time
+
+    # Check cache first
+    now = time.time()
+    if user_id in _plan_cache:
+        cached_plan, cached_time = _plan_cache[user_id]
+        if now - cached_time < PLAN_CACHE_TTL:
+            return cached_plan
+
     try:
         r = httpx.get(
             f"{_URL}/auth/v1/admin/users/{user_id}",
@@ -166,7 +179,9 @@ def get_user_plan(user_id: str) -> dict:
             plan_key = meta.get("plan", DEFAULT_PLAN)
             email = user_data.get("email", "")
             if email in ADMIN_EMAILS:
-                return PLANS["team"]
+                plan = PLANS["team"]
+                _plan_cache[user_id] = (plan, now)
+                return plan
             trial_end = meta.get("trial_end")
             if trial_end:
                 from datetime import datetime
@@ -177,7 +192,13 @@ def get_user_plan(user_id: str) -> dict:
             plan_key = DEFAULT_PLAN
     except Exception:
         plan_key = DEFAULT_PLAN
-    return PLANS.get(plan_key, PLANS[DEFAULT_PLAN])
+    plan = PLANS.get(plan_key, PLANS[DEFAULT_PLAN])
+    _plan_cache[user_id] = (plan, now)
+    return plan
+
+
+def invalidate_plan_cache(user_id: str):
+    _plan_cache.pop(user_id, None)
 
 def get_invoice_count(user_id: str) -> int:
     start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()

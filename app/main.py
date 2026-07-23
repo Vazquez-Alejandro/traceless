@@ -21,17 +21,16 @@ async def global_exception_handler(request, exc):
     logger = logging.getLogger("main")
     logger.error(f"Unhandled error: {traceback.format_exc()}")
     from fastapi.responses import JSONResponse
-    from starlette.responses import Response
     if isinstance(exc, HTTPException):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)},
+        content={"detail": "Error interno del servidor"},
     )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("CORS_ORIGINS", "https://www.traceless.com.ar,https://traceless.com.ar").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

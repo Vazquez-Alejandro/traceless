@@ -1,4 +1,5 @@
 import os, logging
+import html
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -20,19 +21,25 @@ class ContactForm(BaseModel):
 def enviar_contacto(req: ContactForm):
     if not RESEND_API_KEY:
         raise HTTPException(500, "Servicio de correo no configurado")
+    if len(req.nombre) > 200:
+        raise HTTPException(400, "Nombre demasiado largo")
+    if len(req.asunto) > 200:
+        raise HTTPException(400, "Asunto demasiado largo")
+    if len(req.mensaje) > 5000:
+        raise HTTPException(400, "Mensaje demasiado largo (máximo 5000 caracteres)")
 
     import resend
     resend.api_key = RESEND_API_KEY
 
-    html = f"""
+    html_content = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1e40af;">Nuevo mensaje de contacto - TraceLess</h2>
       <hr style="border: 1px solid #e5e7eb;">
-      <p><strong>Nombre:</strong> {req.nombre}</p>
-      <p><strong>Email:</strong> {req.email}</p>
-      <p><strong>Asunto:</strong> {req.asunto}</p>
+      <p><strong>Nombre:</strong> {html.escape(req.nombre)}</p>
+      <p><strong>Email:</strong> {html.escape(req.email)}</p>
+      <p><strong>Asunto:</strong> {html.escape(req.asunto)}</p>
       <hr style="border: 1px solid #e5e7eb;">
-      <p style="white-space: pre-wrap;">{req.mensaje}</p>
+      <p style="white-space: pre-wrap;">{html.escape(req.mensaje)}</p>
       <hr style="border: 1px solid #e5e7eb;">
       <p style="color: #6b7280; font-size: 12px;">Este mensaje fue enviado desde el formulario de contacto de TraceLess.</p>
     </div>
@@ -44,7 +51,7 @@ def enviar_contacto(req: ContactForm):
             "to": [CONTACT_EMAIL],
             "reply_to": req.email,
             "subject": f"[TraceLess] {req.asunto}",
-            "html": html,
+            "html": html_content,
         })
     except Exception as e:
         logger.error(f"Error enviando mail de contacto: {e}")
