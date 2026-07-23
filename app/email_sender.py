@@ -5,7 +5,7 @@ import html as html_mod
 logger = logging.getLogger("email_sender")
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <onboarding@resend.dev>")
+RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <facturas@traceless.com.ar>")
 
 
 def enviar_factura_email(email_cliente: str, nombre_cliente: str, numero: str, total: float, pdf_url: str, mp_link: str = "", emisor_nombre: str = "") -> bool:

@@ -47,7 +47,7 @@ def enviar_contacto(req: ContactForm):
 
     try:
         resend.Emails.send({
-            "from": f"TraceLess Contacto <onboarding@resend.dev>",
+            "from": f"TraceLess Contacto <soporte@traceless.com.ar>",
             "to": [CONTACT_EMAIL],
             "reply_to": req.email,
             "subject": f"[TraceLess] {req.asunto}",
