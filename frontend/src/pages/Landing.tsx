@@ -13,7 +13,7 @@ const PLANS = [
     key: "pro",
     name: "Profesional",
     price: "$15.000/mes",
-    desc: "Para freelancers y monotributistas",
+    desc: "Para profesionales y negocios",
     features: ["Facturas ilimitadas", "100 msg WhatsApp incluidos", "$70/msg extra", "Analytics de pagos", "Facturas recurrentes"],
     highlighted: true,
   },
@@ -21,7 +21,7 @@ const PLANS = [
     key: "team",
     name: "Equipo",
     price: "$29.000/mes",
-    desc: "Para estudios y PyMEs",
+    desc: "Para estudios, PyMEs y empresas",
     features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
   },
@@ -46,7 +46,7 @@ export default function Landing() {
       <section className="flex items-center justify-center px-4 pt-16 pb-12">
         <div className="text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-medium text-blue-400 mb-6">
-            🇦🇷 Hecho para freelancers argentinos
+            🇦🇷 Hecho para negocios argentinos
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-4">
             Cobrá más rápido.{" "}
@@ -92,7 +92,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Todo lo que necesitás para facturar bien</h2>
           <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
-            No es un ERP enorme. Es justo lo que un freelancer necesita para emitir, enviar y cobrar.
+            No necesitás un sistema complicado. Es justo lo que necesitás para facturar, enviar y cobrar.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             {[
