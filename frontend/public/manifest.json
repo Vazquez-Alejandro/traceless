@@ -1,7 +1,7 @@
 {
   "name": "TraceLess — Facturación Electrónica",
   "short_name": "TraceLess",
-  "description": "App de facturación electrónica para monotributistas argentinos con integración ARCA, WhatsApp y MercadoPago.",
+  "description": "App de facturación electrónica para profesionales, PyMEs y empresas argentinas con integración ARCA, WhatsApp y MercadoPago.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#030712",
