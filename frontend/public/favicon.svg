@@ -5,6 +5,6 @@
       <stop offset="100%" stop-color="#6366f1"/>
     </linearGradient>
   </defs>
-  <rect width="100" height="100" rx="20" fill="url(#g)"/>
-  <text x="50" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-3">TL</text>
+  <rect width="100" height="100" rx="24" fill="url(#g)"/>
+  <text x="50" y="68" font-family="Nunito, Poppins, Varela Round, Rounded Mplus 1c, sans-serif" font-size="48" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-2">TL</text>
 </svg>
