@@ -50,9 +50,10 @@ def _cargar_certs():
         cert = base64.b64decode(env).decode()
         key = base64.b64decode(env_key).decode()
     else:
-        d = Path("/home/alejandro")
-        cert = (d / "arca.crt").read_text()
-        key = (d / "arca.key").read_text()
+        cert_path = os.getenv("ARCA_CERT_PATH", "certs/cert.pem")
+        key_path = os.getenv("ARCA_KEY_PATH", "certs/key.pem")
+        cert = Path(cert_path).read_text()
+        key = Path(key_path).read_text()
     return cert, key
 
 def _fecha_utc():

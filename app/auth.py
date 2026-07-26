@@ -18,7 +18,7 @@ LOCKOUT_SECONDS = 300
 # Resend config
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <noreply@traceless.com.ar>")
-VERIFY_SECRET = os.getenv("VERIFY_SECRET", os.getenv("JWT_SECRET", "change-me"))
+VERIFY_SECRET = os.getenv("VERIFY_SECRET") or os.getenv("JWT_SECRET", "")
 BASE_URL = os.getenv("BASE_URL", "https://www.traceless.com.ar")
 
 def create_verify_token(email: str) -> str:

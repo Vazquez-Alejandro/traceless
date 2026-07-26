@@ -7,23 +7,23 @@
   ],
   "crons": [
     {
-      "path": "/api/facturas/recordatorios?secret=traceless-cron-2026",
+      "path": "/api/facturas/recordatorios?secret=bXwyex33cjD5WEaE9hMktAP4lIux_yuLjx7U9JHJf6c",
       "schedule": "0 12 * * 1"
     },
     {
-      "path": "/api/facturas/recurrentes?secret=traceless-cron-2026",
+      "path": "/api/facturas/recurrentes?secret=bXwyex33cjD5WEaE9hMktAP4lIux_yuLjx7U9JHJf6c",
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/facturas/recordatorio-monotributo?secret=traceless-cron-2026",
+      "path": "/api/facturas/recordatorio-monotributo?secret=bXwyex33cjD5WEaE9hMktAP4lIux_yuLjx7U9JHJf6c",
       "schedule": "0 10 20 * *"
     },
     {
-      "path": "/api/retry/process?secret=traceless-cron-2026",
+      "path": "/api/retry/process?secret=bXwyex33cjD5WEaE9hMktAP4lIux_yuLjx7U9JHJf6c",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/facturas/procesar-programadas?secret=traceless-cron-2026",
+      "path": "/api/facturas/procesar-programadas?secret=bXwyex33cjD5WEaE9hMktAP4lIux_yuLjx7U9JHJf6c",
       "schedule": "0 7 * * *"
     }
   ]

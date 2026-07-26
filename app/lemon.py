@@ -53,7 +53,7 @@ PLANS = {
 }
 
 DEFAULT_PLAN = "free"
-ADMIN_EMAILS = {"vazquezale82@gmail.com"}
+ADMIN_EMAILS = set(filter(None, os.getenv("ADMIN_EMAILS", "vazquezale82@gmail.com").split(",")))
 
 # Cache de planes (user_id -> (plan_dict, timestamp))
 _plan_cache: dict[str, tuple[dict, float]] = {}

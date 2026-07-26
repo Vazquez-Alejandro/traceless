@@ -92,7 +92,7 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
             "currency_id": "ARS",
         },
         "payer_email": email,
-        "external_reference": res.user.id,
+        "external_reference": uid,
         "statement_descriptor": "TRACELESS",
     }
 
