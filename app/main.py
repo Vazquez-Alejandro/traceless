@@ -40,7 +40,7 @@ from app.auth import router as auth_router
 from app.clientes import router as clientes_router
 from app.facturas import router as facturas_router
 from app.db import supabase, get_user_id
-from app.lemon import handle_webhook, get_user_plan, PLANS, get_whatsapp_count
+from app.lemon import get_user_plan, PLANS, get_whatsapp_count
 from app.mercadopago import router as mp_router
 from app.retry_queue import router as retry_router
 from app.whatsapp_webhook import router as wa_webhook_router
@@ -93,11 +93,4 @@ def whatsapp_stats(authorization: str = Header("")):
         "plan": plan["name"],
     }
 
-@app.post("/api/lemon/webhook")
-async def lemon_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get("x-signature", "")
-    result = handle_webhook(body, signature)
-    if not result["ok"]:
-        raise HTTPException(400, result["error"])
-    return result
+
