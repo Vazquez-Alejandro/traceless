@@ -298,6 +298,17 @@ def pagar_factura(factura_id: str, authorization: str = Header("")):
     supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura marcada como pagada"}
 
+@router.put("/{factura_id}/marcar-enviada")
+def marcar_enviada(factura_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
+    if not factura.data:
+        raise HTTPException(404, "Factura no encontrada")
+    if factura.data["estado"] != "emitida":
+        raise HTTPException(400, "Solo se pueden marcar como enviadas facturas en estado emitida")
+    supabase.table("facturas").update({"estado": "enviada"}).eq("id", factura_id).execute()
+    return {"ok": True, "mensaje": "Factura marcada como enviada"}
+
 class BulkWhatsApp(BaseModel):
     factura_ids: list[str]
     canal: str = "whatsapp"
@@ -449,9 +460,25 @@ async def enviar_recordatorios(secret: str = ""):
     import asyncio
     now = datetime.now()
     hoy = now.strftime("%Y-%m-%d")
+
+    # Recordatorio para facturas emitidas sin enviar (3+ días)
     emitidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").execute()
+    for f in emitidas.data:
+        cli = f.get("clientes") or {}
+        total = f.get("total", 0)
+        num = f.get("numero", "")
+        fecha = f.get("fecha", "")
+        if fecha:
+            dias_sin_enviar = (now - datetime.strptime(fecha, "%Y-%m-%d")).days
+            if dias_sin_enviar >= 3:
+                perfil = supabase.table("perfiles").select("recordatorios_whatsapp").eq("id", f["user_id"]).single().execute()
+                prefs = perfil.data or {}
+                if prefs.get("recordatorios_whatsapp", True):
+                    crear_notificacion(f["user_id"], "factura_sin_enviar", f"Factura #{num} sin enviar hace {dias_sin_enviar} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} fue emitida pero no enviada", "/facturas")
+
+    # Recordatorio y vencimiento para facturas enviadas
     enviadas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "enviada").execute()
-    facturas_pendientes = emitidas.data + enviadas.data
+    facturas_pendientes = enviadas.data
     enviados = 0
     tasks = []
     for f in facturas_pendientes:

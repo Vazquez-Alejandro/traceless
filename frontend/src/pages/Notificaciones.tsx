@@ -5,6 +5,7 @@ import { api } from "../api/client";
 const TIPO_ICONS: Record<string, string> = {
   pago_recibido: "💰",
   factura_vencida: "⚠️",
+  factura_sin_enviar: "📤",
   credito_bajo: "📉",
   plan_renovado: "✅",
   plan_cancelado: "❌",

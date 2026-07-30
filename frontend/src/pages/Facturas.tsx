@@ -142,6 +142,19 @@ export default function Facturas() {
     }
   };
 
+  const handleMarkSent = async (id: string) => {
+    try {
+      await fetch(`/api/facturas/${id}/marcar-enviada`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setToast("Factura marcada como enviada");
+      load(true);
+    } catch {
+      alert("Error al marcar como enviada");
+    }
+  };
+
   const handleShare = async (facturaId: string) => {
     const url = `${window.location.origin}/api/facturas/public/${facturaId}`;
     await navigator.clipboard.writeText(url);
@@ -611,6 +624,9 @@ export default function Facturas() {
                   <button onClick={() => handlePay(f.id)} className="px-2 py-1 text-[11px] text-green-400 hover:underline">Pagada</button>
                   <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>
                 </>
+              )}
+              {f.estado === "emitida" && (
+                <button onClick={() => handleMarkSent(f.id)} className="px-2 py-1 text-[11px] text-cyan-400 hover:underline">Enviada</button>
               )}
               {f.estado === "programada" && (
                 <button onClick={() => handleDelete(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Eliminar</button>
