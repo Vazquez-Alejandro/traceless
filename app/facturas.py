@@ -204,7 +204,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
 
     supabase.table("facturas").update({"pdf_url": html_url, "mp_link": mp_link}).eq("id", factura["id"]).execute()
 
-    pdf_url_full = f"{os.getenv('BASE_URL', 'http://localhost:8002')}{html_url}"
+    pdf_url_full = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}{html_url}"
     fallback_wa_me = False
     enviado_por = ""
 

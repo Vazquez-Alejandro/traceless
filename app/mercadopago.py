@@ -192,7 +192,7 @@ def crear_link_pago_factura(monto: float, descripcion: str, factura_id: str, ema
         "expires": True,
         "expiration_date_from": datetime.now(timezone.utc).isoformat(),
         "expiration_date_to": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
-        "back_urls": {"success": "https://www.traceless.com.ar/facturas"},
+        "back_urls": {"success": f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/facturas"},
         "auto_return": "approved",
     }
     if email_cliente:

@@ -188,8 +188,9 @@ def signup(req: SignupRequest):
     # Notificar por Telegram
     try:
         import httpx
+        telegram_url = os.getenv("TELEGRAM_NOTIFIER_URL", "https://telegram-notifier-pmcs.onrender.com")
         resp = httpx.post(
-            "https://telegram-notifier-pmcs.onrender.com/notify",
+            f"{telegram_url}/notify",
             json={
                 "app": "traceless",
                 "event": "👤 Nuevo registro",

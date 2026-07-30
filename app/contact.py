@@ -47,7 +47,7 @@ def enviar_contacto(req: ContactForm):
 
     try:
         resend.Emails.send({
-            "from": f"TraceLess Contacto <soporte@traceless.com.ar>",
+            "from": os.getenv("RESEND_FROM", "TraceLess <noreply@traceless.com.ar>"),
             "to": [CONTACT_EMAIL],
             "reply_to": req.email,
             "subject": f"[TraceLess] {req.asunto}",
@@ -60,8 +60,10 @@ def enviar_contacto(req: ContactForm):
     # Notificar por Telegram
     try:
         import httpx
+        import os
+        telegram_url = os.getenv("TELEGRAM_NOTIFIER_URL", "https://telegram-notifier-pmcs.onrender.com")
         httpx.post(
-            "https://telegram-notifier-pmcs.onrender.com/notify",
+            f"{telegram_url}/notify",
             json={
                 "app": "traceless",
                 "event": "📩 Soporte - TraceLess",
