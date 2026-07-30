@@ -65,9 +65,10 @@ export default function ClienteHistorial() {
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                   f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
                   f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
-                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" : "bg-blue-900/40 text-blue-400"
+                  f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" :
+                  f.estado === "enviada" ? "bg-cyan-900/40 text-cyan-400" : "bg-blue-900/40 text-blue-400"
                 }`}>
-                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : "Emitida"}
+                  {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "enviada" ? "Enviada" : "Emitida"}
                 </span>
               </div>
               <div className="text-sm text-gray-400">
@@ -78,6 +79,7 @@ export default function ClienteHistorial() {
               </div>
               <div className="mt-2 flex items-center gap-4 text-[10px] text-gray-500">
                 {f.estado === "emitida" && <span className="text-blue-400">📄 Emitida {f.fecha}</span>}
+                {f.estado === "enviada" && <span className="text-cyan-400">📤 Enviada</span>}
                 {f.fecha_pago && <span className="text-green-400">💚 Pagada {f.fecha_pago}</span>}
                 {f.estado === "anulada" && <span className="text-red-400">🗑️ Anulada</span>}
               </div>

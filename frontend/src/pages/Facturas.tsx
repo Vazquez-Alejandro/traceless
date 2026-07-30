@@ -514,10 +514,10 @@ export default function Facturas() {
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {["", "emitida", "pagada", "vencida", "programada", "anulada"].map(estado => (
+          {["", "emitida", "enviada", "pagada", "vencida", "programada", "anulada"].map(estado => (
             <button key={estado} onClick={() => setFilterEstado(estado)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === estado ? "bg-blue-600 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"}`}>
-              {estado === "" ? "Todas" : estado === "emitida" ? "Emitidas" : estado === "pagada" ? "Pagadas" : estado === "vencida" ? "Vencidas" : estado === "programada" ? "Programadas" : "Anuladas"}
+              {estado === "" ? "Todas" : estado === "emitida" ? "Emitidas" : estado === "enviada" ? "Enviadas" : estado === "pagada" ? "Pagadas" : estado === "vencida" ? "Vencidas" : estado === "programada" ? "Programadas" : "Anuladas"}
             </button>
           ))}
         </div>
@@ -568,9 +568,10 @@ export default function Facturas() {
                       f.estado === "pagada" ? "bg-green-900/40 text-green-400" :
                       f.estado === "anulada" ? "bg-red-900/40 text-red-400" :
                       f.estado === "vencida" ? "bg-yellow-900/40 text-yellow-400" :
+                      f.estado === "enviada" ? "bg-cyan-900/40 text-cyan-400" :
                       f.estado === "programada" ? "bg-purple-900/40 text-purple-400" : "bg-blue-900/40 text-blue-400"
                     }`}>
-                      {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "programada" ? "Programada" : "Emitida"}
+                      {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "enviada" ? "Enviada" : f.estado === "programada" ? "Programada" : "Emitida"}
                     </span>
                     {f.scheduled_send && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">📅 {f.scheduled_send}</span>
@@ -605,7 +606,7 @@ export default function Facturas() {
               {!userPlan.cbu && !userPlan.alias_banco && (
                 <Link to="/perfil" className="px-2 py-1 text-[10px] text-yellow-500 hover:text-yellow-400 bg-yellow-900/20 rounded-lg">⚙️ CBU</Link>
               )}
-              {f.estado === "emitida" && (
+              {(f.estado === "emitida" || f.estado === "enviada" || f.estado === "vencida") && (
                 <>
                   <button onClick={() => handlePay(f.id)} className="px-2 py-1 text-[11px] text-green-400 hover:underline">Pagada</button>
                   <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>

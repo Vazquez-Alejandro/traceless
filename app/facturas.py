@@ -248,6 +248,9 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
                 fallback_wa_me = True
                 enviado_por = "wa_me"
 
+    if enviado_por:
+        supabase.table("facturas").update({"estado": "enviada"}).eq("id", factura["id"]).execute()
+
     return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}, "enviado_por": enviado_por, "fallback_wa_me": fallback_wa_me}
 
 @router.get("")
@@ -290,8 +293,8 @@ def pagar_factura(factura_id: str, authorization: str = Header("")):
     factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
     if not factura.data:
         raise HTTPException(404, "Factura no encontrada")
-    if factura.data["estado"] != "emitida":
-        raise HTTPException(400, "Solo se pueden pagar facturas en estado emitida")
+    if factura.data["estado"] not in ("emitida", "enviada", "vencida"):
+        raise HTTPException(400, "Solo se pueden pagar facturas en estado emitida, enviada o vencida")
     supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura marcada como pagada"}
 
@@ -315,6 +318,7 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
             continue
         pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/pdf"
         mp_link = f.data.get("mp_link", "")
+        estado_actual = f.data.get("estado", "")
 
         if req.canal == "email":
             email_cliente = f.data["clientes"].get("email", "")
@@ -335,6 +339,8 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
             if ok:
                 enviados += 1
                 enviados_email.append(f.data["clientes"]["nombre"])
+                if estado_actual == "emitida":
+                    supabase.table("facturas").update({"estado": "enviada"}).eq("id", fid).execute()
             else:
                 errores.append({"id": fid, "error": "Error al enviar email"})
         else:
@@ -366,6 +372,8 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
                 costo = plan.get("whatsapp_extra_cost", 70)
                 descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
             enviados += 1
+            if estado_actual == "emitida":
+                supabase.table("facturas").update({"estado": "enviada"}).eq("id", fid).execute()
     if enviados > 0:
         from app.creditos import verificar_creditos_bajos
         verificar_creditos_bajos(uid)
@@ -440,10 +448,13 @@ async def enviar_recordatorios(secret: str = ""):
     from app.whatsapp import enviar_recordatorio_whatsapp
     import asyncio
     now = datetime.now()
-    vencidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").lte("fecha", (now - timedelta(days=7)).strftime("%Y-%m-%d")).execute()
+    hoy = now.strftime("%Y-%m-%d")
+    emitidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").execute()
+    enviadas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "enviada").execute()
+    facturas_pendientes = emitidas.data + enviadas.data
     enviados = 0
     tasks = []
-    for f in vencidas.data:
+    for f in facturas_pendientes:
         cli = f.get("clientes") or {}
         telefono = cli.get("telefono", "")
         if not telefono:
@@ -456,13 +467,17 @@ async def enviar_recordatorios(secret: str = ""):
             continue
         total = f.get("total", 0)
         num = f.get("numero", "")
-        dias = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days
-        if dias >= 30:
+        vencimiento = f.get("vencimiento", "")
+        if vencimiento:
+            dias_vencida = (now - datetime.strptime(vencimiento, "%Y-%m-%d")).days
+        else:
+            dias_vencida = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days - 30
+        if dias_vencida >= 0:
             supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
-            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} vencida hace {dias} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} lleva {dias} días sin pagar", "/facturas")
-        elif dias >= 7:
-            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} con {dias} días de atraso", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} tiene {dias} días de atraso", "/facturas")
-        tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias))
+            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} vencida hace {dias_vencida} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} lleva {dias_vencida} días sin pagar", "/facturas")
+        elif dias_vencida >= -23:
+            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} con {7 + dias_vencida} días de atraso", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} vence en {-dias_vencida} días", "/facturas")
+        tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, max(0, dias_vencida)))
         enviados += 1
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -684,6 +699,7 @@ async def procesar_programadas(secret: str = ""):
                             mp_link=mp_link,
                         ))
                         log_whatsapp_send(uid, f["id"], "factura")
+                        supabase.table("facturas").update({"estado": "enviada"}).eq("id", f["id"]).execute()
             procesadas += 1
             crear_notificacion(uid, "factura_programada", f"Factura programada #{afip_result['numero']} procesada", f"Se emitió la factura a {cli.get('nombre', '')} por ${f['total']:,.2f}", "/facturas")
         except Exception as e:
@@ -701,11 +717,12 @@ def estadisticas(authorization: str = Header("")):
     facturas = res.data
     totales = sum(f["total"] for f in facturas if f["estado"] != "anulada")
     emitidas = sum(1 for f in facturas if f["estado"] == "emitida")
+    enviadas = sum(1 for f in facturas if f["estado"] == "enviada")
     vencidas = sum(1 for f in facturas if f["estado"] == "vencida")
     pagadas = sum(1 for f in facturas if f["estado"] == "pagada")
     anuladas = sum(1 for f in facturas if f["estado"] == "anulada")
-    por_cobrar = emitidas + vencidas
-    return {"totales": totales, "emitidas": emitidas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar}
+    por_cobrar = emitidas + enviadas + vencidas
+    return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar}
 
 @router.get("/resumen")
 def resumen(authorization: str = Header("")):
@@ -766,7 +783,7 @@ def analytics_clientes(authorization: str = Header("")):
                     c["dias_atraso"].append(dias)
             else:
                 c["pagadas_tiempo"] += 1
-        elif f["estado"] in ("emitida", "vencida"):
+        elif f["estado"] in ("emitida", "enviada", "vencida"):
             c["impagas"] += 1
     result = []
     for c in clientes.values():
@@ -808,7 +825,7 @@ def historial_cliente(cliente_id: str, authorization: str = Header("")):
                     dias_atraso.append(dias)
             else:
                 pagadas_tiempo += 1
-        elif f["estado"] in ("emitida", "vencida"):
+        elif f["estado"] in ("emitida", "enviada", "vencida"):
             impagas += 1
     atraso_prom = round(sum(dias_atraso) / len(dias_atraso)) if dias_atraso else 0
     resumen = {
