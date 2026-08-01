@@ -21,3 +21,4 @@ backend/
 .lemon-*
 .lemon-api-key
 .lemon-webhook-secret
+certs/
