@@ -13,7 +13,6 @@ def enviar_factura_email(email_cliente: str, nombre_cliente: str, numero: str, t
         return False
 
     import resend
-    resend.api_key = RESEND_FROM.split("<")[-1].replace(">", "").strip() if "<" in RESEND_FROM else RESEND_API_KEY
     resend.api_key = RESEND_API_KEY
 
     asunto = f"Factura {numero} de {emisor_nombre or 'TraceLess'}"

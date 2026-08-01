@@ -127,9 +127,11 @@ Los planes se cachean en memoria (5 min TTL) para evitar llamadas HTTP repetidas
 ### ARCA (Facturación Electrónica)
 - `ARCA_ENV` (produccion / homologacion)
 - `ARCA_CUIT`
-- `ARCA_CERT_B64` (certificado en base64)
-- `ARCA_KEY_B64` (clave privada en base64)
+- `ARCA_CERT_PATH` (ruta al certificado .pem)
+- `ARCA_KEY_PATH` (ruta a la clave privada .pem)
 - `ARCA_PUNTO_VENTA`
+- `ARCA_USE_REAL` (0 o 1)
+- `ARCA_ENV` (produccion / homologacion)
 
 ### MercadoPago (Pagos)
 - `MP_ACCESS_TOKEN`

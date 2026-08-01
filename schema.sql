@@ -178,3 +178,12 @@ create policy "Sistema puede insertar notificaciones"
   on notificaciones for insert with check (true);
 
 create index if not exists idx_notificaciones_user on notificaciones(user_id, created_at desc);
+
+-- Cache (ARCA TA token cache)
+create table if not exists cache (
+  key text primary key,
+  token text,
+  sign text,
+  expires timestamptz,
+  created_at timestamptz default now()
+);
