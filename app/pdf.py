@@ -100,7 +100,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     <div>
       {logo_html}
       <h1>{html_mod.escape(nombre_emisor)}</h1>
-      <div class="datos">CUIT: {html_mod.escape(emisor.get('cuit', ''))}<br>{html_mod.escape(emisor.get('direccion', ''))}{email_section}</div>
+      <div class="datos">CUIT: {html_mod.escape(emisor.get('cuit', ''))}<br>{html_mod.escape(emisor.get('condicion_iva', 'Responsable Inscripto'))}<br>{html_mod.escape(emisor.get('direccion', ''))}{email_section}</div>
     </div>
     <div style="text-align:right">
       <h1>Factura {html_mod.escape(factura.get('tipo_nombre', 'B'))}</h1>
