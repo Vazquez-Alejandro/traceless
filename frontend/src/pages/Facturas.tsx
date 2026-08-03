@@ -382,9 +382,12 @@ export default function Facturas() {
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => {
+          <button onClick={async () => {
             const t = localStorage.getItem("token");
-            window.open(`/api/facturas/export?token=${t}`, "_blank");
+            const res = await fetch('/api/facturas/export', { headers: { Authorization: `Bearer ${t}` } });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank");
           }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             Exportar Excel
           </button>
