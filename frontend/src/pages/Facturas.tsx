@@ -614,7 +614,14 @@ export default function Facturas() {
                 <button onClick={() => handleShare(f.id)} className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-gray-800/50 rounded-lg">Copiar link</button>
               )}
               {f.estado !== "programada" && (
-                <a href={`/api/facturas/${f.id}/pdf`} className="px-2 py-1 text-[11px] text-blue-400 hover:underline bg-blue-900/20 rounded-lg" target="_blank" rel="noopener noreferrer">PDF</a>
+                <button onClick={async () => {
+                  const t = localStorage.getItem("token");
+                  const res = await fetch(`/api/facturas/${f.id}/pdf`, { headers: { Authorization: `Bearer ${t}` } });
+                  if (!res.ok) { alert("Error generando PDF"); return; }
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, "_blank");
+                }} className="px-2 py-1 text-[11px] text-blue-400 hover:underline bg-blue-900/20 rounded-lg">PDF</button>
               )}
               {f.mp_link && (
                 <a href={f.mp_link} target="_blank" rel="noopener noreferrer" className="px-2 py-1 text-[11px] text-green-400 hover:underline bg-green-900/20 rounded-lg">Pagar</a>
