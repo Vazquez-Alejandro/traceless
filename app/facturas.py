@@ -428,7 +428,7 @@ def factura_publica(factura_id: str):
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
     from app.pdf import generar_html_factura
-    html = generar_html_factura(f.data, f.data.get("clientes") or {}, emisor)
+    html = generar_html_factura({**f.data, "tipo_nombre": _tipo_nombre(f.data.get("tipo", 6))}, f.data.get("clientes") or {}, emisor)
     from fastapi.responses import HTMLResponse
     return HTMLResponse(html)
 
@@ -441,7 +441,7 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
     from app.pdf import generar_html_factura
-    html = generar_html_factura(f.data, f.data.get("clientes") or {}, emisor)
+    html = generar_html_factura({**f.data, "tipo_nombre": _tipo_nombre(f.data.get("tipo", 6))}, f.data.get("clientes") or {}, emisor)
     try:
         from weasyprint import HTML
         pdf_bytes = HTML(string=html).write_pdf()
