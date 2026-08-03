@@ -1,10 +1,11 @@
-import os, logging
-from fastapi import APIRouter, Request, Response
+import os, logging, hmac, hashlib
+from fastapi import APIRouter, Request, Response, HTTPException
 
 logger = logging.getLogger("whatsapp_webhook")
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "traceless-verify-2026")
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
 OPT_OUT_KEYWORDS = {"alto", "parar", "stop", "cancelar", "no quiero", "basta"}
 
@@ -50,7 +51,18 @@ async def verify_webhook(request: Request):
 @router.post("/webhook")
 async def receive_webhook(request: Request):
     """Recibe eventos de WhatsApp (mensajes entrantes, estados de envío)."""
-    body = await request.json()
+    signature = request.headers.get("x-hub-signature-256", "")
+    if WHATSAPP_APP_SECRET:
+        raw_body = await request.body()
+        expected = "sha256=" + hmac.new(WHATSAPP_APP_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            logger.warning("WhatsApp webhook: firma inválida")
+            raise HTTPException(401, "Invalid signature")
+    else:
+        raw_body = await request.body()
+
+    import json
+    body = json.loads(raw_body)
 
     entry = body.get("entry", [{}])[0]
     changes = entry.get("changes", [{}])[0]

@@ -15,6 +15,12 @@ _login_attempts: dict[str, list[float]] = defaultdict(list)
 MAX_ATTEMPTS = 5
 LOCKOUT_SECONDS = 300
 
+# Rate limiting para forgot-password y resend-verification
+_forgot_attempts: dict[str, list[float]] = defaultdict(list)
+_resend_attempts: dict[str, list[float]] = defaultdict(list)
+MAX_EMAIL_ATTEMPTS = 3
+EMAIL_LOCKOUT_SECONDS = 300
+
 # Resend config
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM = os.getenv("RESEND_FROM", "TraceLess <noreply@traceless.com.ar>")
@@ -244,6 +250,12 @@ def login(req: LoginRequest):
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest):
+    now = time.time()
+    email_key = req.email.lower().strip()
+    _forgot_attempts[email_key] = [t for t in _forgot_attempts[email_key] if now - t < EMAIL_LOCKOUT_SECONDS]
+    if len(_forgot_attempts[email_key]) >= MAX_EMAIL_ATTEMPTS:
+        raise HTTPException(429, "Demasiados intentos. Esperá 5 minutos e intentá de nuevo.")
+    _forgot_attempts[email_key].append(now)
     token = create_reset_token(req.email)
     send_reset_email(req.email, token)
     return {"ok": True, "mensaje": "Si el email existe, recibiste un link para restablecer tu contraseña."}
@@ -322,6 +334,12 @@ def verify_email(req: VerifyRequest):
 
 @router.post("/resend-verification")
 def resend_verification(req: ForgotPasswordRequest):
+    now = time.time()
+    email_key = req.email.lower().strip()
+    _resend_attempts[email_key] = [t for t in _resend_attempts[email_key] if now - t < EMAIL_LOCKOUT_SECONDS]
+    if len(_resend_attempts[email_key]) >= MAX_EMAIL_ATTEMPTS:
+        raise HTTPException(429, "Demasiados intentos. Esperá 5 minutos e intentá de nuevo.")
+    _resend_attempts[email_key].append(now)
     email = req.email
     import httpx
     r = httpx.get(
