@@ -433,8 +433,9 @@ def factura_publica(factura_id: str):
     return HTMLResponse(html)
 
 @router.get("/{factura_id}/pdf")
-def factura_pdf(factura_id: str):
-    f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).single().execute()
+def factura_pdf(factura_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).eq("user_id", uid).single().execute()
     if not f.data:
         raise HTTPException(404, "Factura no encontrada")
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
