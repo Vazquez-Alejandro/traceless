@@ -433,7 +433,7 @@ class ProfileUpdate(BaseModel):
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):
     uid = get_user_id(authorization)
-    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    data = {k: v for k, v in req.model_dump().items() if v is not None and v != ""}
     if data:
         supabase.table("perfiles").update(data).eq("id", uid).execute()
     return {"ok": True, "mensaje": "Perfil actualizado"}

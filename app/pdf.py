@@ -92,7 +92,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   .final {{ font-weight: bold; font-size: 16px; border-top: 2px solid #111; }}
   .cae {{ font-size: 11px; color: #888; text-align: center; margin-top: 40px; }}
 </style></head><body>
-  <a href="/facturas" class="back-btn">
+  <a href="/" class="back-btn">
     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     Volver
   </a>

@@ -485,10 +485,13 @@ export default function Facturas() {
               {detalles.map((d, i) => (
                 <div key={i} className="flex gap-2 items-start">
                   <input placeholder="Descripción" value={d.descripcion} onChange={e => updateItem(i, "descripcion", e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && e.preventDefault()}
                     className="flex-1 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
                   <input type="number" step="1" placeholder="Cant." value={d.cantidad} onChange={e => updateItem(i, "cantidad", parseFloat(e.target.value) || 0)}
+                    onKeyDown={e => e.key === "Enter" && e.preventDefault()}
                     className="w-20 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm text-center" />
                   <input type="number" step="0.01" placeholder="P.Unit" value={d.precio_unitario} onChange={e => updateItem(i, "precio_unitario", parseFloat(e.target.value) || 0)}
+                    onKeyDown={e => e.key === "Enter" && e.preventDefault()}
                     className="w-28 px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
                   <span className="text-sm text-gray-400 py-2 w-20 text-right">${(d.cantidad * d.precio_unitario).toFixed(2)}</span>
                   <button type="button" onClick={() => removeItem(i)} className="text-red-400 text-sm py-2 px-2">✕</button>
