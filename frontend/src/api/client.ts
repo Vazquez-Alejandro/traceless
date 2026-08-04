@@ -153,6 +153,8 @@ export const api = {
       request(`/facturas/${id}/marcar-enviada`, { method: "PUT" }),
     notaCredito: (data: { factura_original_id: string; motivo: string; importe?: number }) =>
       request("/facturas/nota-credito", { method: "POST", body: JSON.stringify(data) }),
+    import: (data: any[]) =>
+      request("/facturas/import", { method: "POST", body: JSON.stringify(data) }),
   },
   reembolsos: {
     create: (data: { factura_id: string; nota_credito_id?: string; monto: number; metodo?: string; referencia?: string; fecha?: string; notas?: string }) =>

@@ -580,6 +580,101 @@ def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: s
     from fastapi.responses import FileResponse
     return FileResponse(path, filename=f"facturas-{datetime.now().strftime('%Y%m%d')}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+
+class FacturaImportItem(BaseModel):
+    cliente_cuit: str
+    cliente_nombre: Optional[str] = None
+    tipo: int = 11
+    importe: float
+    descripcion: str = "Honorarios"
+    fecha: Optional[str] = None
+
+
+@router.post("/import")
+async def importar_facturas(req: list[FacturaImportItem], authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    ok, msg = can_create_invoice(uid)
+    if not ok:
+        raise HTTPException(402, msg)
+
+    resultados = []
+    for i, item in enumerate(req):
+        try:
+            cuit_limpio = item.cliente_cuit.replace("-", "").strip()
+            if not cuit_limpio:
+                resultados.append({"fila": i + 1, "ok": False, "error": "CUIT vacío"})
+                continue
+
+            cliente = supabase.table("clientes").select("*").eq("cuit", cuit_limpio).eq("user_id", uid).execute()
+            if cliente.data:
+                cliente_id = cliente.data[0]["id"]
+                cliente_data = cliente.data[0]
+            else:
+                nombre = item.cliente_nombre or f"Cliente {cuit_limpio}"
+                nuevo = supabase.table("clientes").insert({
+                    "user_id": uid,
+                    "nombre": nombre,
+                    "apellido": "",
+                    "cuit": cuit_limpio,
+                    "condicion_iva": "Consumidor Final",
+                }).execute()
+                cliente_id = nuevo.data[0]["id"]
+                cliente_data = nuevo.data[0]
+
+            user_lock = _get_user_lock(uid)
+            with user_lock:
+                last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
+                ultimo_numero = 0
+                if last.data:
+                    try:
+                        ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
+                    except (ValueError, IndexError):
+                        ultimo_numero = 0
+
+            afip_result = generar_factura_afip(
+                cliente_cuit=cuit_limpio,
+                cliente_nombre=f"{cliente_data.get('nombre', '')} {cliente_data.get('apellido', '')}".strip(),
+                tipo=item.tipo,
+                importe=item.importe,
+                condicion_iva=cliente_data.get("condicion_iva", "Consumidor Final"),
+                descripcion=item.descripcion,
+                ultimo_numero=ultimo_numero,
+            )
+
+            hoy = item.fecha or datetime.now().strftime("%Y-%m-%d")
+            factura_data = {
+                "user_id": uid,
+                "cliente_id": cliente_id,
+                "tipo": item.tipo,
+                "numero": afip_result["numero"],
+                "cae": afip_result["cae"],
+                "cae_vencimiento": afip_result["cae_vencimiento"],
+                "neto": afip_result["neto"],
+                "iva": afip_result["iva"],
+                "total": afip_result["total"],
+                "descripcion": item.descripcion,
+                "fecha": hoy,
+                "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+                "estado": "emitida",
+            }
+            res = supabase.table("facturas").insert(factura_data).execute()
+
+            resultados.append({
+                "fila": i + 1,
+                "ok": True,
+                "factura_id": res.data[0]["id"],
+                "numero": afip_result["numero"],
+                "cae": afip_result["cae"],
+                "total": afip_result["total"],
+            })
+        except Exception as e:
+            resultados.append({"fila": i + 1, "ok": False, "error": str(e)})
+
+    exitosos = sum(1 for r in resultados if r["ok"])
+    fallidos = sum(1 for r in resultados if not r["ok"])
+    return {"ok": True, "exitosos": exitosos, "fallidos": fallidos, "resultados": resultados}
+
+
 @router.get("/public/{factura_id}")
 def factura_publica(factura_id: str):
     f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva, telefono)").eq("id", factura_id).single().execute()

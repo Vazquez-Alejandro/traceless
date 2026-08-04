@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import * as XLSX from "xlsx";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
@@ -60,6 +61,8 @@ export default function Facturas() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [ncModal, setNcModal] = useState<{ open: boolean; factura: Factura | null; motivo: string; importe: string; loading: boolean }>({ open: false, factura: null, motivo: "", importe: "", loading: false });
   const [refModal, setRefModal] = useState<{ open: boolean; factura: Factura | null; metodo: string; referencia: string; importe: string; notas: string; loading: boolean }>({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false });
+  const [importModal, setImportModal] = useState<{ open: boolean; items: any[]; loading: boolean; results: any[] | null }>({ open: false, items: [], loading: false, results: null });
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (reset = true) => {
     const newOffset = reset ? 0 : offset;
@@ -194,6 +197,64 @@ export default function Facturas() {
     setUsarItems(false);
     setShowForm(true);
     setToast("Datos copiados. Modificá lo que necesites y emití.");
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const mapped = rows.map((row: any) => {
+        const find = (keys: string[]) => {
+          for (const k of keys) {
+            const found = Object.keys(row).find(col => col.toLowerCase().trim() === k);
+            if (found && row[found]) return String(row[found]).trim();
+          }
+          return "";
+        };
+        const tipoStr = find(["tipo", "type", "comprobante"]).toUpperCase();
+        let tipo = 11;
+        if (tipoStr === "A" || tipoStr === "FACTURA A") tipo = 1;
+        else if (tipoStr === "B" || tipoStr === "FACTURA B") tipo = 6;
+        else if (tipoStr === "C" || tipoStr === "FACTURA C") tipo = 11;
+        else if (tipoStr === "E" || tipoStr === "FACTURA E") tipo = 19;
+
+        return {
+          cliente_cuit: find(["cuit", "documento", "dni", "rut", "rif"]),
+          cliente_nombre: find(["cliente", "nombre", "name", "razon_social"]),
+          tipo,
+          importe: parseFloat(find(["importe", "total", "monto", "amount"]) || "0") || 0,
+          descripcion: find(["descripcion", "description", "detalle", "concepto"]) || "Honorarios",
+          fecha: find(["fecha", "date"]) || "",
+        };
+      }).filter((item: any) => item.cliente_cuit && item.importe > 0);
+
+      if (mapped.length === 0) {
+        setToast("No se encontraron facturas válidas (se necesita CUIT e importe)");
+        return;
+      }
+      setImportModal({ open: true, items: mapped, loading: false, results: null });
+    } catch (err: any) {
+      setToast("Error al leer el archivo: " + (err.message || "desconocido"));
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleConfirmImport = async () => {
+    setImportModal(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await api.facturas.import(importModal.items);
+      setImportModal(prev => ({ ...prev, loading: false, results: res.resultados }));
+      setToast(`Importación completada: ${res.exitosos} éxitos, ${res.fallidos} fallos`);
+      load(true);
+    } catch (err: any) {
+      setImportModal(prev => ({ ...prev, loading: false }));
+      setToast("Error al importar: " + (err.message || "desconocido"));
+    }
   };
 
   const openNcModal = (f: Factura) => {
@@ -502,6 +563,10 @@ export default function Facturas() {
           }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             Exportar Excel
           </button>
+          <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+            Importar Excel
+          </button>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportExcel} className="hidden" />
           <button onClick={() => {
             if (userPlan.invoices_limit !== null && userPlan.invoices_used >= userPlan.invoices_limit) {
               setToast(`Límite de ${userPlan.invoices_limit} facturas/mes alcanzado. Actualizá tu plan para seguir facturando.`);
@@ -857,6 +922,79 @@ export default function Facturas() {
               className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
               {refModal.loading ? "Registrando..." : "Registrar Reembolso"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {importModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <h3 className="text-lg font-bold">Importar Facturas ({importModal.items.length})</h3>
+              {!importModal.results && (
+                <button onClick={() => setImportModal({ open: false, items: [], loading: false, results: null })} className="text-gray-400 hover:text-white">✕</button>
+              )}
+            </div>
+            <div className="overflow-auto flex-1 p-4">
+              {importModal.results ? (
+                <div className="space-y-2">
+                  {importModal.results.map((r: any) => (
+                    <div key={r.fila} className={`p-3 rounded-xl text-sm ${r.ok ? 'bg-green-900/30 border border-green-800/40' : 'bg-red-900/30 border border-red-800/40'}`}>
+                      <div className="flex justify-between">
+                        <span>Fila {r.fila}: {r.ok ? `${r.numero} — CAE ${r.cae} — $${r.total}` : r.error}</span>
+                        <span>{r.ok ? '✓' : '✕'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-gray-400 text-left border-b border-gray-800">
+                        <th className="pb-2 pr-2">CUIT</th>
+                        <th className="pb-2 pr-2">Cliente</th>
+                        <th className="pb-2 pr-2">Tipo</th>
+                        <th className="pb-2 pr-2 text-right">Importe</th>
+                        <th className="pb-2 pr-2">Descripción</th>
+                        <th className="pb-2">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importModal.items.map((item: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-800/50">
+                          <td className="py-2 pr-2 font-mono text-xs">{item.cliente_cuit}</td>
+                          <td className="py-2 pr-2">{item.cliente_nombre || '—'}</td>
+                          <td className="py-2 pr-2">{item.tipo === 1 ? 'A' : item.tipo === 6 ? 'B' : item.tipo === 11 ? 'C' : 'E'}</td>
+                          <td className="py-2 pr-2 text-right font-mono">${item.importe.toLocaleString()}</td>
+                          <td className="py-2 pr-2 text-gray-400">{item.descripcion}</td>
+                          <td className="py-2 text-gray-400">{item.fecha || 'Hoy'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-800 flex justify-end gap-3">
+              {importModal.results ? (
+                <button onClick={() => setImportModal({ open: false, items: [], loading: false, results: null })}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">
+                  Cerrar
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setImportModal({ open: false, items: [], loading: false, results: null })}
+                    className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm">
+                    Cancelar
+                  </button>
+                  <button onClick={handleConfirmImport} disabled={importModal.loading}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+                    {importModal.loading ? "Importando..." : `Confirmar importación (${importModal.items.length})`}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

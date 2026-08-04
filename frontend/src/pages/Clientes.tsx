@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import * as XLSX from "xlsx";
 
 interface Cliente {
   id: string;
@@ -18,7 +19,7 @@ export default function Clientes() {
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+  const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "", direccion: "", condicion_iva: "Consumidor Final" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
   const [toast, setToast] = useState("");
@@ -83,7 +84,7 @@ export default function Clientes() {
         await api.clientes.create(form);
         setToast("Cliente creado");
       }
-      setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+      setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "", direccion: "", condicion_iva: "Consumidor Final" });
       setEditingId(null);
       setShowForm(false);
       load(true);
@@ -93,35 +94,46 @@ export default function Clientes() {
   };
 
   const handleEdit = (c: Cliente) => {
-    setForm({ nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit });
+    setForm({ nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit, direccion: (c as any).direccion || "", condicion_iva: (c as any).condicion_iva || "Consumidor Final" });
     setEditingId(c.id);
     setShowForm(true);
   };
 
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImportando(true);
-    const text = await file.text();
-    const lines = text.split("\n").filter(Boolean);
-    const header = lines[0].toLowerCase();
-    const cols = header.split(",").map(c => c.trim());
-    const data = lines.slice(1).map(line => {
-      const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
-      const idx = (name: string) => cols.indexOf(name);
-      return {
-        nombre: vals[idx("nombre")] || "",
-        apellido: vals[idx("apellido")] || vals[idx("nombre")] || "",
-        email: vals[idx("email")] || "",
-        telefono: vals[idx("telefono")] || vals[idx("whatsapp")] || "",
-        cuit: vals[idx("cuit")] || vals[idx("documento")] || "",
-        direccion: vals[idx("direccion")] || "",
-        condicion_iva: "Responsable Inscripto",
-      };
-    });
     try {
-      await api.clientes.importBulk(data);
-      setToast(`Importados ${data.length} clientes`);
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const mapped = rows.map((row: any) => {
+        const find = (keys: string[]) => {
+          for (const k of keys) {
+            const found = Object.keys(row).find(col => col.toLowerCase().trim() === k);
+            if (found && row[found]) return String(row[found]).trim();
+          }
+          return "";
+        };
+        return {
+          nombre: find(["nombre", "name"]),
+          apellido: find(["apellido", "surname", "last_name"]),
+          email: find(["email", "correo", "mail"]),
+          telefono: find(["telefono", "tel", "whatsapp", "phone", "movil"]),
+          cuit: find(["cuit", "documento", "dni", "rut", "rif"]),
+          direccion: find(["direccion", "address", "domicilio", "dir"]),
+          condicion_iva: find(["condicion_iva", "condicion", "iva", "tax_status"]) || "Consumidor Final",
+        };
+      }).filter((c: any) => c.nombre);
+
+      if (mapped.length === 0) {
+        setToast("No se encontraron clientes en el archivo");
+      } else {
+        await api.clientes.importBulk(mapped);
+        setToast(`Importados ${mapped.length} clientes`);
+      }
     } catch (err: any) {
       setToast("Error al importar: " + (err.message || "desconocido"));
     }
@@ -141,9 +153,9 @@ export default function Clientes() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
-            {importando ? "Importando..." : "Importar CSV"}
+            {importando ? "Importando..." : "Importar Excel"}
           </button>
-          <input ref={fileRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportExcel} className="hidden" />
           <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
             {showForm ? "Cancelar" : "+ Nuevo Cliente"}
           </button>
@@ -152,7 +164,7 @@ export default function Clientes() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6 grid md:grid-cols-2 gap-4">
-          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "", direccion: "", condicion_iva: "Consumidor Final" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
           {editingId && <p className="col-span-2 text-sm text-gray-400 -mb-2">Editando cliente</p>}
@@ -166,6 +178,16 @@ export default function Clientes() {
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           <input placeholder="CUIT" value={form.cuit} onChange={e => setForm({ ...form, cuit: e.target.value })}
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+          <input placeholder="Dirección" value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })}
+            className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+          <select value={form.condicion_iva} onChange={e => setForm({ ...form, condicion_iva: e.target.value })}
+            className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
+            <option value="Consumidor Final">Consumidor Final</option>
+            <option value="Responsable Inscripto">Responsable Inscripto</option>
+            <option value="Monotributo">Monotributo</option>
+            <option value="Exento">Exento</option>
+            <option value="No Responsable">No Responsable</option>
+          </select>
           <button type="submit" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">{editingId ? "Actualizar" : "Guardar"}</button>
         </form>
       )}
