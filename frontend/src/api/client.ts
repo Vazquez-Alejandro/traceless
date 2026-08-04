@@ -141,8 +141,28 @@ export const api = {
     create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string; canal?: string }) =>
       request("/facturas", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request(`/facturas/${id}`),
+    update: (id: string, data: any) =>
+      request(`/facturas/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: string) =>
       request(`/facturas/${id}`, { method: "DELETE" }),
+    anular: (id: string) =>
+      request(`/facturas/${id}/anular`, { method: "PUT" }),
+    pagar: (id: string) =>
+      request(`/facturas/${id}/pagar`, { method: "PUT" }),
+    marcarEnviada: (id: string) =>
+      request(`/facturas/${id}/marcar-enviada`, { method: "PUT" }),
+    notaCredito: (data: { factura_original_id: string; motivo: string; importe?: number }) =>
+      request("/facturas/nota-credito", { method: "POST", body: JSON.stringify(data) }),
+  },
+  reembolsos: {
+    create: (data: { factura_id: string; nota_credito_id?: string; monto: number; metodo?: string; referencia?: string; fecha?: string; notas?: string }) =>
+      request("/reembolsos", { method: "POST", body: JSON.stringify(data) }),
+    list: (facturaId?: string) => {
+      const url = facturaId ? `/reembolsos?factura_id=${facturaId}` : "/reembolsos";
+      return request(url);
+    },
+    resumen: (facturaId: string) => request(`/reembolsos/resumen/${facturaId}`),
+    delete: (id: string) => request(`/reembolsos/${id}`, { method: "DELETE" }),
   },
   notificaciones: {
     list: (limit = 50, offset = 0) => request(`/notificaciones?limit=${limit}&offset=${offset}`),

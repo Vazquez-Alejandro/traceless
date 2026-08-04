@@ -19,6 +19,7 @@ export default function Clientes() {
   const [offset, setOffset] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
   const [toast, setToast] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
@@ -75,14 +76,26 @@ export default function Clientes() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.clientes.create(form);
+      if (editingId) {
+        await api.clientes.update(editingId, form);
+        setToast("Cliente actualizado");
+      } else {
+        await api.clientes.create(form);
+        setToast("Cliente creado");
+      }
       setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" });
+      setEditingId(null);
       setShowForm(false);
-      setToast("Cliente creado");
       load(true);
     } catch (err: any) {
       setToast("Error: " + (err.message || "desconocido"));
     }
+  };
+
+  const handleEdit = (c: Cliente) => {
+    setForm({ nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit });
+    setEditingId(c.id);
+    setShowForm(true);
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,9 +152,10 @@ export default function Clientes() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6 grid md:grid-cols-2 gap-4">
-          <button type="button" onClick={() => setShowForm(false)} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ nombre: "", apellido: "", email: "", telefono: "", cuit: "" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
+          {editingId && <p className="col-span-2 text-sm text-gray-400 -mb-2">Editando cliente</p>}
           <input placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           <input placeholder="Apellido" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required
@@ -152,7 +166,7 @@ export default function Clientes() {
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
           <input placeholder="CUIT" value={form.cuit} onChange={e => setForm({ ...form, cuit: e.target.value })}
             className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
-          <button type="submit" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">Guardar</button>
+          <button type="submit" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">{editingId ? "Actualizar" : "Guardar"}</button>
         </form>
       )}
 
@@ -171,6 +185,7 @@ export default function Clientes() {
             </div>
             <div className="flex items-center gap-2">
               <Link to={`/clientes/${c.id}`} className="text-xs text-blue-400 hover:underline">Ver historial</Link>
+              <button onClick={() => handleEdit(c)} className="text-xs text-gray-400 hover:text-white">Editar</button>
               <button onClick={() => copiar(c)} className="text-xs text-gray-400 hover:text-white">Copiar</button>
               <button onClick={() => handleDelete(c)} className="text-xs text-red-400 hover:text-red-300">Eliminar</button>
             </div>

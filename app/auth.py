@@ -159,11 +159,28 @@ def signup(req: SignupRequest):
         json={"email": req.email, "password": req.password, "email_confirm": False},
         timeout=10,
     )
-    if r.status_code == 409:
-        raise HTTPException(409, "Este email ya está registrado. Iniciá sesión.")
+    if r.status_code in (409, 422):
+        try:
+            err = r.json()
+            if err.get("error_code") == "email_exists" or "already" in err.get("msg", "").lower():
+                raise HTTPException(409, "Este email ya está registrado. Si ya tenés cuenta, iniciá sesión.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        raise HTTPException(409, "Este email ya está registrado. Si ya tenés cuenta, iniciá sesión.")
     if r.status_code != 200:
         logger.error(f"Error creando usuario: {r.status_code} {r.text}")
-        raise HTTPException(500, "Error al crear la cuenta")
+        try:
+            err = r.json()
+            err_msg = err.get("msg", "")
+            if "password" in err_msg.lower():
+                raise HTTPException(400, "La contraseña no cumple los requisitos de seguridad.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        raise HTTPException(500, "Error al crear la cuenta. Intentá de nuevo.")
 
     user = r.json()
     user_id = user["id"]
@@ -237,7 +254,19 @@ def login(req: LoginRequest):
         if remaining <= 0:
             raise HTTPException(429, "Demasiados intentos. Esperá 5 minutos e intentá de nuevo.")
         logger.error(f"Login error: {r.status_code} {r.text}")
-        raise HTTPException(401, "Credenciales inválidas")
+        # Parse Supabase error for better messages
+        try:
+            err = r.json()
+            err_code = err.get("error_code", "")
+            if err_code == "email_not_confirmed":
+                raise HTTPException(403, "Tu email no fue verificado. Revisá tu casilla de correo.")
+            if err_code == "invalid_grant":
+                raise HTTPException(401, "Email o contraseña incorrectos.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        raise HTTPException(401, "Email o contraseña incorrectos. Verificá los datos e intentá de nuevo.")
     _login_attempts.pop(email_key, None)
     data = r.json()
     if not data.get("user", {}).get("email_confirmed_at"):
@@ -262,7 +291,7 @@ def forgot_password(req: ForgotPasswordRequest):
 
 @router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest):
-    import re
+    import re, httpx
     email = verify_reset_token(req.token)
     if not email:
         raise HTTPException(400, "Link inválido o expirado")
@@ -274,7 +303,6 @@ def reset_password(req: ResetPasswordRequest):
     if not re.search(r"[0-9]", req.password):
         raise HTTPException(400, "La contraseña debe contener al menos un número")
 
-    import httpx
     r = httpx.get(
         f"{_URL}/auth/v1/admin/users",
         params={"filter[email]": f"eq.{email}"},
@@ -285,14 +313,65 @@ def reset_password(req: ResetPasswordRequest):
         raise HTTPException(404, "Usuario no encontrado")
 
     user = r.json()["users"][0]
-    r2 = httpx.put(
-        f"{_URL}/auth/v1/admin/users/{user['id']}",
-        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-        json={"password": req.password},
+    uid = user["id"]
+    logger.info(f"Reset password: updating user {uid} email={email}")
+
+    # Method 1: Supabase Python client admin API
+    try:
+        from app.db import supabase as admin_sb
+        admin_sb.auth.admin.update_user_by_id(uid, {"password": req.password})
+        logger.info("Python client update_user_by_id called")
+    except Exception as e:
+        logger.warning(f"Python client update failed: {e}")
+
+    # Verify after method 1
+    test_r = httpx.post(
+        f"{_URL}/auth/v1/token?grant_type=password",
+        json={"email": email, "password": req.password},
+        headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
         timeout=10,
     )
-    if r2.status_code != 200:
-        raise HTTPException(500, "Error al actualizar la contraseña")
+    if test_r.status_code == 200:
+        return {"ok": True, "mensaje": "Contraseña actualizada"}
+
+    # Method 2: Raw PUT with password
+    r2 = httpx.put(
+        f"{_URL}/auth/v1/admin/users/{uid}",
+        headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
+        json={"password": req.password, "email_confirm": True},
+        timeout=10,
+    )
+    logger.info(f"Reset password: raw PUT status={r2.status_code}")
+
+    # Verify after method 2
+    test_r2 = httpx.post(
+        f"{_URL}/auth/v1/token?grant_type=password",
+        json={"email": email, "password": req.password},
+        headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
+        timeout=10,
+    )
+    if test_r2.status_code == 200:
+        return {"ok": True, "mensaje": "Contraseña actualizada"}
+
+    # Method 3: Supabase GoTrue recover endpoint (uses Supabase's own flow)
+    # This generates a recovery token that can be used client-side
+    logger.info(f"Reset password: admin methods failed, using GoTrue recover")
+    r3 = httpx.post(
+        f"{_URL}/auth/v1/recover",
+        json={"email": email, "redirect_to": f"{BASE_URL}/reset-password-confirm"},
+        headers={"apikey": _ANON_KEY, "Content-Type": "application/json"},
+        timeout=10,
+    )
+    logger.info(f"Reset password: recover endpoint status={r3.status_code}")
+
+    # Check if the current password already works (user might be entering the same one)
+    if test_r.status_code != 200:
+        err = test_r.json() if test_r.status_code >= 400 else {}
+        err_code = err.get("error_code", "")
+        if err_code == "invalid_grant":
+            # Password is wrong but not because of our update - Supabase might have different hashing
+            raise HTTPException(400, "No se pudo actualizar con esa contraseña. Intentá con una diferente o pedí un nuevo link de recuperación.")
+        raise HTTPException(500, "No se pudo actualizar la contraseña. Pedí un nuevo link de recuperación.")
 
     return {"ok": True, "mensaje": "Contraseña actualizada"}
 

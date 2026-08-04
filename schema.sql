@@ -194,3 +194,32 @@ create table if not exists cache (
   expires timestamptz,
   created_at timestamptz default now()
 );
+
+-- Reembolsos
+create table if not exists reembolsos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  factura_id uuid not null references facturas(id) on delete cascade,
+  nota_credito_id uuid references facturas(id) on delete set null,
+  monto numeric(12,2) not null,
+  metodo text not null default 'transferencia',
+  referencia text default '',
+  fecha text not null,
+  estado text default 'completado',
+  notas text default '',
+  created_at timestamptz default now()
+);
+
+alter table reembolsos enable row level security;
+
+create policy "Usuarios pueden ver sus reembolsos"
+  on reembolsos for select using (auth.uid() = user_id);
+
+create policy "Usuarios pueden crear reembolsos"
+  on reembolsos for insert with check (auth.uid() = user_id);
+
+create policy "Usuarios pueden eliminar sus reembolsos"
+  on reembolsos for delete using (auth.uid() = user_id);
+
+create index if not exists idx_reembolsos_user on reembolsos(user_id);
+create index if not exists idx_reembolsos_factura on reembolsos(factura_id);

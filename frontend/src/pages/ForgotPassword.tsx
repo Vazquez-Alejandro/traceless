@@ -14,7 +14,7 @@ export default function ForgotPassword() {
     setLoading(true);
     const res = await api.auth.forgotPassword(email);
     if (res.error) {
-      setError("Error al enviar el email");
+      setError(res.error);
     } else {
       setSent(true);
     }

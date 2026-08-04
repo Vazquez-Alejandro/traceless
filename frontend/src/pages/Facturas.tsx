@@ -40,6 +40,7 @@ export default function Facturas() {
   const [total, setTotal] = useState(0);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
@@ -57,6 +58,8 @@ export default function Facturas() {
   const [filterEstado, setFilterEstado] = useState("");
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [ncModal, setNcModal] = useState<{ open: boolean; factura: Factura | null; motivo: string; importe: string; loading: boolean }>({ open: false, factura: null, motivo: "", importe: "", loading: false });
+  const [refModal, setRefModal] = useState<{ open: boolean; factura: Factura | null; metodo: string; referencia: string; importe: string; notas: string; loading: boolean }>({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false });
 
   const load = useCallback(async (reset = true) => {
     const newOffset = reset ? 0 : offset;
@@ -193,6 +196,89 @@ export default function Facturas() {
     setToast("Datos copiados. Modificá lo que necesites y emití.");
   };
 
+  const openNcModal = (f: Factura) => {
+    setNcModal({ open: true, factura: f, motivo: "Anulación total", importe: String(f.total), loading: false });
+  };
+
+  const handleCrearNc = async () => {
+    if (!ncModal.factura || !ncModal.motivo) return;
+    setNcModal({ ...ncModal, loading: true });
+    try {
+      const res = await api.facturas.notaCredito({
+        factura_original_id: ncModal.factura.id,
+        motivo: ncModal.motivo,
+        importe: ncModal.importe ? parseFloat(ncModal.importe) : undefined,
+      });
+      setToast(res.mensaje || "Nota de crédito emitida");
+      setNcModal({ open: false, factura: null, motivo: "", importe: "", loading: false });
+      load(true);
+    } catch (err: any) {
+      setToast("Error: " + (err.message || "No se pudo emitir la nota de crédito"));
+      setNcModal({ ...ncModal, loading: false });
+    }
+  };
+
+  const openRefModal = async (f: Factura) => {
+    try {
+      const res = await api.reembolsos.resumen(f.id);
+      const pendiente = res.saldo_pendiente || f.total;
+      setRefModal({ open: true, factura: f, metodo: "transferencia", referencia: "", importe: String(pendiente > 0 ? pendiente.toFixed(2) : "0"), notas: "", loading: false });
+    } catch {
+      setRefModal({ open: true, factura: f, metodo: "transferencia", referencia: "", importe: String(f.total), notas: "", loading: false });
+    }
+  };
+
+  const handleCrearReembolso = async () => {
+    if (!refModal.factura || !refModal.importe || parseFloat(refModal.importe) <= 0) return;
+    setRefModal({ ...refModal, loading: true });
+    try {
+      await api.reembolsos.create({
+        factura_id: refModal.factura.id,
+        monto: parseFloat(refModal.importe),
+        metodo: refModal.metodo,
+        referencia: refModal.referencia,
+        notas: refModal.notas,
+      });
+      setToast("Reembolso registrado ✅");
+      setRefModal({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false });
+      load(true);
+    } catch (err: any) {
+      setToast("Error: " + (err.message || "No se pudo registrar el reembolso"));
+      setRefModal({ ...refModal, loading: false });
+    }
+  };
+
+  const handleEditFactura = (f: Factura) => {
+    let desc = "Honorarios";
+    let hasItems = false;
+    try {
+      const parsed = JSON.parse(f.descripcion || "");
+      desc = parsed.d || "Honorarios";
+      if (parsed.i && parsed.i.length > 0) {
+        hasItems = true;
+        setDetalles(parsed.i.map((it: any) => ({
+          descripcion: it.desc || "",
+          cantidad: it.cant || 1,
+          precio_unitario: it.precio || 0,
+        })));
+      }
+    } catch {
+      desc = f.descripcion || "Honorarios";
+      setDetalles([]);
+    }
+    setForm({
+      cliente_id: f.clientes?.id || "",
+      tipo: f.tipo,
+      importe: String(f.total),
+      descripcion: desc,
+      recurrente: false,
+      scheduled_send: f.scheduled_send || "",
+    });
+    setUsarItems(hasItems);
+    setEditingId(f.id);
+    setShowForm(true);
+  };
+
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -294,6 +380,31 @@ export default function Facturas() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (editingId) {
+      const body: any = {};
+      if (form.cliente_id) body.cliente_id = form.cliente_id;
+      if (form.tipo) body.tipo = form.tipo;
+      if (form.descripcion) body.descripcion = form.descripcion;
+      if (usarItems) body.importe = totalItems;
+      else if (form.importe) body.importe = parseFloat(form.importe);
+      if (form.scheduled_send !== undefined) body.scheduled_send = form.scheduled_send || null;
+      try {
+        await api.facturas.update(editingId, body);
+        setToast("Factura actualizada");
+        setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
+        setDetalles([]);
+        setUsarItems(false);
+        setEditingId(null);
+        setShowForm(false);
+        load(true);
+      } catch (err: any) {
+        setToast("Error: " + (err.message || "No se pudo actualizar"));
+      }
+      setLoading(false);
+      return;
+    }
+
     const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe), tipo: form.tipo, scheduled_send: form.scheduled_send || undefined, canal: "whatsapp" };
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
@@ -396,7 +507,7 @@ export default function Facturas() {
               setToast(`Límite de ${userPlan.invoices_limit} facturas/mes alcanzado. Actualizá tu plan para seguir facturando.`);
               return;
             }
-            setShowForm(!showForm); setDetalles([]); setUsarItems(false);
+            setEditingId(null); setShowForm(!showForm); setDetalles([]); setUsarItems(false);
           }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
             {showForm ? "Cancelar" : "+ Nueva Factura"}
           </button>
@@ -405,9 +516,10 @@ export default function Facturas() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
-          <button type="button" onClick={() => setShowForm(false)} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setDetalles([]); setUsarItems(false); setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
+          {editingId && <p className="text-sm text-gray-400 mb-3">Editando factura</p>}
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div className="flex gap-2">
               <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required
@@ -505,7 +617,7 @@ export default function Facturas() {
           )}
 
           <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
-            {loading ? "Guardando..." : form.scheduled_send ? "Programar Factura" : "Emitir Factura"}
+            {loading ? "Guardando..." : editingId ? "Actualizar Factura" : form.scheduled_send ? "Programar Factura" : "Emitir Factura"}
           </button>
         </form>
       )}
@@ -607,6 +719,9 @@ export default function Facturas() {
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-800/30 flex-wrap">
+              {(f.estado === "programada" || f.estado === "emitida") && (
+                <button onClick={() => handleEditFactura(f)} title="Editar" className="px-2 py-1 text-[11px] text-blue-400 hover:text-blue-300 bg-blue-900/20 rounded-lg">Editar</button>
+              )}
               <button onClick={() => handleClone(f)} title="Reemitir" className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-gray-800/50 rounded-lg">Reemitir</button>
               {f.estado !== "programada" && (
                 <button onClick={() => handleWhatsApp(f)} title="WhatsApp" className="px-2 py-1 text-[11px] text-green-400 hover:text-green-300 bg-green-900/20 rounded-lg">WhatsApp</button>
@@ -636,6 +751,8 @@ export default function Facturas() {
                 <>
                   <button onClick={() => handlePay(f.id)} className="px-2 py-1 text-[11px] text-green-400 hover:underline">Pagada</button>
                   <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>
+                  <button onClick={() => openNcModal(f)} className="px-2 py-1 text-[11px] text-orange-400 hover:text-orange-300 bg-orange-900/20 rounded-lg">Nota de crédito</button>
+                  <button onClick={() => openRefModal(f)} className="px-2 py-1 text-[11px] text-purple-400 hover:text-purple-300 bg-purple-900/20 rounded-lg">Reembolso</button>
                 </>
               )}
               {f.estado === "emitida" && (
@@ -655,6 +772,94 @@ export default function Facturas() {
         )}
         {facturas.length === 0 && !loading && <p className="text-gray-500 text-sm text-center py-8">No hay facturas{filterCliente || filterEstado ? " con estos filtros" : " aún"}.</p>}
       </div>
+
+      {ncModal.open && ncModal.factura && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setNcModal({ open: false, factura: null, motivo: "", importe: "", loading: false })}>
+          <div className="bg-gray-900 rounded-2xl border border-gray-700 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Nota de Crédito</h3>
+              <button onClick={() => setNcModal({ open: false, factura: null, motivo: "", importe: "", loading: false })} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div className="mb-4 p-3 rounded-xl bg-gray-800/40 border border-gray-700/40 text-sm">
+              <p className="text-gray-300">Factura: <span className="font-semibold">{ncModal.factura.numero}</span></p>
+              <p className="text-gray-400">Cliente: {ncModal.factura.clientes?.nombre} {ncModal.factura.clientes?.apellido}</p>
+              <p className="text-gray-400">Total: <span className="font-semibold text-white">${ncModal.factura.total.toLocaleString()}</span></p>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Motivo *</label>
+                <select value={ncModal.motivo} onChange={e => setNcModal({ ...ncModal, motivo: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
+                  <option value="Anulación total">Anulación total</option>
+                  <option value="Devolución">Devolución</option>
+                  <option value="Descuento">Descuento</option>
+                  <option value="Ajuste">Ajuste</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Importe (${ncModal.factura.total.toLocaleString()} = total)</label>
+                <input type="number" step="0.01" value={ncModal.importe} onChange={e => setNcModal({ ...ncModal, importe: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+                <p className="text-[10px] text-gray-500 mt-1">Dejar vacío = monto total. Solo podés emitir NC por el saldo restante (${(ncModal.factura.total).toLocaleString()})</p>
+              </div>
+            </div>
+            <button onClick={handleCrearNc} disabled={ncModal.loading || !ncModal.motivo}
+              className="w-full px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+              {ncModal.loading ? "Emitiendo..." : "Emitir Nota de Crédito"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {refModal.open && refModal.factura && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setRefModal({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false })}>
+          <div className="bg-gray-900 rounded-2xl border border-gray-700 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Registrar Reembolso</h3>
+              <button onClick={() => setRefModal({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false })} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div className="mb-4 p-3 rounded-xl bg-gray-800/40 border border-gray-700/40 text-sm">
+              <p className="text-gray-300">Factura: <span className="font-semibold">{refModal.factura.numero}</span></p>
+              <p className="text-gray-400">Cliente: {refModal.factura.clientes?.nombre} {refModal.factura.clientes?.apellido}</p>
+              <p className="text-gray-400">Total factura: <span className="font-semibold text-white">${refModal.factura.total.toLocaleString()}</span></p>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Monto a reembolsar *</label>
+                <input type="number" step="0.01" value={refModal.importe} onChange={e => setRefModal({ ...refModal, importe: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+                <p className="text-[10px] text-gray-500 mt-1">Podés hacer reembolsos parciales</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Método *</label>
+                <select value={refModal.metodo} onChange={e => setRefModal({ ...refModal, metodo: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
+                  <option value="transferencia">Transferencia bancaria</option>
+                  <option value="mercadopago">MercadoPago</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Referencia / Comprobante</label>
+                <input placeholder="Nº transferencia, Nº comprobante, etc." value={refModal.referencia} onChange={e => setRefModal({ ...refModal, referencia: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Notas</label>
+                <input placeholder="Motivo del reembolso..." value={refModal.notas} onChange={e => setRefModal({ ...refModal, notas: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm" />
+              </div>
+            </div>
+            <button onClick={handleCrearReembolso} disabled={refModal.loading || !refModal.importe || parseFloat(refModal.importe) <= 0}
+              className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+              {refModal.loading ? "Registrando..." : "Registrar Reembolso"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

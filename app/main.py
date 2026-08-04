@@ -47,6 +47,7 @@ from app.whatsapp_webhook import router as wa_webhook_router
 from app.creditos import router as creditos_router
 from app.contact import router as contact_router
 from app.notifications import router as notifications_router
+from app.reembolsos import router as reembolsos_router
 
 app.include_router(auth_router)
 app.include_router(clientes_router)
@@ -57,6 +58,7 @@ app.include_router(wa_webhook_router)
 app.include_router(creditos_router)
 app.include_router(contact_router)
 app.include_router(notifications_router)
+app.include_router(reembolsos_router)
 
 @app.get("/")
 def root():

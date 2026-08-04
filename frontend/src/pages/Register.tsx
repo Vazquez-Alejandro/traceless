@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import PasswordInput from "../components/PasswordInput";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
@@ -74,8 +75,8 @@ export default function Register() {
       } else {
         navigate("/dashboard");
       }
-    } catch {
-      setError("Error al crear la cuenta");
+    } catch (err: any) {
+      setError(err.message || "Error al crear la cuenta");
     }
     setLoading(false);
   };
@@ -148,8 +149,7 @@ export default function Register() {
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading}
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
           <div>
-            <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading}
-              className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+            <PasswordInput value={password} onChange={setPassword} disabled={loading} />
             {password.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${passwordChecks.length ? "bg-green-900/40 text-green-400" : "bg-gray-800 text-gray-500"}`}>
@@ -164,8 +164,8 @@ export default function Register() {
               </div>
             )}
           </div>
-          <input type="password" placeholder="Repetir contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={loading}
-            className={`w-full px-4 py-3 bg-gray-900 border rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50 ${confirmPassword && password !== confirmPassword ? "border-red-500" : "border-gray-800"}`} />
+          <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Repetir contraseña" disabled={loading}
+            className={confirmPassword && password !== confirmPassword ? "[&_input]:border-red-500" : ""} />
           {confirmPassword && password !== confirmPassword && (
             <p className="text-red-400 text-[10px] -mt-2">Las contraseñas no coinciden</p>
           )}

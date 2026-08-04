@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import PasswordInput from "../components/PasswordInput";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -35,11 +36,15 @@ export default function ResetPassword() {
       return;
     }
     setLoading(true);
-    const res = await api.auth.resetPassword(token, password);
-    if (res.error) {
-      setError("Error al actualizar la contraseña. Pedí un nuevo link.");
-    } else {
-      setDone(true);
+    try {
+      const res = await api.auth.resetPassword(token, password);
+      if (res.error) {
+        setError(res.error);
+      } else {
+        setDone(true);
+      }
+    } catch (err: any) {
+      setError(err.message || "Error al actualizar la contraseña. Intentá de nuevo.");
     }
     setLoading(false);
   };
@@ -70,10 +75,8 @@ export default function ResetPassword() {
           <p className="text-gray-400 text-sm mt-2">Nueva contraseña</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="password" placeholder="Nueva contraseña" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading}
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
-          <input type="password" placeholder="Repetir contraseña" value={confirm} onChange={e => setConfirm(e.target.value)} required disabled={loading}
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+          <PasswordInput value={password} onChange={setPassword} placeholder="Nueva contraseña" disabled={loading} />
+          <PasswordInput value={confirm} onChange={setConfirm} placeholder="Repetir contraseña" disabled={loading} />
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
             {loading ? (

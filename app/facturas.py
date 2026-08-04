@@ -276,6 +276,125 @@ def anular_factura(factura_id: str, authorization: str = Header("")):
     supabase.table("facturas").update({"estado": "anulada"}).eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura anulada correctamente. Recordá emitir la nota de crédito correspondiente ante ARCA."}
 
+
+class NotaCreditoCreate(BaseModel):
+    factura_original_id: str
+    motivo: str = "Anulación total"
+    importe: Optional[float] = None  # None = monto total de la original
+
+
+_NC_TIPO_MAP = {1: 3, 6: 8, 11: 13, 19: 21}
+
+
+def _nc_tipo_nombre(tipo: int) -> str:
+    return {3: "NC A", 8: "NC B", 13: "NC C", 21: "NC E"}.get(tipo, "NC B")
+
+
+@router.post("/nota-credito")
+async def crear_nota_credito(req: NotaCreditoCreate, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+
+    ok, msg = can_create_invoice(uid)
+    if not ok:
+        raise HTTPException(402, msg)
+
+    factura_original = supabase.table("facturas").select("*").eq("id", req.factura_original_id).eq("user_id", uid).single().execute()
+    if not factura_original.data:
+        raise HTTPException(404, "Factura original no encontrada")
+
+    orig = factura_original.data
+    if orig["estado"] in ("programada", "anulada"):
+        raise HTTPException(400, "No se puede emitir nota de crédito sobre una factura programada o anulada")
+
+    tipo_original = orig.get("tipo", 6)
+    tipo_nc = _NC_TIPO_MAP.get(tipo_original)
+    if not tipo_nc:
+        raise HTTPException(400, f"Tipo de factura {tipo_original} no tiene nota de crédito asociada")
+
+    importe_nc = req.importe if req.importe is not None else float(orig["total"])
+    if importe_nc <= 0:
+        raise HTTPException(400, "El importe debe ser mayor a 0")
+    if importe_nc > float(orig["total"]):
+        raise HTTPException(400, f"El importe no puede superar el total de la factura original (${orig['total']:,.2f})")
+
+    # If there are already credit notes against this invoice, check remaining amount
+    existing_nc = supabase.table("facturas").select("total").eq("factura_original_id", req.factura_original_id).eq("user_id", uid).execute()
+    total_nc_previo = sum(float(nc["total"]) for nc in (existing_nc.data or []))
+    if total_nc_previo + importe_nc > float(orig["total"]):
+        raise HTTPException(400, f"El importe total de notas de crédito (${total_nc_previo + importe_nc:,.2f}) supera el monto de la factura original (${orig['total']:,.2f})")
+
+    cliente = supabase.table("clientes").select("*").eq("id", orig["cliente_id"]).eq("user_id", uid).single().execute()
+    if not cliente.data:
+        raise HTTPException(404, "Cliente no encontrado")
+
+    # Use per-user lock for invoice number
+    user_lock = _get_user_lock(uid)
+    with user_lock:
+        last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
+        ultimo_numero = 0
+        if last.data:
+            try:
+                ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
+            except (ValueError, IndexError):
+                ultimo_numero = 0
+
+    try:
+        afip_result = generar_factura_afip(
+            cliente_cuit=cliente.data.get("cuit", ""),
+            cliente_nombre=f"{cliente.data['nombre']} {cliente.data.get('apellido', '')}",
+            tipo=tipo_nc,
+            importe=importe_nc,
+            condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
+            descripcion=f"Nota de crédito s/ Factura {orig.get('numero', '')} — {req.motivo}",
+            ultimo_numero=ultimo_numero,
+        )
+    except Exception as e:
+        raise HTTPException(502, f"Error emitiendo nota de crédito en ARCA: {e}")
+
+    import json as _json
+    nc_data = {
+        "user_id": uid,
+        "cliente_id": orig["cliente_id"],
+        "tipo": tipo_nc,
+        "numero": afip_result["numero"],
+        "cae": afip_result["cae"],
+        "cae_vencimiento": afip_result["cae_vencimiento"],
+        "neto": afip_result["neto"],
+        "iva": afip_result["iva"],
+        "total": afip_result["total"],
+        "descripcion": _json.dumps({
+            "d": f"Nota de crédito s/ Factura {orig.get('numero', '')}",
+            "motivo": req.motivo,
+            "factura_original": orig.get("numero", ""),
+        }, ensure_ascii=False),
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "estado": "emitida",
+        "factura_original_id": req.factura_original_id,
+    }
+
+    res = supabase.table("facturas").insert(nc_data).execute()
+    nc = res.data[0]
+
+    perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+    emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
+
+    html_url = guardar_factura_html(
+        factura={**nc_data, "id": nc["id"], "tipo_nombre": _nc_tipo_nombre(tipo_nc)},
+        cliente=cliente.data,
+        emisor=emisor,
+    )
+    supabase.table("facturas").update({"pdf_url": html_url}).eq("id", nc["id"]).execute()
+
+    # If full amount, mark original as "anulada"
+    if importe_nc >= float(orig["total"]):
+        supabase.table("facturas").update({"estado": "anulada"}).eq("id", req.factura_original_id).execute()
+
+    return {
+        "ok": True,
+        "nota_credito": {**nc, "pdf_url": html_url},
+        "mensaje": f"Nota de crédito {afip_result['numero']} emitida correctamente",
+    }
+
 @router.delete("/{factura_id}")
 def eliminar_factura(factura_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)
@@ -286,6 +405,47 @@ def eliminar_factura(factura_id: str, authorization: str = Header("")):
         raise HTTPException(400, "Solo se pueden eliminar facturas programadas. Para emitidas, usá Anular.")
     supabase.table("facturas").delete().eq("id", factura_id).execute()
     return {"ok": True, "mensaje": "Factura eliminada"}
+
+class FacturaUpdate(BaseModel):
+    cliente_id: Optional[str] = None
+    tipo: Optional[int] = None
+    importe: Optional[float] = None
+    descripcion: Optional[str] = None
+    scheduled_send: Optional[str] = None
+
+@router.put("/{factura_id}")
+def actualizar_factura(factura_id: str, req: FacturaUpdate, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    factura = supabase.table("facturas").select("*").eq("id", factura_id).eq("user_id", uid).single().execute()
+    if not factura.data:
+        raise HTTPException(404, "Factura no encontrada")
+    if factura.data["estado"] not in ("programada", "emitida"):
+        raise HTTPException(400, "Solo se pueden editar facturas programadas o emitidas")
+
+    import json as _json
+    update_data = {}
+    if req.cliente_id is not None:
+        update_data["cliente_id"] = req.cliente_id
+    if req.tipo is not None:
+        update_data["tipo"] = req.tipo
+    if req.descripcion is not None:
+        update_data["descripcion"] = req.descripcion
+    if req.scheduled_send is not None:
+        update_data["scheduled_send"] = req.scheduled_send if req.scheduled_send else None
+    if req.importe is not None:
+        update_data["total"] = req.importe
+        # Update descripcion with items if present
+        try:
+            parsed = _json.loads(factura.data.get("descripcion", ""))
+            if parsed.get("i"):
+                parsed["d"] = req.descripcion or parsed.get("d", "")
+                update_data["descripcion"] = _json.dumps(parsed, ensure_ascii=False)
+        except Exception:
+            pass
+
+    if update_data:
+        supabase.table("facturas").update(update_data).eq("id", factura_id).execute()
+    return {"ok": True, "mensaje": "Factura actualizada"}
 
 @router.put("/{factura_id}/pagar")
 def pagar_factura(factura_id: str, authorization: str = Header("")):
@@ -875,4 +1035,4 @@ def obtener_factura(factura_id: str, authorization: str = Header("")):
     return {"factura": res.data}
 
 def _tipo_nombre(tipo: int) -> str:
-    return {1: "A", 6: "B", 11: "C", 19: "E"}.get(tipo, "B")
+    return {1: "A", 3: "NC A", 6: "B", 8: "NC B", 11: "C", 13: "NC C", 19: "E", 21: "NC E"}.get(tipo, "B")

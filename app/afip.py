@@ -212,6 +212,19 @@ def _alicuota_iva(tipo: int) -> tuple:
         return (4, 10.5)
     return (3, 21.0)
 
+# RG 5616: CondicionIVAReceptorId (obligatorio desde 01/09/2026)
+_COND_ICA_RECEPTOR_MAP = {
+    "Responsable Inscripto": 1,
+    "Responsable Monotributo": 4,
+    "Monotributo": 4,
+    "Consumidor Final": 5,
+    "Exento": 6,
+    "No Responsable": 7,
+}
+
+def _condicion_iva_receptor_id(condicion_iva: str) -> int:
+    return _COND_ICA_RECEPTOR_MAP.get(condicion_iva, 5)
+
 def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           tipo: int, importe: float,
                           condicion_iva: str, descripcion: str,
@@ -284,6 +297,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                     "Concepto": 1,
                     "DocTipo": doc_tipo,
                     "DocNro": doc_nro,
+                    "CondicionIVAReceptorId": _condicion_iva_receptor_id(condicion_iva),
                     "CbteDesde": prox_numero,
                     "CbteHasta": prox_numero,
                     "CbteFch": datetime.now().strftime("%Y%m%d"),

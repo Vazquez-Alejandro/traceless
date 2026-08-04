@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../api/client";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -21,7 +22,11 @@ export default function Login() {
       localStorage.setItem("refresh_token", res.refresh_token);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Email o contraseña incorrectos");
+      const msg = err.message || "Email o contraseña incorrectos";
+      setError(msg);
+      if (msg.toLowerCase().includes("incorrectos") || msg.toLowerCase().includes("inválid")) {
+        setResent(false);
+      }
     }
     setSending(false);
   };
@@ -52,8 +57,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required disabled={sending}
             className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
-          <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} required disabled={sending}
-            className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+          <PasswordInput value={password} onChange={setPassword} disabled={sending} />
           <div className="text-right">
             <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-blue-400">¿Olvidaste tu contraseña?</Link>
           </div>
