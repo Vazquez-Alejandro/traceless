@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [resumen, setResumen] = useState<{ mes_actual: number; mes_anterior: number; anio: number; mes_nombre: string } | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [whatsappStats, setWhatsappStats] = useState({ used: 0, limit: 0, remaining: 0 });
+  const [loading, setLoading] = useState(true);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export default function Dashboard() {
         .map(([mes, total]) => ({ mes, total }))
         .sort((a, b) => a.mes.localeCompare(b.mes))
         .slice(-6));
+      setLoading(false);
     });
   }, []);
 
@@ -95,6 +97,8 @@ export default function Dashboard() {
 
   return (
     <div>
+      {loading && <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Cargando dashboard...</div>}
+      {!loading && (<>
       {plan === "Gratis" && (
         <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-between">
           <div>
@@ -290,6 +294,7 @@ export default function Dashboard() {
         <Link to="/facturas" className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">Nueva Factura</Link>
         <Link to="/clientes" className="px-5 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm">Nuevo Cliente</Link>
       </div>
+      </>)}
     </div>
   );
 }
