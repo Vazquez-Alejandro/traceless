@@ -1,5 +1,25 @@
 import { Link } from "react-router-dom";
 
+const SHOW_TESTIMONIALS = false; // Cambiar a true cuando tengamos testimonios reales
+
+const TESTIMONIALS = [
+  {
+    name: "Gisela D.",
+    role: "Monotributista",
+    text: "Uso TraceLess para facturar a mis clientes. Lo mejor es que la factura llega por WhatsApp al instante y no tengo que perseguir a nadie para que pague.",
+  },
+  {
+    name: "Leonardo M.",
+    role: "Responsable Inscripto",
+    text: "Pasé de ARCA a TraceLess en 5 minutos. Ahora facturo desde el celular y mis clientes reciben todo al toque. Me ahorra horas por mes.",
+  },
+  {
+    name: "Martín S.",
+    role: "Estudio contable",
+    text: "Mis clientes que usan TraceLess me facilitan la vida. Las facturas llegan organizadas y no tengo que estar pidiendo comprobantes por WhatsApp.",
+  },
+];
+
 const PLANS = [
   {
     key: "free",
@@ -112,6 +132,28 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {SHOW_TESTIMONIALS && (
+        <section className="py-12 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Lo que dicen nuestros usuarios</h2>
+            <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
+              Monotributistas y profesionales que ya facturan con TraceLess.
+            </p>
+            <div className="grid md:grid-cols-3 gap-6">
+              {TESTIMONIALS.map((t, i) => (
+                <div key={i} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
+                  <p className="text-sm text-gray-300 leading-relaxed mb-4">"{t.text}"</p>
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-xs text-gray-500">{t.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section id="precios" className="py-12 sm:py-20">
         <div className="max-w-6xl mx-auto px-4">
