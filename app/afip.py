@@ -266,9 +266,17 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     ta = _login()
     pto_vta = _punto_venta()
     doc_tipo, doc_nro = _doc_tipo(cliente_cuit)
-    iva_id, iva_pct = _alicuota_iva(tipo)
-    neto = round(importe / (1 + iva_pct / 100), 2)
-    iva_imp = round(neto * iva_pct / 100, 2)
+
+    es_factura_c = (tipo == 11)
+
+    if es_factura_c:
+        neto = round(importe, 2)
+        iva_imp = 0
+        iva_id = None
+    else:
+        iva_id, iva_pct = _alicuota_iva(tipo)
+        neto = round(importe / (1 + iva_pct / 100), 2)
+        iva_imp = round(neto * iva_pct / 100, 2)
 
     import zeep
     from zeep.transports import Transport
@@ -284,6 +292,36 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         raise RuntimeError(f"Error al obtener último comprobante: {serialize_object(ultimo_arca.Errors)}")
     prox_numero = (ultimo_arca.CbteNro or 0) + 1
 
+    det_request = {
+        "Concepto": 1,
+        "DocTipo": doc_tipo,
+        "DocNro": doc_nro,
+        "CondicionIVAReceptorId": _condicion_iva_receptor_id(condicion_iva),
+        "CbteDesde": prox_numero,
+        "CbteHasta": prox_numero,
+        "CbteFch": datetime.now().strftime("%Y%m%d"),
+        "ImpTotal": neto + iva_imp,
+        "ImpTotConc": 0,
+        "ImpNeto": neto,
+        "ImpOpEx": 0,
+        "ImpTrib": 0,
+        "ImpIVA": iva_imp,
+        "FchServDesde": None,
+        "FchServHasta": None,
+        "FchVtoPago": None,
+        "MonId": "PES",
+        "MonCotiz": 1,
+    }
+
+    if not es_factura_c and iva_id is not None:
+        det_request["Iva"] = {
+            "AlicIva": {
+                "Id": iva_id,
+                "BaseImp": neto,
+                "Importe": iva_imp,
+            }
+        }
+
     req = {
         "Auth": auth,
         "FeCAEReq": {
@@ -293,33 +331,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                 "CbteTipo": tipo,
             },
             "FeDetReq": {
-                "FECAEDetRequest": {
-                    "Concepto": 1,
-                    "DocTipo": doc_tipo,
-                    "DocNro": doc_nro,
-                    "CondicionIVAReceptorId": _condicion_iva_receptor_id(condicion_iva),
-                    "CbteDesde": prox_numero,
-                    "CbteHasta": prox_numero,
-                    "CbteFch": datetime.now().strftime("%Y%m%d"),
-                    "ImpTotal": neto + iva_imp,
-                    "ImpTotConc": 0,
-                    "ImpNeto": neto,
-                    "ImpOpEx": 0,
-                    "ImpTrib": 0,
-                    "ImpIVA": iva_imp,
-                    "FchServDesde": None,
-                    "FchServHasta": None,
-                    "FchVtoPago": None,
-                    "MonId": "PES",
-                    "MonCotiz": 1,
-                    "Iva": {
-                        "AlicIva": {
-                            "Id": iva_id,
-                            "BaseImp": neto,
-                            "Importe": iva_imp,
-                        }
-                    },
-                }
+                "FECAEDetRequest": det_request,
             },
         }
     }
@@ -333,14 +345,20 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         from zeep.helpers import serialize_object
         raise RuntimeError(f"Errores ARCA: {serialize_object(resp.Errors)}")
 
-    total_final = neto + iva_imp
     ed = resp.FeDetResp.FECAEDetResponse[0]
+
+    if ed.Resultado == "R":
+        from zeep.helpers import serialize_object
+        obs = serialize_object(ed.get("Observaciones", {}))
+        msgs = [o.get("Msg", "") for o in (obs.get("Obs", []) if isinstance(obs, dict) else [])]
+        raise RuntimeError(f"ARCA rechazó: {'; '.join(msgs)}")
+
     return {
         "cae": ed.CAE,
         "cae_vencimiento": ed.CAEFchVto,
         "numero": f"{pto_vta:04d}-{ed.CbteDesde:08d}",
         "neto": neto,
         "iva": iva_imp,
-        "total": total_final,
+        "total": neto + iva_imp,
         "tipo": tipo,
     }
