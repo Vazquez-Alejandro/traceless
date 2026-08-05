@@ -19,8 +19,8 @@ MP_BASE = "https://api.mercadopago.com"
 
 # Precios en ARS por plan (actualizables)
 MP_PRICES = {
-    "pro": {"amount": 15000, "name": "Profesional"},
-    "team": {"amount": 29000, "name": "Equipo"},
+    "pro": {"amount": 18000, "name": "Profesional"},
+    "team": {"amount": 32000, "name": "Equipo"},
 }
 
 

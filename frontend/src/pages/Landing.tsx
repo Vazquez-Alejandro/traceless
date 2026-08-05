@@ -6,13 +6,13 @@ const PLANS = [
     name: "Gratis",
     price: "Gratis",
     desc: "Para probar la plataforma",
-    features: ["5 facturas por mes", "Sin WhatsApp API", "1 usuario"],
+    features: ["20 facturas por mes", "Sin WhatsApp API", "1 usuario"],
     highlighted: false,
   },
   {
     key: "pro",
     name: "Profesional",
-    price: "$15.000/mes",
+    price: "$18.000/mes",
     desc: "Para profesionales y negocios",
     features: ["Facturas ilimitadas", "100 msg WhatsApp incluidos", "$70/msg extra", "Analytics de pagos", "Facturas recurrentes"],
     highlighted: true,
@@ -20,7 +20,7 @@ const PLANS = [
   {
     key: "team",
     name: "Equipo",
-    price: "$29.000/mes",
+    price: "$32.000/mes",
     desc: "Para estudios, PyMEs y empresas",
     features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
@@ -63,7 +63,7 @@ export default function Landing() {
               Empezar Gratis — Sin tarjeta
             </Link>
           </div>
-          <p className="text-[10px] text-gray-600 mt-3">5 facturas por mes. Sin tarjeta de crédito.</p>
+          <p className="text-[10px] text-gray-600 mt-3">20 facturas por mes. Sin tarjeta de crédito.</p>
         </div>
       </section>
 
