@@ -55,6 +55,8 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         result = await _crear_factura_interna(uid, req)
         return result
     except Exception as e:
+        import traceback
+        logger.error("Error creando factura: %s\n%s", e, traceback.format_exc())
         queue_factura(
             user_id=uid,
             cliente_id=req.cliente_id,
@@ -68,7 +70,7 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         return {
             "factura": None,
             "pendiente": True,
-            "mensaje": "ARCA no respondió. Tu factura está en cola y se emitirá automáticamente cuando el servicio se recupere.",
+            "mensaje": f"ARCA no respondió ({type(e).__name__}: {str(e)[:100]}). Tu factura está en cola.",
         }
 
 
