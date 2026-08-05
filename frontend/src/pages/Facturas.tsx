@@ -53,7 +53,7 @@ export default function Facturas() {
   const [loading, setLoading] = useState(false);
   const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number; cbu?: string; alias_banco?: string }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkCanal, setBulkCanal] = useState<"whatsapp" | "email">("whatsapp");
+  const [bulkCanal, setBulkCanal] = useState<"whatsapp" | "email" | "both">("whatsapp");
 
   const [filterCliente, setFilterCliente] = useState("");
   const [filterEstado, setFilterEstado] = useState("");
@@ -361,59 +361,19 @@ export default function Facturas() {
     const seleccionadas = facturas.filter(f => selected.has(f.id));
     if (seleccionadas.length === 0) return;
 
-    if (bulkCanal === "email") {
-      const sinEmail = seleccionadas.filter(f => !f.clientes?.email);
-      if (sinEmail.length > 0) {
-        if (!confirm(`${sinEmail.length} factura(s) sin email del cliente. Se envían las demás. ¿Continuar?`)) return;
-      }
-      try {
-        const res = await fetch(`/api/facturas/enviar-whatsapp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-          body: JSON.stringify({ factura_ids: seleccionadas.map(f => f.id), canal: "email" }),
-        }).then(r => r.json());
-        if (res.enviados > 0) setToast(`📧 ${res.enviados} factura(s) enviada(s) por email`);
-        if (res.errores?.length > 0) setToast(`⚠️ ${res.errores.length} factura(s) con error: ${res.errores[0].error}`);
-        setSelected(new Set());
-        load(true);
-      } catch {
-        setToast("Error al enviar por email");
-      }
-      return;
-    }
-
-    const sinTelefono = seleccionadas.filter(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""));
-    if (sinTelefono.length > 0) {
-      if (!confirm(`${sinTelefono.length} factura(s) sin teléfono del cliente. Se abrieron las demás. ¿Continuar?`)) return;
-    }
-
     try {
       const res = await fetch(`/api/facturas/enviar-whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body: JSON.stringify({ factura_ids: seleccionadas.map(f => f.id), canal: "whatsapp" }),
+        body: JSON.stringify({ factura_ids: seleccionadas.map(f => f.id), canal: bulkCanal }),
       }).then(r => r.json());
 
-      if (res.enviados > 0) setToast(`✅ ${res.enviados} factura(s) enviada(s) por WhatsApp API`);
-
-      if (res.fallback_wa_me_ids?.length > 0) {
-        const fallbackFacturas = facturas.filter(f => res.fallback_wa_me_ids.includes(f.id));
-        const sinTel = fallbackFacturas.filter(f => !f.clientes?.telefono?.replace(/[^0-9]/g, ""));
-        const conTel = fallbackFacturas.filter(f => f.clientes?.telefono?.replace(/[^0-9]/g, ""));
-        if (conTel.length > 0) {
-          conTel.forEach((f, i) => {
-            setTimeout(() => handleWhatsApp(f), i * 400);
-          });
-          setToast(`📱 Sin créditos API. Abriendo ${conTel.length} chats de wa.me (gratis)`);
-        }
-        if (sinTel.length > 0) {
-          setToast(`⚠️ ${sinTel.length} factura(s) sin teléfono ni email`);
-        }
-      }
-
-      if (res.enviados_email?.length > 0) {
-        setToast(`📧 ${res.enviados_email.length} factura(s) enviadas por email`);
-      }
+      const parts: string[] = [];
+      if (res.enviados > 0) parts.push(`${res.enviados} factura(s) enviada(s)`);
+      if (res.enviados_email?.length > 0) parts.push(`📧 ${res.enviados_email.length} por email`);
+      if (res.fallback_wa_me_ids?.length > 0) parts.push(`📱 ${res.fallback_wa_me_ids.length} por wa.me`);
+      if (res.errores?.length > 0) parts.push(`⚠️ ${res.errores.length} error(es)`);
+      if (parts.length > 0) setToast(parts.join(" · "));
 
       setSelected(new Set());
       load(true);
@@ -742,10 +702,20 @@ export default function Facturas() {
                     className={`px-2 py-1 text-[10px] font-medium rounded-md transition-all ${bulkCanal === "email" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"}`}>
                     📧 Email
                   </button>
+                  <button onClick={() => setBulkCanal("both")}
+                    className={`px-2 py-1 text-[10px] font-medium rounded-md transition-all ${bulkCanal === "both" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>
+                    📱📧 Ambos
+                  </button>
                 </div>
                 <button onClick={handleBulkWhatsApp}
-                  className={`px-3 py-1.5 text-white text-xs font-semibold rounded-lg ${bulkCanal === "email" ? "bg-blue-600 hover:bg-blue-500" : "bg-green-600 hover:bg-green-500"}`}>
-                  {bulkCanal === "email" ? `📧 Enviar ${selected.size} por email` : `📱 Enviar ${selected.size} por WhatsApp`}
+                  className={`px-3 py-1.5 text-white text-xs font-semibold rounded-lg ${
+                    bulkCanal === "email" ? "bg-blue-600 hover:bg-blue-500" :
+                    bulkCanal === "both" ? "bg-purple-600 hover:bg-purple-500" :
+                    "bg-green-600 hover:bg-green-500"
+                  }`}>
+                  {bulkCanal === "email" ? `📧 Enviar ${selected.size} por email` :
+                   bulkCanal === "both" ? `📱📧 Enviar ${selected.size} por ambos` :
+                   `📱 Enviar ${selected.size} por WhatsApp`}
                 </button>
               </div>
             )}

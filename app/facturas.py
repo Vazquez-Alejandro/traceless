@@ -446,34 +446,35 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
         mp_link = f.data.get("mp_link", "")
         estado_actual = f.data.get("estado", "")
 
-        if req.canal == "email":
+        if req.canal in ("email", "both"):
             email_cliente = f.data["clientes"].get("email", "")
-            if not email_cliente:
+            if email_cliente:
+                from app.email_sender import enviar_factura_email
+                perfil = supabase.table("perfiles").select("nombre").eq("id", uid).single().execute()
+                ok = enviar_factura_email(
+                    email_cliente=email_cliente,
+                    nombre_cliente=f.data["clientes"]["nombre"],
+                    numero=f.data["numero"],
+                    total=f.data["total"],
+                    pdf_url=pdf_url,
+                    mp_link=mp_link,
+                    emisor_nombre=(perfil.data or {}).get("nombre", ""),
+                )
+                if ok:
+                    enviados += 1
+                    enviados_email.append(f.data["clientes"]["nombre"])
+                else:
+                    if req.canal == "email":
+                        errores.append({"id": fid, "error": "Error al enviar email"})
+            elif req.canal == "email":
                 errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin email"})
-                continue
-            from app.email_sender import enviar_factura_email
-            perfil = supabase.table("perfiles").select("nombre").eq("id", uid).single().execute()
-            ok = enviar_factura_email(
-                email_cliente=email_cliente,
-                nombre_cliente=f.data["clientes"]["nombre"],
-                numero=f.data["numero"],
-                total=f.data["total"],
-                pdf_url=pdf_url,
-                mp_link=mp_link,
-                emisor_nombre=(perfil.data or {}).get("nombre", ""),
-            )
-            if ok:
-                enviados += 1
-                enviados_email.append(f.data["clientes"]["nombre"])
-                if estado_actual == "emitida":
-                    supabase.table("facturas").update({"estado": "enviada"}).eq("id", fid).execute()
-            else:
-                errores.append({"id": fid, "error": "Error al enviar email"})
-        else:
+
+        if req.canal in ("whatsapp", "both"):
             import re
             telefono = re.sub(r'[^0-9]', '', (f.data["clientes"].get("telefono") or ""))
             if not telefono:
-                errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
+                if req.canal == "whatsapp":
+                    errores.append({"id": fid, "error": f"Cliente {f.data['clientes']['nombre']} sin teléfono"})
                 continue
             from app.lemon import can_send_whatsapp, log_whatsapp_send, get_whatsapp_count, get_user_plan
             from app.creditos import descontar_credito
@@ -498,8 +499,9 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
                 costo = plan.get("whatsapp_extra_cost", 70)
                 descontar_credito(uid, costo, f"Mensaje extra WhatsApp #{count}")
             enviados += 1
-            if estado_actual == "emitida":
-                supabase.table("facturas").update({"estado": "enviada"}).eq("id", fid).execute()
+
+        if estado_actual == "emitida":
+            supabase.table("facturas").update({"estado": "enviada"}).eq("id", fid).execute()
     if enviados > 0:
         from app.creditos import verificar_creditos_bajos
         verificar_creditos_bajos(uid)
