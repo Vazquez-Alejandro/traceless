@@ -922,24 +922,46 @@ async def procesar_programadas(secret: str = ""):
             supabase.table("facturas").update({"pdf_url": html_url}).eq("id", f["id"]).execute()
 
             plan = get_user_plan(uid)
+            base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
+            pdf_url_full = f"{base_url}{html_url}"
+            enviado = False
+
+            # Intentar WhatsApp si el plan lo permite
             if plan["whatsapp"]:
                 telefono = cli.get("telefono", "")
                 if telefono:
                     wp_ok, _ = can_send_whatsapp(uid)
                     if wp_ok:
-                        base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
-                        pdf_url = f"{base_url}{html_url}"
                         tasks.append(enviar_factura_whatsapp(
                             telefono=telefono,
                             cliente=cli.get("nombre", ""),
                             numero=afip_result["numero"],
                             total=f["total"],
-                            pdf_url=pdf_url,
+                            pdf_url=pdf_url_full,
                             fecha=hoy,
                             mp_link=mp_link,
                         ))
                         log_whatsapp_send(uid, f["id"], "factura")
-                        supabase.table("facturas").update({"estado": "enviada"}).eq("id", f["id"]).execute()
+                        enviado = True
+
+            # Si no se envió por WhatsApp, intentar por email
+            if not enviado:
+                email_cliente = cli.get("email", "")
+                if email_cliente:
+                    from app.email_sender import enviar_factura_email
+                    enviar_factura_email(
+                        email_cliente=email_cliente,
+                        nombre_cliente=cli.get("nombre", ""),
+                        numero=afip_result["numero"],
+                        total=f["total"],
+                        pdf_url=pdf_url_full,
+                        mp_link=mp_link,
+                        emisor_nombre=emisor.get("nombre", ""),
+                    )
+                    enviado = True
+
+            if enviado:
+                supabase.table("facturas").update({"estado": "enviada"}).eq("id", f["id"]).execute()
             procesadas += 1
             crear_notificacion(uid, "factura_programada", f"Factura programada #{afip_result['numero']} procesada", f"Se emitió la factura a {cli.get('nombre', '')} por ${f['total']:,.2f}", "/facturas")
         except Exception as e:

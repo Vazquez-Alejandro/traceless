@@ -33,26 +33,11 @@ def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: st
         return ""
 
 def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
-    cbu = emisor.get("cbu", "")
-    alias_banco = emisor.get("alias_banco", "")
-    qr_html = _generar_qr_pago(factura["total"], cbu, alias_banco, emisor.get("nombre", ""))
-
     mp_link = factura.get("mp_link", "")
     mp_section = ""
     if mp_link:
         mp_link_escaped = html_mod.escape(mp_link)
-        mp_section = f'<div style="margin-top:20px;text-align:center"><a href="{mp_link_escaped}" style="display:inline-block;padding:10px 24px;background:#009ee3;color:white;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">💳 Pagar online con MercadoPago</a></div>'
-
-    cbu_section = ""
-    if cbu or alias_banco:
-        cbu_lines = ""
-        if cbu:
-            cbu_lines += f"<div><strong>CBU:</strong> <span style='font-family:monospace'>{html_mod.escape(cbu)}</span></div>"
-        if alias_banco:
-            cbu_lines += f"<div><strong>Alias:</strong> <span style='font-family:monospace'>{html_mod.escape(alias_banco)}</span></div>"
-        cbu_lines += "<div style='margin-top:4px;font-size:11px;color:#666'>Transferí a esta cuenta</div>"
-        qr_cell = f'<div style="text-align:center">{qr_html}</div>' if qr_html else ""
-        cbu_section = f'<div style="margin-top:24px;padding:16px;border:1px solid #ddd;border-radius:10px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:8px;color:#333">Datos para transferencia bancaria</div><div style="display:flex;gap:20px;align-items:center">{cbu_lines} {qr_cell}</div></div>'
+        mp_section = f'<div style="margin-top:20px;text-align:center"><a href="{mp_link_escaped}" style="display:inline-block;padding:12px 32px;background:#009ee3;color:white;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">💳 Pagar con MercadoPago</a></div>'
 
     logo_url = emisor.get("logo_url", "")
     empresa = emisor.get("empresa", "")
@@ -121,7 +106,6 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     <tr><td>IVA</td><td style="text-align:right">${factura.get('iva', 0):,.2f}</td></tr>
     <tr class="final"><td>Total</td><td style="text-align:right">${factura['total']:,.2f}</td></tr>
   </table>
-  {cbu_section}
   {mp_section}
   {condiciones_section}
   <div class="cae">CAE: {html_mod.escape(str(factura['cae']))} — Vence: {html_mod.escape(str(factura.get('cae_vencimiento', '')))}</div>

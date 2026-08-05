@@ -18,7 +18,7 @@ PLANS = {
         "analytics": False,
         "recurrentes": False,
         "multi_user": False,
-        "retry_queue": False,
+        "retry_queue": True,
     },
     "pro": {
         "name": "Profesional",

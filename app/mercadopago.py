@@ -194,9 +194,8 @@ def crear_link_pago_factura(monto: float, descripcion: str, factura_id: str, ema
         "expiration_date_to": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
         "back_urls": {"success": f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/facturas"},
         "auto_return": "approved",
+        "statement_descriptor": "TRACELESS",
     }
-    if email_cliente:
-        body["payer"] = {"email": email_cliente}
     r = httpx.post(f"{MP_BASE}/checkout/preferences", json=body, headers=_mp_headers(), timeout=15)
     if r.status_code not in (200, 201):
         logger.error(f"Error creando link pago factura: {r.status_code} {r.text}")

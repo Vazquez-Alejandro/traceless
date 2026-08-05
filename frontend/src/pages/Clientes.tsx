@@ -152,6 +152,32 @@ export default function Clientes() {
           {total > 0 && <p className="text-xs text-gray-500 mt-1">{total} clientes</p>}
         </div>
         <div className="flex gap-2">
+          <button onClick={() => {
+            const ws = XLSX.utils.aoa_to_sheet([
+              ["nombre", "apellido", "email", "telefono", "cuit", "direccion", "condicion_iva"],
+              ["Juan", "Pérez", "juan@email.com", "1155551234", "20300000000", "Calle 123 456", "Consumidor Final"],
+              ["María", "López", "maria@email.com", "1166667890", "27300000000", "Av. Siempre Viva 789", "Monotributo"]
+            ]);
+            ws["!cols"] = [{wch:15},{wch:15},{wch:25},{wch:15},{wch:15},{wch:30},{wch:22}];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+            XLSX.writeFile(wb, "template_clientes.xlsx");
+          }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+            Descargar template
+          </button>
+          {clientes.length > 0 && (
+            <button onClick={() => {
+              const data = clientes.map(c => ({
+                nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit, direccion: (c as any).direccion || "", condicion_iva: (c as any).condicion_iva || "Consumidor Final"
+              }));
+              const ws = XLSX.utils.json_to_sheet(data);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+              XLSX.writeFile(wb, "mis_clientes.xlsx");
+            }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+              Exportar mis clientes
+            </button>
+          )}
           <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             {importando ? "Importando..." : "Importar Excel"}
           </button>

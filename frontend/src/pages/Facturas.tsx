@@ -62,6 +62,8 @@ export default function Facturas() {
   const [ncModal, setNcModal] = useState<{ open: boolean; factura: Factura | null; motivo: string; importe: string; loading: boolean }>({ open: false, factura: null, motivo: "", importe: "", loading: false });
   const [refModal, setRefModal] = useState<{ open: boolean; factura: Factura | null; metodo: string; referencia: string; importe: string; notas: string; loading: boolean }>({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false });
   const [importModal, setImportModal] = useState<{ open: boolean; items: any[]; loading: boolean; results: any[] | null }>({ open: false, items: [], loading: false, results: null });
+  const [pendientes, setPendientes] = useState<any[]>([]);
+  const [tab, setTab] = useState<"facturas" | "cola">("facturas");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (reset = true) => {
@@ -101,6 +103,14 @@ export default function Facturas() {
     api.auth.me().then(res => {
       if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos, cbu: res.user.cbu, alias_banco: res.user.alias_banco });
     });
+    // Cargar facturas pendientes de reintento
+    const t = localStorage.getItem("token");
+    if (t) {
+      fetch(`${BASE_URL}/api/retry/pending`, { headers: { Authorization: `Bearer ${t}` } })
+        .then(r => r.json())
+        .then(d => setPendientes(d.pendientes || []))
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -523,6 +533,16 @@ export default function Facturas() {
           }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             Exportar Excel
           </button>
+          <button onClick={() => {
+            const ws = XLSX.utils.json_to_sheet([{
+              cliente_cuit: "20300000000", cliente_nombre: "Juan Pérez", tipo: 11, importe: 1000, descripcion: "Honorarios", fecha: "2026-08-05"
+            }]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Facturas");
+            XLSX.writeFile(wb, "template_facturas.xlsx");
+          }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+            Descargar template
+          </button>
           <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
             Importar Excel
           </button>
@@ -539,7 +559,41 @@ export default function Facturas() {
         </div>
       </div>
 
-      {showForm && (
+      <div className="flex gap-1 mb-4 border-b border-gray-800">
+        <button onClick={() => setTab("facturas")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "facturas" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500 hover:text-gray-300"}`}>
+          Facturas ({total})
+        </button>
+        {pendientes.length > 0 && (
+          <button onClick={() => setTab("cola")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "cola" ? "border-amber-500 text-amber-400" : "border-transparent text-gray-500 hover:text-gray-300"}`}>
+            En cola ({pendientes.length})
+          </button>
+        )}
+      </div>
+
+      {tab === "cola" && pendientes.length > 0 && (
+        <div className="space-y-2 mb-6">
+          <p className="text-xs text-gray-500 mb-3">Estas facturas se reintentan automáticamente. ARCA no respondió en el primer intento.</p>
+          {pendientes.map((p: any) => (
+            <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-900/20 border border-amber-800/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-900/40 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-amber-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                </div>
+                <div>
+                  <p className="text-sm text-white">{p.clientes?.nombre} {p.clientes?.apellido}</p>
+                  <p className="text-xs text-gray-500">${p.importe?.toLocaleString("es-AR")} · Intento {p.intentos || 0}/5</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-amber-400">Reintentando...</p>
+                {p.ultimo_error && <p className="text-[10px] text-gray-600 max-w-[180px] truncate">{p.ultimo_error.slice(0, 50)}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "facturas" && (
         <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
           <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setDetalles([]); setUsarItems(false); setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -646,6 +700,8 @@ export default function Facturas() {
           </button>
         </form>
       )}
+
+      {tab === "facturas" && (<>
 
       {toast && (
         <div className="mb-4 p-3 rounded-xl bg-blue-900/30 border border-blue-700/30 text-sm text-blue-200 flex items-center justify-center gap-2">
@@ -807,6 +863,7 @@ export default function Facturas() {
         )}
         {facturas.length === 0 && !loading && <p className="text-gray-500 text-sm text-center py-8">No hay facturas{filterCliente || filterEstado ? " con estos filtros" : " aún"}.</p>}
       </div>
+      </>)}
 
       {ncModal.open && ncModal.factura && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setNcModal({ open: false, factura: null, motivo: "", importe: "", loading: false })}>

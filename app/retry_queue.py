@@ -56,6 +56,14 @@ def process_pending_retries():
                 .execute()
             results["permanently_failed"] += 1
             logger.warning(f"Factura {fid} falló permanentemente tras {intentos} intentos")
+            from app.notifications import crear_notificacion
+            crear_notificacion(
+                factura["user_id"],
+                "factura_reintento_fail",
+                "Factura no pudo emitirse",
+                f"La factura a {factura.get('descripcion', 'Honorarios')} por ${factura.get('importe', 0):,.2f} falló tras {max_intentos} intentos. Revisá ARCA o creala manualmente.",
+                "/facturas"
+            )
             continue
 
         try:
@@ -85,6 +93,19 @@ def process_pending_retries():
                 .execute()
             results["success"] += 1
             logger.info(f"Factura {fid} completada en reintento {intentos + 1}")
+
+            # Notificar al usuario que la factura se emitió
+            from app.notifications import crear_notificacion
+            factura_data = result.get("factura", {})
+            numero = factura_data.get("numero", "?")
+            total = factura_data.get("total", factura.get("importe", 0))
+            crear_notificacion(
+                factura["user_id"],
+                "factura_reintento_ok",
+                f"Factura #{numero} emitida",
+                f"La factura por ${total:,.2f} se emitió correctamente después de un reintento.",
+                "/facturas"
+            )
         except Exception as e:
             import math
             backoff_minutes = 5 * (2 ** intentos)

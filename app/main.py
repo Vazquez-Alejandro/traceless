@@ -74,11 +74,6 @@ def health():
         "supabase_url": _URL[:30] + "..." if _URL else "MISSING",
         "anon_key_len": len(_ANON_KEY) if _ANON_KEY else 0,
         "service_key_len": len(_SERVICE_KEY) if _SERVICE_KEY else 0,
-        "arca_use_real": os.getenv("ARCA_USE_REAL", "MISSING"),
-        "arca_env": os.getenv("ARCA_ENV", "MISSING"),
-        "arca_cuit": os.getenv("ARCA_CUIT", "MISSING")[:5] + "..." if os.getenv("ARCA_CUIT") else "MISSING",
-        "arca_cert_b64_len": len(os.getenv("ARCA_CERT_B64", "")),
-        "arca_key_b64_len": len(os.getenv("ARCA_KEY_B64", "")),
     }
 
 @app.get("/api/planes")
@@ -94,38 +89,6 @@ def listar_planes(authorization: str = Header("")):
         return {
             "planes": {k: {**v} for k, v in PLANS.items()},
         }
-
-@app.get("/api/debug/arca")
-def debug_arca():
-    import os, logging
-    logger = logging.getLogger("debug")
-    try:
-        from app.afip import _login, _cargar_certs, _generar_tra, _firmar_cms, _WSAA_WSDL, _arca_ses, _arca_transport, ARCA_HOMO
-        cert, key = _cargar_certs()
-        logger.info("Certs loaded: cert_len=%d, key_len=%d", len(cert), len(key))
-        tra = _generar_tra()
-        cms_b64 = _firmar_cms(tra, cert, key)
-        logger.info("CMS signed, len=%d", len(cms_b64))
-
-        import zeep
-        from zeep.transports import Transport
-        transport = Transport(session=_arca_ses)
-        client = zeep.Client(wsdl=_WSAA_WSDL, settings=zeep.Settings(strict=False), transport=transport)
-        service = client.bind('LoginCMSService', 'LoginCms')
-        logger.info("Calling loginCms to: %s", _WSAA_WSDL)
-        resp = service.loginCms(in0=cms_b64)
-        logger.info("Login OK, resp_len=%d", len(resp))
-        from lxml import etree
-        root = etree.fromstring(resp.encode())
-        token = root.findtext(".//token")
-        return {"ok": True, "token_len": len(token) if token else 0, "homo": ARCA_HOMO}
-    except Exception as e:
-        import traceback
-        cause = e
-        while hasattr(cause, '__cause__') and cause.__cause__:
-            cause = cause.__cause__
-        return {"ok": False, "error": str(cause)[:300], "type": type(cause).__name__, "traceback": traceback.format_exc()[-500:]}
-
 
 @app.get("/api/whatsapp/stats")
 def whatsapp_stats(authorization: str = Header("")):
