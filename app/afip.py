@@ -231,13 +231,7 @@ def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           ultimo_numero: int = 0) -> dict:
     USE_REAL = os.getenv("ARCA_USE_REAL", "0") == "1"
     if USE_REAL:
-        try:
-            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero)
-        except Exception as e:
-            logger.exception("ARCA real falló: %s", e)
-            import traceback
-            tb = traceback.format_exc()
-            logger.error("Traceback ARCA:\n%s", tb)
+        return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero)
     return _mock_generate(cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
 def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str, ultimo_numero: int = 0) -> dict:
