@@ -66,6 +66,7 @@ def root():
 
 @app.get("/api/health")
 def health():
+    import os
     from app.db import _URL, _ANON_KEY, _SERVICE_KEY
     return {
         "status": "ok",
@@ -73,6 +74,11 @@ def health():
         "supabase_url": _URL[:30] + "..." if _URL else "MISSING",
         "anon_key_len": len(_ANON_KEY) if _ANON_KEY else 0,
         "service_key_len": len(_SERVICE_KEY) if _SERVICE_KEY else 0,
+        "arca_use_real": os.getenv("ARCA_USE_REAL", "MISSING"),
+        "arca_env": os.getenv("ARCA_ENV", "MISSING"),
+        "arca_cuit": os.getenv("ARCA_CUIT", "MISSING")[:5] + "..." if os.getenv("ARCA_CUIT") else "MISSING",
+        "arca_cert_b64_len": len(os.getenv("ARCA_CERT_B64", "")),
+        "arca_key_b64_len": len(os.getenv("ARCA_KEY_B64", "")),
     }
 
 @app.get("/api/planes")
