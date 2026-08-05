@@ -206,54 +206,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
 
     supabase.table("facturas").update({"pdf_url": html_url, "mp_link": mp_link}).eq("id", factura["id"]).execute()
 
-    pdf_url_full = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}{html_url}"
-    fallback_wa_me = False
-    enviado_por = ""
-
-    if req.canal == "email":
-        email_cliente = cliente.data.get("email", "")
-        if email_cliente:
-            from app.email_sender import enviar_factura_email
-            ok = enviar_factura_email(
-                email_cliente=email_cliente,
-                nombre_cliente=cliente.data.get("nombre", ""),
-                numero=factura["numero"],
-                total=factura["total"],
-                pdf_url=pdf_url_full,
-                mp_link=mp_link,
-                emisor_nombre=emisor.get("nombre", ""),
-            )
-            enviado_por = "email" if ok else ""
-    elif req.canal == "whatsapp":
-        telefono = cliente.data.get("telefono", "")
-        if telefono:
-            if plan["whatsapp"]:
-                wp_ok, wp_msg = can_send_whatsapp(uid)
-                if wp_ok:
-                    await enviar_factura_whatsapp(
-                        telefono=telefono,
-                        cliente=cliente.data["nombre"],
-                        numero=factura["numero"],
-                        total=factura["total"],
-                        pdf_url=pdf_url_full,
-                        fecha=factura["fecha"].split("T")[0],
-                        mp_link=mp_link,
-                    )
-                    log_whatsapp_send(uid, factura["id"], "factura")
-                    from app.creditos import verificar_creditos_bajos
-                    verificar_creditos_bajos(uid)
-                    enviado_por = "whatsapp_api"
-                else:
-                    fallback_wa_me = True
-                    enviado_por = "wa_me"
-            else:
-                fallback_wa_me = True
-                enviado_por = "wa_me"
-
-    if enviado_por:
-        supabase.table("facturas").update({"estado": "enviada"}).eq("id", factura["id"]).execute()
-
-    return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}, "enviado_por": enviado_por, "fallback_wa_me": fallback_wa_me}
+    return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}, "enviado_por": "", "fallback_wa_me": False}
 
 @router.get("")
 def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), cliente_id: Optional[str] = None, estado: Optional[str] = None):
