@@ -478,8 +478,8 @@ export default function Facturas() {
       return;
     }
     if (res.pendiente) {
-      setToast("⏳ ARCA está tomando un café. Dejanos la factura acá, nos encargamos de aprobarla y enviarla apenas vuelva. Podés cerrar la app tranquilo.");
-      setTimeout(() => setToast(""), 8000);
+      setToast("⏳ " + (res.mensaje || "ARCA no respondió. Tu factura está en cola."));
+      setTimeout(() => setToast(""), 10000);
       setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
       setDetalles([]);
       setUsarItems(false);
