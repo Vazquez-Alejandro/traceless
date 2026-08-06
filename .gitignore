@@ -22,3 +22,4 @@ backend/
 .lemon-api-key
 .lemon-webhook-secret
 certs/
+.env*
