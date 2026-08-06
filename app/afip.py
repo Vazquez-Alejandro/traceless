@@ -35,26 +35,62 @@ logger = logging.getLogger("afip")
 ARCA_HOMO = os.getenv("ARCA_ENV", "homologacion") != "produccion"
 CUIT = os.getenv("ARCA_CUIT", "20294796577")
 
-_WSAA_WSDL = "https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl"
-_WSFE_WSDL = "https://wswhomo.afip.gov.ar/wsfev1/service.asmx?WSDL"
-if not ARCA_HOMO:
-    _WSAA_WSDL = "https://wsaa.afip.gov.ar/ws/services/LoginCms?wsdl"
-    _WSFE_WSDL = "https://servicios1.afip.gov.ar/wsfev1/service.asmx?WSDL"
+# Configuración fiscal resuelta con defaults de env y override por usuario.
+# Permitir que cada usuario use su propio CUIT + certificado es el objetivo:
+# los valores por usuario llegan en 'fiscal' (dict) y sobreescriben a los de env.
+_DEFAULT_FISCAL = {
+    "cuit": CUIT,
+    "cert": None,
+    "key": None,
+    "pto_venta": int(os.getenv("ARCA_PUNTO_VENTA", "2")),
+    "homologacion": os.getenv("ARCA_ENV", "homologacion") != "produccion",
+    "use_real": os.getenv("ARCA_USE_REAL", "1") == "1",
+    "nombre": "Usuario TraceLess",
+    "direccion": "",
+    "condicion_iva": "Responsable Inscripto",
+}
+
+
+def _resolver_cfg(fiscal: dict | None = None) -> dict:
+    cfg = dict(_DEFAULT_FISCAL)
+    if fiscal is None:
+        cfg["cert"], cfg["key"] = _cargar_certs()
+        return cfg
+    for k in ("cuit", "pto_venta", "homologacion", "use_real", "nombre", "direccion", "condicion_iva"):
+        if fiscal.get(k) is not None:
+            cfg[k] = fiscal[k]
+    # En el camino por-usuario NO heredamos el cert global: si el usuario no cargó
+    # su propio certificado, emitimos comprobante simple (sin CAE). Esto evita
+    # facturar con una identidad fiscal distinta a la del usuario (error 10007).
+    if fiscal.get("cert"):
+        cfg["cert"], cfg["key"] = fiscal["cert"], fiscal["key"]
+    else:
+        cfg["cert"], cfg["key"] = None, None
+    return cfg
+
+def _wsdl_wsaa(homologacion: bool) -> str:
+    return ("https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl" if homologacion
+            else "https://wsaa.afip.gov.ar/ws/services/LoginCms?wsdl")
+
+def _wsdl_wsfe(homologacion: bool) -> str:
+    return ("https://wswhomo.afip.gov.ar/wsfev1/service.asmx?WSDL" if homologacion
+            else "https://servicios1.afip.gov.ar/wsfev1/service.asmx?WSDL")
 
 _ta_cache = None
 
 def _cargar_certs():
-    env = os.getenv("ARCA_CERT_B64")
-    env_key = os.getenv("ARCA_KEY_B64")
-    if env and env_key:
-        cert = base64.b64decode(env).decode()
-        key = base64.b64decode(env_key).decode()
-    else:
+    try:
+        env = os.getenv("ARCA_CERT_B64")
+        env_key = os.getenv("ARCA_KEY_B64")
+        if env and env_key:
+            return base64.b64decode(env).decode(), base64.b64decode(env_key).decode()
         cert_path = os.getenv("ARCA_CERT_PATH", "certs/cert.pem")
         key_path = os.getenv("ARCA_KEY_PATH", "certs/key.pem")
-        cert = Path(cert_path).read_text()
-        key = Path(key_path).read_text()
-    return cert, key
+        if not Path(cert_path).exists() or not Path(key_path).exists():
+            return None, None
+        return Path(cert_path).read_text(), Path(key_path).read_text()
+    except Exception:
+        return None, None
 
 def _fecha_utc():
     return datetime.now(timezone.utc)
@@ -85,11 +121,15 @@ def _firmar_cms(tra: bytes, cert_pem: str, key_pem: str) -> str:
 
 _CACHE_PATH = "/tmp/arcata.json"
 
-def _ta_cache_load() -> dict | None:
+def _ta_key(key_id: str = "arcata") -> str:
+    return f"arcata::{key_id}"
+
+def _ta_cache_load(key_id: str = "arcata") -> dict | None:
+    cache_key = _ta_key(key_id)
     # Try Supabase first
     try:
         from app.db import supabase
-        r = supabase.table("cache").select("*").eq("key", "arcata").single().execute()
+        r = supabase.table("cache").select("*").eq("key", cache_key).single().execute()
         if r.data:
             d = r.data
             d["expires"] = datetime.fromisoformat(d["expires"])
@@ -101,6 +141,8 @@ def _ta_cache_load() -> dict | None:
     try:
         import json
         d = json.loads(open(_CACHE_PATH).read())
+        if d.get("_key") and d["_key"] != key_id:
+            return None
         d["expires"] = datetime.fromisoformat(d["expires"])
         return d
     except Exception:
@@ -108,12 +150,14 @@ def _ta_cache_load() -> dict | None:
 
 def _ta_cache_save(ta: dict):
     import json
+    key_id = ta.get("_key", "arcata")
+    cache_key = _ta_key(key_id)
     d = dict(ta)
     d["expires"] = ta["expires"].isoformat()
     # Try Supabase
     try:
         from app.db import supabase
-        supabase.table("cache").upsert({"key": "arcata", **d, "expires": d["expires"]}).execute()
+        supabase.table("cache").upsert({"key": cache_key, **d, "expires": d["expires"]}).execute()
     except Exception:
         pass
     # File fallback
@@ -124,16 +168,22 @@ def _ta_cache_save(ta: dict):
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=20),
        retry=retry_if_exception_type((RuntimeError, ConnectionError, TimeoutError)))
-def _login() -> dict:
+def _login(cfg: dict | None = None) -> dict:
     global _ta_cache
+    cfg = cfg or _resolver_cfg()
     now = datetime.now(timezone.utc)
+    cuit = cfg["cuit"]
+    key_id = f"{cuit}|{cfg.get('homologacion')}"
 
-    cached = _ta_cache or _ta_cache_load()
+    if _ta_cache and _ta_cache.get("_key") == key_id and _ta_cache["expires"] > now:
+        return _ta_cache
+
+    cached = _ta_cache_load(key_id)
     if cached and cached["expires"] > now:
         _ta_cache = cached
         return cached
 
-    cert, key = _cargar_certs()
+    cert, key = cfg["cert"], cfg["key"]
     tra = _generar_tra()
     cms_b64 = _firmar_cms(tra, cert, key)
 
@@ -143,7 +193,7 @@ def _login() -> dict:
     if _arca_transport is None:
         _arca_transport = Transport(session=_arca_ses)
     client = zeep.Client(
-        wsdl=_WSAA_WSDL,
+        wsdl=_wsdl_wsaa(cfg.get("homologacion", True)),
         settings=zeep.Settings(strict=False),
         transport=_arca_transport,
     )
@@ -153,7 +203,7 @@ def _login() -> dict:
         resp = service.loginCms(in0=cms_b64)
     except Exception as e:
         if "alreadyAuthenticated" in str(e):
-            fresh = _ta_cache_load()
+            fresh = _ta_cache_load(key_id)
             if fresh and fresh["expires"] > now:
                 _ta_cache = fresh
                 return fresh
@@ -180,7 +230,7 @@ def _login() -> dict:
     exp = root.findtext(".//expirationTime")
     expires = datetime.fromisoformat(exp) if exp else now + timedelta(hours=12)
 
-    _ta_cache = {"token": token, "sign": sign, "expires": expires}
+    _ta_cache = {"token": token, "sign": sign, "expires": expires, "_key": key_id}
     _ta_cache_save(_ta_cache)
     return _ta_cache
 
@@ -228,33 +278,47 @@ def _condicion_iva_receptor_id(condicion_iva: str) -> int:
 def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           tipo: int, importe: float,
                           condicion_iva: str, descripcion: str,
-                          ultimo_numero: int = 0) -> dict:
-    USE_REAL = os.getenv("ARCA_USE_REAL", "0") == "1"
-    if USE_REAL:
+                          ultimo_numero: int = 0,
+                          fiscal: dict | None = None) -> dict:
+    cfg = _resolver_cfg(fiscal)
+
+    # El usuario necesita sí o sí su certificado para emitir con CAE fiscal.
+    # Sin certificado emitimos un comprobante simple legítimo (sin CAE):
+    # sirve como presupuesto / nota de venta y NO implica documentación fiscal.
+    if not cfg.get("cert") or not cfg.get("key"):
+        return _simple_generate(cfg, cliente_cuit, tipo, importe, descripcion, ultimo_numero)
+
+    if cfg.get("use_real"):
         try:
-            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero)
+            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero, cfg)
         except Exception as e:
             from tenacity import RetryError
             if isinstance(e, RetryError) and e.last_attempt.exception():
                 raise e.last_attempt.exception()
             raise
-    return _mock_generate(cliente_cuit, tipo, importe, descripcion, ultimo_numero)
+    return _simple_generate(cfg, cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
-def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: str, ultimo_numero: int = 0) -> dict:
-    iva_percentage = 0.21
-    if tipo == 19:
-        iva_percentage = 0.105
-    neto = round(importe / (1 + iva_percentage), 2)
+def _faecal(importe: float, tipo: int) -> tuple[float, float]:
+    if tipo == 11:  # Factura C (monotributo) no discrimina IVA
+        return round(importe, 2), 0.0
+    pct = 0.105 if tipo == 19 else 0.21
+    neto = round(importe / (1 + pct), 2)
     iva = round(importe - neto, 2)
+    return neto, iva
+
+def _simple_generate(cfg: dict, cliente_cuit: str, tipo: int, importe: float, descripcion: str, ultimo_numero: int = 0) -> dict:
+    pto = int(cfg.get("pto_venta", 2))
+    neto, iva = _faecal(importe, tipo)
     prox = ultimo_numero + 1
     return {
-        "cae": f"{datetime.now().strftime('%Y%m%d')}{prox:08d}",
-        "cae_vencimiento": datetime.now().strftime("%Y-%m-%d"),
-        "numero": f"{_punto_venta():04d}-{prox:08d}",
+        "cae": "",
+        "cae_vencimiento": "",
+        "numero": f"{pto:04d}-{prox:08d}",
         "neto": neto,
         "iva": iva,
         "total": importe,
         "tipo": tipo,
+        "es_fiscal": False,
     }
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=3, max=30),
@@ -262,9 +326,12 @@ def _mock_generate(cliente_cuit: str, tipo: int, importe: float, descripcion: st
 def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                      tipo: int, importe: float,
                      condicion_iva: str, descripcion: str,
-                     ultimo_numero: int = 0) -> dict:
-    ta = _login()
-    pto_vta = _punto_venta()
+                     ultimo_numero: int = 0,
+                     cfg: dict | None = None) -> dict:
+    cfg = cfg or _resolver_cfg()
+    ta = _login(cfg)
+    pto_vta = int(cfg.get("pto_venta", 2))
+    auth_cuit = cfg["cuit"]
     doc_tipo, doc_nro = _doc_tipo(cliente_cuit)
 
     es_factura_c = (tipo == 11)
@@ -283,8 +350,8 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     global _arca_transport
     if _arca_transport is None:
         _arca_transport = Transport(session=_arca_ses)
-    client = zeep.Client(wsdl=_WSFE_WSDL, transport=_arca_transport, settings=zeep.Settings(strict=False))
-    auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": CUIT}
+    client = zeep.Client(wsdl=_wsdl_wsfe(cfg.get("homologacion", True)), transport=_arca_transport, settings=zeep.Settings(strict=False))
+    auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": auth_cuit}
 
     ultimo_arca = client.service.FECompUltimoAutorizado(Auth=auth, PtoVta=pto_vta, CbteTipo=tipo)
     if hasattr(ultimo_arca, 'Errors') and ultimo_arca.Errors:

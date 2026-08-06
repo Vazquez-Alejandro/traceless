@@ -57,6 +57,10 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     if condiciones_venta:
         condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{html_mod.escape(condiciones_venta)}</div></div>'
 
+    cae_section = ""
+    if factura.get("cae"):
+        cae_section = f'<div class="cae">CAE: {html_mod.escape(str(factura["cae"]))} — Vence: {html_mod.escape(str(factura.get("cae_vencimiento", "")))}</div>'
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
@@ -108,7 +112,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
   </table>
   {mp_section}
   {condiciones_section}
-  <div class="cae">CAE: {html_mod.escape(str(factura['cae']))} — Vence: {html_mod.escape(str(factura.get('cae_vencimiento', '')))}</div>
+  {cae_section}
   <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
 """

@@ -475,6 +475,9 @@ def me(authorization: str = Header("")):
                 "retry_queue": plan.get("retry_queue", False),
             },
             "whatsapp_configurado": whatsapp_ok,
+            "arca_configurado": bool(perfil_data.get("arca_cert") and perfil_data.get("arca_key") and perfil_data.get("arca_cuit")),
+            "arca_cuit": perfil_data.get("arca_cuit", "") if perfil_data else "",
+            "arca_env": (perfil_data.get("arca_env", "produccion") if perfil_data else "produccion"),
             "telefono": perfil_data.get("telefono", "") if perfil_data else "",
             "cuit": perfil_data.get("cuit", "") if perfil_data else "",
             "direccion": perfil_data.get("direccion", "") if perfil_data else "",
@@ -512,6 +515,11 @@ class ProfileUpdate(BaseModel):
     recordatorios_whatsapp: Optional[bool] = None
     recordatorio_monotributo: Optional[bool] = None
     recordatorio_vencidas: Optional[bool] = None
+    arca_cuit: Optional[str] = None
+    arca_cert: Optional[str] = None
+    arca_key: Optional[str] = None
+    arca_punto_venta: Optional[int] = None
+    arca_env: Optional[str] = None
 
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):

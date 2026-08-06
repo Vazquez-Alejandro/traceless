@@ -25,6 +25,37 @@ def _get_user_lock(user_id: str) -> threading.Lock:
             _user_locks[user_id] = threading.Lock()
         return _user_locks[user_id]
 
+def _fiscal_cfg_emisor(emisor: dict) -> dict:
+    import base64
+    cfg = {
+        "cuit": emisor.get("arca_cuit") or emisor.get("cuit") or "",
+        "pto_venta": int(emisor["arca_punto_venta"]) if emisor.get("arca_punto_venta") else None,
+        "homologacion": (emisor.get("arca_env", "produccion") != "produccion"),
+        "use_real": bool(emisor.get("arca_cert") and emisor.get("arca_key")),
+        "nombre": emisor.get("nombre", ""),
+        "direccion": emisor.get("direccion", ""),
+        "condicion_iva": emisor.get("condicion_iva", "Responsable Inscripto"),
+        "cert": None,
+        "key": None,
+    }
+    cert = emisor.get("arca_cert") or ""
+    key = emisor.get("arca_key") or ""
+    if cert.startswith("arza_b64:"):
+        try:
+            cfg["cert"] = base64.b64decode(cert.split(":", 1)[1]).decode()
+        except Exception:
+            cfg["cert"] = None
+    elif cert:
+        cfg["cert"] = cert
+    if key.startswith("arza_b64:"):
+        try:
+            cfg["key"] = base64.b64decode(key.split(":", 1)[1]).decode()
+        except Exception:
+            cfg["key"] = None
+    elif key:
+        cfg["key"] = key
+    return cfg
+
 class DetalleItem(BaseModel):
     descripcion: str
     cantidad: float = 1
@@ -139,6 +170,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
         descripcion=req.descripcion,
         ultimo_numero=ultimo_numero,
+        fiscal=_fiscal_cfg_emisor(emisor),
     )
 
     factura_data = {
@@ -253,6 +285,9 @@ async def crear_nota_credito(req: NotaCreditoCreate, authorization: str = Header
     if not ok:
         raise HTTPException(402, msg)
 
+    _perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+    _emisor = _perfil.data or {}
+
     factura_original = supabase.table("facturas").select("*").eq("id", req.factura_original_id).eq("user_id", uid).single().execute()
     if not factura_original.data:
         raise HTTPException(404, "Factura original no encontrada")
@@ -302,6 +337,7 @@ async def crear_nota_credito(req: NotaCreditoCreate, authorization: str = Header
             condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
             descripcion=f"Nota de crédito s/ Factura {orig.get('numero', '')} — {req.motivo}",
             ultimo_numero=ultimo_numero,
+            fiscal=_fiscal_cfg_emisor(_emisor),
         )
     except Exception as e:
         raise HTTPException(502, f"Error emitiendo nota de crédito en ARCA: {e}")
@@ -554,6 +590,9 @@ async def importar_facturas(req: list[FacturaImportItem], authorization: str = H
     if not ok:
         raise HTTPException(402, msg)
 
+    _emi = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+    _emisor_import = _emi.data or {}
+
     resultados = []
     for i, item in enumerate(req):
         try:
@@ -596,6 +635,7 @@ async def importar_facturas(req: list[FacturaImportItem], authorization: str = H
                 condicion_iva=cliente_data.get("condicion_iva", "Consumidor Final"),
                 descripcion=item.descripcion,
                 ultimo_numero=ultimo_numero,
+                fiscal=_fiscal_cfg_emisor(_emisor_import),
             )
 
             hoy = item.fecha or datetime.now().strftime("%Y-%m-%d")
@@ -803,7 +843,8 @@ async def procesar_recurrentes(secret: str = ""):
                             cli.data.get("cuit",""), cli.data.get("nombre",""),
                             rec["tipo"], rec["importe"],
                             cli.data.get("condicion_iva","Consumidor Final"),
-                            rec.get("descripcion",""), 0
+                            rec.get("descripcion",""), 0,
+                            fiscal=_fiscal_cfg_emisor(emisor),
                         )
                         fd = {
                             "user_id": uid, "cliente_id": rec["cliente_id"],
@@ -891,6 +932,7 @@ async def procesar_programadas(secret: str = ""):
                 condicion_iva=cli.get("condicion_iva", "Consumidor Final"),
                 descripcion=desc,
                 ultimo_numero=ultimo_numero,
+                fiscal=_fiscal_cfg_emisor(emisor),
             )
 
             from app.mercadopago import crear_link_pago_factura
