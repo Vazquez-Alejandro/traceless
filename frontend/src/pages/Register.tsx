@@ -17,11 +17,15 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+  const [referralPromo, setReferralPromo] = useState("");
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const planParam = searchParams.get("plan");
+  const codeParam = searchParams.get("code");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(planParam);
   const navigate = useNavigate();
 
@@ -31,6 +35,36 @@ export default function Register() {
     number: /[0-9]/.test(password),
   };
   const passwordValid = passwordChecks.length && passwordChecks.upper && passwordChecks.number;
+
+  // Auto-fill referral code from URL
+  useState(() => {
+    if (codeParam) {
+      setReferralCode(codeParam.toUpperCase());
+      validateReferralCode(codeParam.toUpperCase());
+    }
+  });
+
+  const validateReferralCode = async (code: string) => {
+    if (!code) {
+      setReferralValid(null);
+      setReferralPromo("");
+      return;
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/api/referrals/validate/${code}`);
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setReferralValid(true);
+        setReferralPromo(data.promo_description);
+      } else {
+        setReferralValid(false);
+        setReferralPromo("");
+      }
+    } catch {
+      setReferralValid(false);
+      setReferralPromo("");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +84,12 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const signupRes = await api.auth.signup({ email, password, name });
+      const signupRes = await api.auth.signup({
+        email,
+        password,
+        name,
+        referral_code: referralCode || undefined,
+      });
       if (signupRes.error) {
         setError(signupRes.error);
         return;
@@ -61,6 +100,19 @@ export default function Register() {
       }
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
+
+      // Apply referral code if valid
+      if (referralValid && referralCode) {
+        try {
+          await fetch(`${BASE_URL}/api/referrals/apply`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${res.token}` },
+          });
+        } catch (e) {
+          console.error("Error applying referral:", e);
+        }
+      }
+
       if (selectedPlan !== "free") {
         const p = await fetch(`${BASE_URL}/api/mercadopago/checkout?plan_key=${selectedPlan}`, {
           method: "POST",
@@ -169,6 +221,34 @@ export default function Register() {
           {confirmPassword && password !== confirmPassword && (
             <p className="text-red-400 text-[10px] -mt-2">Las contraseñas no coinciden</p>
           )}
+          <div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Código de referido (opcional)"
+                value={referralCode}
+                onChange={e => {
+                  const val = e.target.value.toUpperCase();
+                  setReferralCode(val);
+                  validateReferralCode(val);
+                }}
+                disabled={loading}
+                className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50 uppercase"
+              />
+              {referralValid === true && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">✓</span>
+              )}
+              {referralValid === false && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-sm">✕</span>
+              )}
+            </div>
+            {referralValid === true && referralPromo && (
+              <p className="text-green-400 text-[10px] mt-1">🎁 {referralPromo}</p>
+            )}
+            {referralValid === false && referralCode && (
+              <p className="text-red-400 text-[10px] mt-1">Código no válido o ya utilizado</p>
+            )}
+          </div>
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"

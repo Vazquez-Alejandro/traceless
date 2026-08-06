@@ -124,6 +124,7 @@ class SignupRequest(BaseModel):
     email: str
     password: str
     name: str
+    referral_code: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str
@@ -195,11 +196,14 @@ def signup(req: SignupRequest):
         logger.warning(f"Error insertando perfil: {e}")
 
     trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    app_meta = {"plan": "free", "trial_end": trial_end}
+    if req.referral_code:
+        app_meta["referral_code"] = req.referral_code.upper()
     try:
         httpx.put(
             f"{_URL}/auth/v1/admin/users/{user_id}",
             headers={"apikey": _SERVICE_KEY, "Authorization": f"Bearer {_SERVICE_KEY}", "Content-Type": "application/json"},
-            json={"app_metadata": {"plan": "free", "trial_end": trial_end}},
+            json={"app_metadata": app_meta},
             timeout=10,
         )
     except Exception as e:
