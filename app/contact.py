@@ -60,7 +60,6 @@ def enviar_contacto(req: ContactForm):
     # Notificar por Telegram
     try:
         import httpx
-        import os
         telegram_url = os.getenv("TELEGRAM_NOTIFIER_URL", "https://telegram-notifier-pmcs.onrender.com")
         httpx.post(
             f"{telegram_url}/notify",
