@@ -51,7 +51,7 @@ export default function Facturas() {
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [cliForm, setCliForm] = useState({ nombre: "", apellido: "", telefono: "", cuit: "" });
   const [loading, setLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number; cbu?: string; alias_banco?: string }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
+  const [userPlan, setUserPlan] = useState<{ invoices_limit: number | null; invoices_used: number; features: { recurrentes: boolean; analytics: boolean }; whatsapp_configurado?: boolean; whatsapp_limit?: number; whatsapp_used?: number; whatsapp_extra_cost?: number; creditos?: number; cbu?: string; alias_banco?: string; arca_configurado?: boolean }>({ invoices_limit: 5, invoices_used: 0, features: { recurrentes: false, analytics: false } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkCanal, setBulkCanal] = useState<"whatsapp" | "email" | "both">("whatsapp");
 
@@ -101,7 +101,7 @@ export default function Facturas() {
   useEffect(() => {
     api.clientes.list(100, 0).then(res => setClientes(res.clientes || []));
     api.auth.me().then(res => {
-      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos, cbu: res.user.cbu, alias_banco: res.user.alias_banco });
+      if (res.user) setUserPlan({ invoices_limit: res.user.invoices_limit, invoices_used: res.user.invoices_used, features: res.user.features || { recurrentes: false, analytics: false }, whatsapp_configurado: res.user.whatsapp_configurado, whatsapp_limit: res.user.whatsapp_limit, whatsapp_used: res.user.whatsapp_used, whatsapp_extra_cost: res.user.whatsapp_extra_cost, creditos: res.user.creditos, cbu: res.user.cbu, alias_banco: res.user.alias_banco, arca_configurado: res.user.arca_configurado });
     });
     // Cargar facturas pendientes de reintento
     const t = localStorage.getItem("token");
@@ -469,7 +469,7 @@ export default function Facturas() {
     } else if (res.enviado_por === "whatsapp_api") {
       setToast("✅ Factura enviada por WhatsApp API");
     } else {
-      setToast("Factura creada ✅ Compartila con tu cliente");
+      setToast(res?.factura?.es_fiscal === false ? "Comprobante simple creado (sin CAE) - Compartilo con tu cliente" : "Factura creada ✅ Compartila con tu cliente");
     }
 
     setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
@@ -599,6 +599,16 @@ export default function Facturas() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
           {editingId && <p className="text-sm text-gray-400 mb-3">Editando factura</p>}
+          {!userPlan.arca_configurado && (
+            <div className="mb-4 p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm flex flex-col gap-1">
+              <strong>⚠️ Sin facturación fiscal conectada</strong>
+              <span>
+                Esta factura se emitirá como <strong>comprobante simple (sin CAE)</strong>. Para que reciba y envíes una{" "}
+                <strong>factura fiscal válida ante AFIP</strong>, conectá tu facturación en{" "}
+                <Link to="/perfil" className="underline font-semibold hover:text-amber-100">tu perfil</Link> cargando tu CUIT y certificado de ARCA.
+              </span>
+            </div>
+          )}
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div className="flex gap-2">
               <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required

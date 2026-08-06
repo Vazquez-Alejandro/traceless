@@ -187,6 +187,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         "fecha": hoy,
         "vencimiento": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
         "estado": "emitida",
+        "es_fiscal": bool(afip_result.get("es_fiscal", True)),
     }
 
     if req.recurrente:
