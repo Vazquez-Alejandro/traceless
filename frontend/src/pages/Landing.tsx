@@ -25,7 +25,7 @@ const TESTIMONIALS = [
 const PLANS = [
   {
     key: "free",
-    name: "Gratis",
+    name: "Freemium",
     price: "Gratis",
     desc: "Para probar la plataforma",
     features: ["20 facturas por mes", "Sin WhatsApp API", "1 usuario"],
