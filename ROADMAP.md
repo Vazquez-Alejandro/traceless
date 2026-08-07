@@ -2,11 +2,10 @@
 
 ## Pendiente (antes de lanzar)
 
-### Activar keep-alive del notificador de Telegram (2 min)
-- [ ] Crear monitor **HTTPS** en `uptimerobot.com` (gratis)
-  - URL: `https://www.traceless.com.ar/api/keepalive?telegram=1`
-  - Intervalo: **5 minutos**
-  - Motivo: el notifier corre en Render plan gratuito y se "duerme" por inactividad, perdiendo avisos de soporte/registros. El endpoint `/api/keepalive` ya está desplegado en producción; el monitor es quien lo dispara cada 5 min.
+### Activar keep-alive del notificador de Telegram ✔
+- [x] Monitor **HTTPS** creado en `uptimerobot.com`
+  - URL: `https://www.traceless.com.ar/api/keepalive?telegram=1` (intervalo 5 min)
+  - Verificado en producción: responde `200` con `{"status":"ok","keepalive":"telegram:200"}`
 
 ## Completado
 
