@@ -10,6 +10,15 @@ from collections import defaultdict
 
 logger = logging.getLogger("auth")
 
+def _arca_configurado(p: dict | None) -> bool:
+    if not p:
+        return False
+    # Si la columna arca_validado existe y es True -> conectada de verdad
+    if "arca_validado" in p:
+        return bool(p.get("arca_validado"))
+    # Migración pendiente: fallback al check de datos (aunque no fue validado)
+    return bool(p.get("arca_cert") and p.get("arca_key") and p.get("arca_cuit"))
+
 # Rate limiting para login
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 MAX_ATTEMPTS = 5
@@ -475,7 +484,7 @@ def me(authorization: str = Header("")):
                 "retry_queue": plan.get("retry_queue", False),
             },
             "whatsapp_configurado": whatsapp_ok,
-            "arca_configurado": bool(perfil_data.get("arca_validado")),
+            "arca_configurado": _arca_configurado(perfil_data),
             "arca_cuit": perfil_data.get("arca_cuit", "") if perfil_data else "",
             "arca_env": (perfil_data.get("arca_env", "produccion") if perfil_data else "produccion"),
             "arca_punto_venta": perfil_data.get("arca_punto_venta", 2) if perfil_data else 2,
@@ -571,14 +580,22 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
         logger.warning(f"ARCA connect falló para {cuit}: {e}")
         raise HTTPException(400, f"No se pudo validar el certificado con ARCA. {str(e)[:200]}")
 
-    supabase.table("perfiles").update({
+        base_data = {
         "arca_cuit": cuit,
         "arca_cert": "arza_b64:" + base64.b64encode(cert_pem.encode()).decode(),
         "arca_key": "arza_b64:" + base64.b64encode(key_pem.encode()).decode(),
         "arca_punto_venta": req.arca_punto_venta,
         "arca_env": req.arca_env,
-        "arca_validado": True,
-    }).eq("id", uid).execute()
+    }
+    try:
+        supabase.table("perfiles").update({**base_data, "arca_validado": True}).eq("id", uid).execute()
+    except Exception:
+        # Columna arca_validado aún no existe: guardar sin ella (migración pendiente)
+        try:
+            supabase.table("perfiles").update(base_data).eq("id", uid).execute()
+        except Exception as e:
+            logger.warning(f"Error guardando arca en perfiles para {cuit}: {e}")
+            raise HTTPException(500, "El certificado se validó con ARCA, pero falló guardarlo en tu perfil. Contactá a soporte.")
 
     return {"ok": True, "mensaje": "Facturación fiscal conectada y verificada con ARCA. Ya podés emitir facturas con CAE."}
 
