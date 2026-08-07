@@ -475,7 +475,7 @@ def me(authorization: str = Header("")):
                 "retry_queue": plan.get("retry_queue", False),
             },
             "whatsapp_configurado": whatsapp_ok,
-            "arca_configurado": bool(perfil_data.get("arca_cert") and perfil_data.get("arca_key") and perfil_data.get("arca_cuit")),
+            "arca_configurado": bool(perfil_data.get("arca_validado")),
             "arca_cuit": perfil_data.get("arca_cuit", "") if perfil_data else "",
             "arca_env": (perfil_data.get("arca_env", "produccion") if perfil_data else "produccion"),
             "arca_punto_venta": perfil_data.get("arca_punto_venta", 2) if perfil_data else 2,
@@ -577,6 +577,7 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
         "arca_key": "arza_b64:" + base64.b64encode(key_pem.encode()).decode(),
         "arca_punto_venta": req.arca_punto_venta,
         "arca_env": req.arca_env,
+        "arca_validado": True,
     }).eq("id", uid).execute()
 
     return {"ok": True, "mensaje": "Facturación fiscal conectada y verificada con ARCA. Ya podés emitir facturas con CAE."}
