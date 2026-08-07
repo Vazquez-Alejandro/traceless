@@ -107,6 +107,42 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
         }
 
 
+@router.post("/preview")
+async def preview_factura(req: FacturaCreate, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    from app.pdf import generar_html_factura
+    from app.afip import _faecal
+
+    cliente = supabase.table("clientes").select("*").eq("id", req.cliente_id).eq("user_id", uid).single().execute()
+    if not cliente.data:
+        raise HTTPException(404, "Cliente no encontrado")
+    perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+    emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "condicion_iva": "Responsable Inscripto"}
+
+    if req.detalles:
+        importe_total = round(sum(d.cantidad * d.precio_unitario for d in req.detalles), 2)
+    else:
+        importe_total = req.importe or 0
+
+    neto, iva = _faecal(importe_total, req.tipo)
+    preview_factura_dict = {
+        "id": "preview",
+        "numero": "PREVIEW",
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "tipo": req.tipo,
+        "tipo_nombre": _tipo_nombre(req.tipo),
+        "neto": neto,
+        "iva": iva,
+        "total": importe_total,
+        "descripcion": req.descripcion,
+        "detalles": [d.model_dump() for d in req.detalles] if req.detalles else [],
+        "cae": "",
+        "cae_vencimiento": "",
+    }
+    html = generar_html_factura(preview_factura_dict, cliente.data, emisor, preview=True)
+    return {"html": html}
+
+
 async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     plan = get_user_plan(uid)
     cliente = supabase.table("clientes").select("*").eq("id", req.cliente_id).eq("user_id", uid).single().execute()

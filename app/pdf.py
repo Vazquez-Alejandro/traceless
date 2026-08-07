@@ -32,7 +32,7 @@ def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: st
     except Exception:
         return ""
 
-def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
+def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bool = False) -> str:
     mp_link = factura.get("mp_link", "")
     mp_section = ""
     if mp_link:
@@ -58,7 +58,12 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
         condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{html_mod.escape(condiciones_venta)}</div></div>'
 
     cae_section = ""
-    if factura.get("cae"):
+    if preview:
+        cae_section = ('<div style="margin-top:24px;padding:14px;border:1px dashed #f59e0b;border-radius:8px;'
+                       'background:#fffbeb;text-align:center">'
+                       '<div style="font-weight:bold;color:#b45309;font-size:13px">VISTA PREVIA — FACTURA NO EMITIDA</div>'
+                       '<div style="color:#b45309;font-size:12px;margin-top:4px">Este es un borrador: el número y el CAE se asignarán recién al emitir.</div></div>')
+    elif factura.get("cae"):
         cae_section = f'<div class="cae">CAE: {html_mod.escape(str(factura["cae"]))} — Vence: {html_mod.escape(str(factura.get("cae_vencimiento", "")))}</div>'
     else:
         cae_section = ('<div style="margin-top:24px;padding:14px;border:2px solid #dc2626;border-radius:8px;'

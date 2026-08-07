@@ -56,6 +56,7 @@ export default function Facturas() {
   const [bulkCanal, setBulkCanal] = useState<"whatsapp" | "email" | "both">("whatsapp");
 
   const [filterCliente, setFilterCliente] = useState("");
+  const [preview, setPreview] = useState<{ open: boolean; loading: boolean; html: string }>({ open: false, loading: false, html: "" });
   const [filterEstado, setFilterEstado] = useState("");
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -408,6 +409,22 @@ export default function Facturas() {
 
   const totalItems = detalles.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
 
+  const handlePreview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.cliente_id) { setToast("Seleccioná un cliente"); setTimeout(() => setToast(""), 4000); return; }
+    setPreview({ open: true, loading: true, html: "" });
+    try {
+      const body: any = { ...form, importe: usarItems ? totalItems : parseFloat(form.importe || "0"), tipo: form.tipo };
+      if (usarItems) body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
+      const res = await api.facturas.preview(body);
+      setPreview({ open: true, loading: false, html: res?.html || "<p>No se pudo generar la vista previa.</p>" });
+    } catch (err: any) {
+      setPreview({ open: false, loading: false, html: "" });
+      setToast("Error: " + (err.message || "No se pudo previsualizar"));
+      setTimeout(() => setToast(""), 5000);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -720,9 +737,15 @@ export default function Facturas() {
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
-            {loading ? "Guardando..." : editingId ? "Actualizar Factura" : form.scheduled_send ? "Programar Factura" : "Emitir Factura"}
-          </button>
+          <div className="flex gap-3">
+            <button type="button" onClick={handlePreview} disabled={loading}
+              className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+              👁 Vista previa
+            </button>
+            <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+              {loading ? "Guardando..." : editingId ? "Actualizar Factura" : form.scheduled_send ? "Programar Factura" : "Emitir Factura"}
+            </button>
+          </div>
         </form>
       )}
 
@@ -1049,6 +1072,28 @@ export default function Facturas() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {preview.open && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-gray-950 rounded-2xl border border-gray-800 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <h3 className="text-sm font-semibold">Vista previa del comprobante</h3>
+              <button onClick={() => setPreview({ open: false, loading: false, html: "" })} className="text-gray-400 hover:text-white p-1" title="Cerrar">✕</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto p-2">
+              {preview.loading ? (
+                <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Generando vista previa...</div>
+              ) : (
+                <iframe title="Vista previa" className="w-full h-[70vh] rounded-lg bg-white" srcDoc={preview.html} />
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-800 flex justify-end gap-3">
+              <button onClick={() => setPreview({ open: false, loading: false, html: "" })}
+                className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl text-sm">Cerrar</button>
             </div>
           </div>
         </div>

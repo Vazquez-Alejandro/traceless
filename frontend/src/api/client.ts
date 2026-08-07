@@ -140,6 +140,7 @@ export const api = {
     },
     create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string; canal?: string }) =>
       request("/facturas", { method: "POST", body: JSON.stringify(data) }),
+    preview: (data: any) => request("/facturas/preview", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request(`/facturas/${id}`),
     update: (id: string, data: any) =>
       request(`/facturas/${id}`, { method: "PUT", body: JSON.stringify(data) }),
