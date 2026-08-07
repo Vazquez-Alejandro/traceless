@@ -16,6 +16,7 @@ export default function Perfil() {
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
   const [arcaState, setArcaState] = useState<"idle" | "validating" | "ok" | "error">("idle");
+  const [logoPreview, setLogoPreview] = useState("");
   const [msg, setMsg] = useState("");
   const [pricing, setPricing] = useState<Record<string, { label: string; label_ars: string; ars: number }>>({});
   useEffect(() => {
@@ -46,8 +47,33 @@ export default function Perfil() {
       setUser(u);
       setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: u.recordatorios_whatsapp !== false, recordatorio_monotributo: u.recordatorio_monotributo !== false, recordatorio_vencidas: u.recordatorio_vencidas !== false });
       setArca({ arca_cuit: u.arca_cuit || "", arca_cert: "", arca_key: "", arca_punto_venta: u.arca_punto_venta || 2, arca_env: u.arca_env || "produccion" });
+      const storedLogo = u.logo_url || "";
+      if (storedLogo.startsWith("data:image/")) setLogoPreview(storedLogo);
     });
   }, []);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const okType = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type);
+    if (!okType) {
+      setMsg("Formato no válido. Usá PNG, JPG, WebP o SVG.");
+      setTimeout(() => setMsg(""), 4000);
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMsg("La imagen es muy grande (máx. 2MB). Usá una más liviana.");
+      setTimeout(() => setMsg(""), 4000);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      setLogoPreview(dataUrl);
+      setForm({ ...form, logo_url: dataUrl });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     const token = localStorage.getItem("token");
@@ -196,11 +222,24 @@ export default function Perfil() {
               ) : <p className="text-white mt-0.5">{user.empresa || "—"}</p>}
             </div>
             <div>
-              <label className="text-gray-500 text-xs">Logo (URL de imagen)</label>
+              <div className="flex items-center justify-between">
+                <label className="text-gray-500 text-xs">Logo</label>
+                <button onClick={() => setForm({ ...form, logo_url: "" })} className="text-[10px] text-red-400 hover:underline">Eliminar logo</button>
+              </div>
+              {logoPreview && (
+                <img src={logoPreview} alt="logo" className="mt-1 max-h-12 object-contain rounded" />
+              )}
               {edit ? (
-                <input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://..."
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
-              ) : <p className="text-white mt-0.5 text-xs break-all">{user.logo_url || "—"}</p>}
+                <div className="mt-2">
+                  <input value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} placeholder="https://... o usá el botón de abajo"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+                  <label className="mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-sm text-gray-300 cursor-pointer">
+                    Subir imagen
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoUpload} className="hidden" />
+                  </label>
+                  <p className="text-[10px] text-gray-500 mt-1">PNG, JPG, WebP o SVG · máx. 2MB</p>
+                </div>
+              ) : <p className="text-white mt-0.5 text-xs break-all">{user.logo_url ? "✓ Logo cargado" : "—"}</p>}
             </div>
             <div>
               <label className="text-gray-500 text-xs">Email fiscal</label>
