@@ -8,16 +8,6 @@
   - Intervalo: **5 minutos**
   - Motivo: el notifier corre en Render plan gratuito y se "duerme" por inactividad, perdiendo avisos de soporte/registros. El endpoint `/api/keepalive` ya está desplegado en producción; el monitor es quien lo dispara cada 5 min.
 
-### Verificar funcionalidad
-- [ ] Probar registro → recibir email de verificación → verificar → login
-- [ ] Probar forgot password → recibir email → restablecer → login
-
-### Configuración Supabase (5 min)
-- [ ] **Email Templates**: Cambiar URL base a `https://www.traceless.com.ar` en Confirm signup y Reset Password
-- [ ] **URL Configuration**:
-  - Site URL: `https://www.traceless.com.ar`
-  - Redirect URLs: agregar `https://www.traceless.com.ar/verify-email` y `https://www.traceless.com.ar/reset-password`
-
 ## Completado
 
 ### 2026-08-07 — Pricing USD + facturación ARCA
@@ -28,6 +18,8 @@
 - [x] Test real de factura con CAE contra ARCA (producción): CAE válido, punto de venta 2 habilitado
 - [x] **Fix notas de crédito**: emisión real ante ARCA (CbteAsoc, NC C sin IVA, extracción de observaciones). Canceladas las 3 facturas de prueba con CAE
 - [x] Endpoint `/api/keepalive` (ping inofensivo a `/health` del notifier) desplegado en producción
+- [x] Config Supabase: email templates y URLs apuntan a `https://www.traceless.com.ar`
+- [x] Flujo verificado: registro + confirmación de email + login, y forgot/reset password
 
 ### 2026-07-21 — Simplificación a 3 planes
 - [x] **Planes reducidos a 3**: Gratis ($0), Profesional ($15.000/mes), Equipo ($29.000/mes)
