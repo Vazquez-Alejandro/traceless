@@ -13,6 +13,7 @@ export default function Perfil() {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: true, recordatorio_monotributo: true, recordatorio_vencidas: true });
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
+  const [arcaMsg, setArcaMsg] = useState("");
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -43,22 +44,29 @@ export default function Perfil() {
 
   const handleArcaSave = async () => {
     const token = localStorage.getItem("token");
-    const body: any = {
-      arca_cuit: arca.arca_cuit.trim(),
+    setArcaMsg("Validando certificado con ARCA…");
+    const body = {
+      arca_cuit: arca.arca_cuit.trim().replace(/\./g, ""),
+      arca_cert: arca.arca_cert.trim(),
+      arca_key: arca.arca_key.trim(),
       arca_punto_venta: Number(arca.arca_punto_venta) || 2,
       arca_env: arca.arca_env,
     };
-    if (arca.arca_cert.trim()) body.arca_cert = arca.arca_cert.trim();
-    if (arca.arca_key.trim()) body.arca_key = arca.arca_key.trim();
-    const r = await fetch(`${BASE_URL}/api/auth/me`, {
-      method: "PUT",
+    const r = await fetch(`${BASE_URL}/api/auth/arca/connect`, {
+      method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     const d = await r.json().catch(() => ({}));
-    setMsg(d.mensaje || (r.ok ? "Facturación fiscal conectada" : "Error al guardar"));
-    setUser({ ...user, arca_configurado: Boolean(body.arca_cert && body.arca_key), arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
-    setTimeout(() => setMsg(""), 4000);
+    if (!r.ok) {
+      setArcaMsg(`❌ ${d.detail || d.mensaje || "No se pudo conectar la facturación fiscal."}`);
+      setTimeout(() => { if (!arca.arca_ok) setArcaMsg(""); }, 8000);
+      return;
+    }
+    setMsg(d.mensaje || "Facturación fiscal conectada");
+    setUser({ ...user, arca_configurado: true, arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
+    setArca({ ...arca, arca_cert: "", arca_key: "" });
+    setTimeout(() => setMsg(""), 5000);
   };
 
   const handleUpgrade = async (planKey: string) => {
@@ -269,9 +277,14 @@ export default function Perfil() {
             </div>
             <p className="text-xs text-gray-500 mb-4">
               {user.arca_configurado
-                ? "Tu facturación fiscal está conectada. Emitís facturas con CAE válido ante AFIP."
+                ? "Tu facturación fiscal está conectada y verificada. Emitís facturas con CAE válido ante AFIP."
                 : "Conectá tu CUIT y certificado digital para emitir facturas fiscales con CAE. Mientras tanto emitís comprobantes simples (sin CAE)."}
             </p>
+            {arcaMsg && (
+              <div className={`mb-3 p-3 rounded-lg text-sm ${arcaMsg.startsWith("❌") ? "bg-red-900/30 border border-red-700/40 text-red-300" : "bg-gray-800/60 border border-gray-700/40 text-gray-200"}`}>
+                {arcaMsg}
+              </div>
+            )}
             <div className="space-y-3 text-sm">
               <div>
                 <label className="text-gray-500 text-xs">CUIT del emisor</label>
@@ -308,7 +321,7 @@ export default function Perfil() {
                 <strong> Web Services → Administrador de Certificados</strong> y generá el certificado para el servicio <strong>wsfe</strong>.
               </div>
               <button onClick={handleArcaSave} className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
-                Guardar facturación fiscal
+                Validar y conectar con ARCA
               </button>
             </div>
           </div>

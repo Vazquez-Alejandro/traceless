@@ -522,6 +522,65 @@ class ProfileUpdate(BaseModel):
     arca_punto_venta: Optional[int] = None
     arca_env: Optional[str] = None
 
+class ArcaConnect(BaseModel):
+    arca_cuit: str
+    arca_cert: str = ""
+    arca_key: str = ""
+    arca_punto_venta: int = 2
+    arca_env: str = "produccion"
+
+@router.post("/arca/connect")
+def arca_connect(req: ArcaConnect, authorization: str = Header("")):
+    uid = _get_user_id(authorization)
+    import base64
+    from app.afip import _login, _resolver_cfg
+
+    cuit = req.arca_cuit.strip().replace(".", "")
+    if not cuit or not cuit.isdigit() or len(cuit) != 11:
+        raise HTTPException(400, "CUIT inválido. Debe tener 11 dígitos.")
+
+    cert, key = req.arca_cert, req.arca_key
+
+    def _decode(s: str) -> str:
+        s = s.strip()
+        if s.startswith("arza_b64:"):
+            try:
+                return base64.b64decode(s.split(":", 1)[1]).decode()
+            except Exception:
+                raise HTTPException(400, "La cadena del certificado o clave no es base64 válida.")
+        if "BEGIN" not in s:
+            raise HTTPException(400, "El certificado/clave debe estar en formato PEM (-----BEGIN ...-----).")
+        return s
+
+    cert_pem = _decode(cert) if cert else ""
+    key_pem = _decode(key) if key else ""
+
+    if not cert_pem or not key_pem:
+        raise HTTPException(400, "Debés cargar el certificado (.pem) y la clave privada (.pem) para conectar.")
+
+    try:
+        cfg = _resolver_cfg({
+            "cuit": cuit,
+            "cert": cert_pem,
+            "key": key_pem,
+            "pto_venta": req.arca_punto_venta,
+            "homologacion": req.arca_env != "produccion",
+        })
+        _login(cfg)
+    except Exception as e:
+        logger.warning(f"ARCA connect falló para {cuit}: {e}")
+        raise HTTPException(400, f"No se pudo validar el certificado con ARCA. {str(e)[:200]}")
+
+    supabase.table("perfiles").update({
+        "arca_cuit": cuit,
+        "arca_cert": "arza_b64:" + base64.b64encode(cert_pem.encode()).decode(),
+        "arca_key": "arza_b64:" + base64.b64encode(key_pem.encode()).decode(),
+        "arca_punto_venta": req.arca_punto_venta,
+        "arca_env": req.arca_env,
+    }).eq("id", uid).execute()
+
+    return {"ok": True, "mensaje": "Facturación fiscal conectada y verificada con ARCA. Ya podés emitir facturas con CAE."}
+
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):
     uid = get_user_id(authorization)
