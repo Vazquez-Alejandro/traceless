@@ -64,6 +64,7 @@ export default function Perfil() {
       return;
     }
     setMsg(d.mensaje || "Facturación fiscal conectada");
+    setArcaMsg("");
     setUser({ ...user, arca_configurado: true, arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
     setArca({ ...arca, arca_cert: "", arca_key: "" });
     setTimeout(() => setMsg(""), 5000);
