@@ -1054,16 +1054,18 @@ async def procesar_programadas(secret: str = ""):
 @router.get("/estadisticas")
 def estadisticas(authorization: str = Header("")):
     uid = get_user_id(authorization)
-    res = supabase.table("facturas").select("total, fecha, estado").eq("user_id", uid).execute()
+    res = supabase.table("facturas").select("total, fecha, estado, tipo").eq("user_id", uid).execute()
     facturas = res.data
+    _NC_TIPOS = {3, 8, 13, 21}  # Notas de crédito: no suman "por cobrar"
     totales = sum(f["total"] for f in facturas if f["estado"] != "anulada")
     emitidas = sum(1 for f in facturas if f["estado"] == "emitida")
     enviadas = sum(1 for f in facturas if f["estado"] == "enviada")
     vencidas = sum(1 for f in facturas if f["estado"] == "vencida")
     pagadas = sum(1 for f in facturas if f["estado"] == "pagada")
     anuladas = sum(1 for f in facturas if f["estado"] == "anulada")
-    por_cobrar = emitidas + enviadas + vencidas
-    return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar}
+    notas_credito = sum(1 for f in facturas if f["tipo"] in _NC_TIPOS)
+    por_cobrar = sum(1 for f in facturas if f["estado"] in ("emitida", "enviada", "vencida") and f["tipo"] not in _NC_TIPOS)
+    return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar, "notas_credito": notas_credito}
 
 @router.get("/resumen")
 def resumen(authorization: str = Header("")):
@@ -1071,13 +1073,14 @@ def resumen(authorization: str = Header("")):
     now = datetime.now()
     anio = now.year
     mes_actual = now.month
-    res = supabase.table("facturas").select("total, fecha, estado").eq("user_id", uid).execute()
+    res = supabase.table("facturas").select("total, fecha, estado, tipo").eq("user_id", uid).execute()
     facturas = res.data
+    _NC_TIPOS = {3, 8, 13, 21}
     mes_actual_total = 0
     mes_anterior_total = 0
     anio_total = 0
     for f in facturas:
-        if f["estado"] == "anulada":
+        if f["estado"] == "anulada" or f["tipo"] in _NC_TIPOS:
             continue
         total = f["total"]
         anio_total += total

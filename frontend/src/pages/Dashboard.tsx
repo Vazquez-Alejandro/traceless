@@ -15,7 +15,7 @@ interface ClienteAnalytics {
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ clientes: 0, facturas: 0, total: 0, emitidas: 0, enviadas: 0, por_cobrar: 0, pagadas: 0 });
+  const [stats, setStats] = useState({ clientes: 0, facturas: 0, total: 0, emitidas: 0, enviadas: 0, por_cobrar: 0, pagadas: 0, notas_credito: 0 });
   const [plan, setPlan] = useState("Gratis");
   const [planKey, setPlanKey] = useState("free");
   const [features, setFeatures] = useState({ analytics: false, recurrentes: false, multi_user: false, retry_queue: false });
@@ -60,6 +60,7 @@ export default function Dashboard() {
         enviadas: e.enviadas || 0,
         por_cobrar: e.por_cobrar || 0,
         pagadas: e.pagadas || 0,
+        notas_credito: e.notas_credito || 0,
       });
       setPlan(p.plan_actual || "Gratis");
       setClientesAnalytics(a.clientes || []);
@@ -211,13 +212,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-5 gap-4 mb-8">
+      <div className="grid md:grid-cols-6 gap-4 mb-8">
         {[
           { label: "Clientes", value: stats.clientes, to: "/clientes", color: "border-blue-500" },
           { label: "Emitidas", value: stats.emitidas, to: "/facturas", color: "border-blue-400" },
           { label: "Enviadas", value: stats.enviadas, to: "/facturas", color: "border-cyan-500" },
           { label: "Por cobrar", value: stats.por_cobrar, to: "/facturas", color: "border-yellow-500" },
           { label: "Pagadas", value: stats.pagadas, to: "/facturas", color: "border-green-500" },
+          { label: "Notas de crédito", value: stats.notas_credito, to: "/facturas", color: "border-purple-500" },
         ].map((s, i) => (
           <Link key={i} to={s.to} className={`p-4 rounded-2xl bg-gray-900/40 border border-gray-800/40 border-t-4 ${s.color} hover:bg-gray-900/60 transition-all`}>
             <div className="text-2xl font-bold">{s.value}</div>
