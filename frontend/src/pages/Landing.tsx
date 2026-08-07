@@ -60,12 +60,14 @@ export default function Landing() {
   }, []);
 
   const priceText = (p: (typeof PLANS)[number]) => {
+    if (p.key === "free") return "Gratis";
     const ref = p.price === "price_pro" ? pricing.pro : pricing.team;
     if (!ref) return p.price === "price_pro" ? "USD 12" : "USD 22";
     return `${ref.label}/mes`;
   };
 
   const priceSub = (p: (typeof PLANS)[number]) => {
+    if (p.key === "free") return "";
     const ref = p.price === "price_pro" ? pricing.pro : pricing.team;
     if (!ref) return "";
     return `≈ ${formatARS(ref.ars)}`;
