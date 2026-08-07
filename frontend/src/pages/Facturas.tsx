@@ -42,7 +42,7 @@ export default function Facturas() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
+  const [form, setForm] = useState({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "", modo: "fiscal" });
   const [detalles, setDetalles] = useState<DetalleItem[]>([]);
   const [usarItems, setUsarItems] = useState(false);
   const [copiado, setCopiado] = useState("");
@@ -423,7 +423,7 @@ export default function Facturas() {
       try {
         await api.facturas.update(editingId, body);
         setToast("Factura actualizada");
-        setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
+        setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "", modo: "fiscal" });
         setDetalles([]);
         setUsarItems(false);
         setEditingId(null);
@@ -450,7 +450,7 @@ export default function Facturas() {
     if (res.pendiente) {
       setToast("⏳ " + (res.mensaje || "ARCA no respondió. Tu factura está en cola."));
       setTimeout(() => setToast(""), 10000);
-      setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
+      setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "", modo: "fiscal" });
       setDetalles([]);
       setUsarItems(false);
       setShowForm(false);
@@ -472,7 +472,7 @@ export default function Facturas() {
       setToast(res?.factura?.es_fiscal === false ? "Comprobante simple creado (sin CAE) - Compartilo con tu cliente" : "Factura creada ✅ Compartila con tu cliente");
     }
 
-    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" });
+    setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "", modo: "fiscal" });
     setDetalles([]);
     setUsarItems(false);
     setShowForm(false);
@@ -595,7 +595,7 @@ export default function Facturas() {
 
       {tab === "facturas" && (
         <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
-          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setDetalles([]); setUsarItems(false); setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
+          <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setDetalles([]); setUsarItems(false); setForm({ cliente_id: "", tipo: 6, importe: "", descripcion: "Honorarios", recurrente: false, scheduled_send: "", modo: "fiscal" }); }} className="absolute top-3 right-3 text-gray-500 hover:text-white p-1" title="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
           {editingId && <p className="text-sm text-gray-400 mb-3">Editando factura</p>}
@@ -607,6 +607,21 @@ export default function Facturas() {
                 <strong>factura fiscal válida ante AFIP</strong>, conectá tu facturación en{" "}
                 <Link to="/perfil" className="underline font-semibold hover:text-amber-100">tu perfil</Link> cargando tu CUIT y certificado de ARCA.
               </span>
+            </div>
+          )}
+          {userPlan.arca_configurado && (
+            <div className="mb-4 p-3 rounded-xl border border-gray-800 bg-gray-900/50 flex items-center gap-3 flex-wrap">
+              <label className="flex items-center gap-2 text-sm text-gray-300">
+                <span className="font-medium">Tipo de comprobante:</span>
+                <select value={form.modo} onChange={e => setForm({ ...form, modo: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-sm">
+                  <option value="fiscal">Factura fiscal con CAE (AFIP)</option>
+                  <option value="simple">Comprobante simple (sin CAE)</option>
+                </select>
+              </label>
+              {form.modo === "simple" && (
+                <span className="text-xs text-amber-300/80">Se emitirá sin CAE, útil como presupuesto o nota de venta informal.</span>
+              )}
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -805,6 +820,9 @@ export default function Facturas() {
                     }`}>
                       {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "enviada" ? "Enviada" : f.estado === "programada" ? "Programada" : "Emitida"}
                     </span>
+                    {f.es_fiscal === false && (
+                      <span className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Sin CAE</span>
+                    )}
                     {f.scheduled_send && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">📅 {f.scheduled_send}</span>
                     )}

@@ -25,13 +25,14 @@ def _get_user_lock(user_id: str) -> threading.Lock:
             _user_locks[user_id] = threading.Lock()
         return _user_locks[user_id]
 
-def _fiscal_cfg_emisor(emisor: dict) -> dict:
+def _fiscal_cfg_emisor(emisor: dict, modo: str = "fiscal") -> dict:
     import base64
+    tiene_cert = bool(emisor.get("arca_cert") and emisor.get("arca_key"))
     cfg = {
         "cuit": emisor.get("arca_cuit") or emisor.get("cuit") or "",
         "pto_venta": int(emisor["arca_punto_venta"]) if emisor.get("arca_punto_venta") else None,
         "homologacion": (emisor.get("arca_env", "produccion") != "produccion"),
-        "use_real": bool(emisor.get("arca_cert") and emisor.get("arca_key")),
+        "use_real": tiene_cert and modo == "fiscal",
         "nombre": emisor.get("nombre", ""),
         "direccion": emisor.get("direccion", ""),
         "condicion_iva": emisor.get("condicion_iva", "Responsable Inscripto"),
@@ -70,6 +71,7 @@ class FacturaCreate(BaseModel):
     recurrente: bool = False
     scheduled_send: Optional[str] = None
     canal: str = "whatsapp"
+    modo: str = "fiscal"
 
 @router.post("")
 async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
@@ -170,7 +172,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
         condicion_iva=cliente.data.get("condicion_iva", "Consumidor Final"),
         descripcion=req.descripcion,
         ultimo_numero=ultimo_numero,
-        fiscal=_fiscal_cfg_emisor(emisor),
+        fiscal=_fiscal_cfg_emisor(emisor, req.modo),
     )
 
     factura_data = {
