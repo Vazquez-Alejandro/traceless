@@ -580,7 +580,7 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
         logger.warning(f"ARCA connect falló para {cuit}: {e}")
         raise HTTPException(400, f"No se pudo validar el certificado con ARCA. {str(e)[:200]}")
 
-        base_data = {
+    base_data = {
         "arca_cuit": cuit,
         "arca_cert": "arza_b64:" + base64.b64encode(cert_pem.encode()).decode(),
         "arca_key": "arza_b64:" + base64.b64encode(key_pem.encode()).decode(),
