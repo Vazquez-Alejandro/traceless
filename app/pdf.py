@@ -60,6 +60,12 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict) -> str:
     cae_section = ""
     if factura.get("cae"):
         cae_section = f'<div class="cae">CAE: {html_mod.escape(str(factura["cae"]))} — Vence: {html_mod.escape(str(factura.get("cae_vencimiento", "")))}</div>'
+    else:
+        cae_section = ('<div style="margin-top:24px;padding:14px;border:2px solid #dc2626;border-radius:8px;'
+                       'background:#fef2f2;text-align:center">'
+                       '<div style="font-weight:bold;color:#b91c1c;font-size:14px">COMPROBANTE SIN CAE</div>'
+                       '<div style="color:#dc2626;font-size:12px;margin-top:4px">Este documento NO es una factura electrónica válida ante AFIP: '
+                       'no posee CAE ni constancia de la autoridad fiscal. Se entrega como comprobante de la operación.</div></div>')
 
     return f"""<!DOCTYPE html>
 <html lang="es">
