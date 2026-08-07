@@ -19,6 +19,26 @@ def _arca_configurado(p: dict | None) -> bool:
     # Migración pendiente: fallback al check de datos (aunque no fue validado)
     return bool(p.get("arca_cert") and p.get("arca_key") and p.get("arca_cuit"))
 
+def _arca_decode_cert(p: dict | None) -> str:
+    if not p:
+        return ""
+    cert = p.get("arca_cert") or ""
+    import base64
+    if cert.startswith("arza_b64:"):
+        try:
+            return base64.b64decode(cert.split(":", 1)[1]).decode()
+        except Exception:
+            return ""
+    return cert
+
+def _arca_cert_expira(p: dict | None) -> str | None:
+    from app.afip import cert_expiracion
+    try:
+        exp = cert_expiracion(_arca_decode_cert(p))
+        return exp.isoformat() if exp else None
+    except Exception:
+        return None
+
 # Rate limiting para login
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 MAX_ATTEMPTS = 5
@@ -488,6 +508,7 @@ def me(authorization: str = Header("")):
             "arca_cuit": perfil_data.get("arca_cuit", "") if perfil_data else "",
             "arca_env": (perfil_data.get("arca_env", "produccion") if perfil_data else "produccion"),
             "arca_punto_venta": perfil_data.get("arca_punto_venta", 2) if perfil_data else 2,
+            "arca_cert_expira": _arca_cert_expira(perfil_data),
             "telefono": perfil_data.get("telefono", "") if perfil_data else "",
             "cuit": perfil_data.get("cuit", "") if perfil_data else "",
             "direccion": perfil_data.get("direccion", "") if perfil_data else "",

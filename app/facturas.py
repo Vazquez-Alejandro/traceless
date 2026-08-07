@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
@@ -806,7 +806,41 @@ async def recordatorio_monotributo(secret: str = ""):
         await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "enviados": enviados}
 
-@router.get("/recurrentes")
+@router.get("/verificar-certificados")
+async def verificar_certificados(secret: str = ""):
+    """Cron diario: notifica a usuarios cuyo certificado ARCA esté por vencer (30 días)
+    o ya vencido, para que lo renueven a tiempo y no interrumpan la emisión."""
+    if secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(403, "No autorizado")
+    from app.afip import cert_expiracion
+    import base64
+    ahora = datetime.now(timezone.utc).date()
+    avisados = {"vencidos": 0, "proximos": 0}
+
+    res = supabase.table("perfiles").select("id, arca_cert, arca_validado").limit(1000).execute()
+    for p in res.data or []:
+        if not p.get("arca_validado"):
+            continue
+        cert = p.get("arca_cert") or ""
+        if cert.startswith("arza_b64:"):
+            try:
+                cert = base64.b64decode(cert.split(":", 1)[1]).decode()
+            except Exception:
+                continue
+        exp = cert_expiracion(cert)
+        if not exp:
+            continue
+        restantes = (exp - ahora).days
+        uid = p["id"]
+        if restantes < 0:
+            crear_notificacion(uid, "arca_cert_vencido", "Tu certificado de ARCA venció",
+                               f"Tu certificado digital expiró el {exp.strftime('%d/%m/%Y')}. Renová el certificado en AFIP y actualizalo en Perfil → Facturación fiscal para seguir emitiendo facturas con CAE.", "/perfil")
+            avisados["vencidos"] += 1
+        elif restantes <= 30:
+            crear_notificacion(uid, "arca_cert_proximo", "Tu certificado de ARCA vence pronto",
+                               f"Tu certificado digital vence el {exp.strftime('%d/%m/%Y')} ({restantes} días). Renovalo en AFIP para no interrumpir la emisión de facturas.", "/perfil")
+            avisados["proximos"] += 1
+    return {"ok": True, **avisados}
 async def procesar_recurrentes(secret: str = ""):
     if secret != os.getenv("CRON_SECRET", ""):
         raise HTTPException(403, "No autorizado")

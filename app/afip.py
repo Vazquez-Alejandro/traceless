@@ -95,6 +95,16 @@ def _cargar_certs():
 def _fecha_utc():
     return datetime.now(timezone.utc)
 
+def cert_expiracion(cert_pem: str | None):
+    """Devuelve la fecha de vencimiento (date) del certificado PEM, o None si no se puede leer."""
+    if not cert_pem or "BEGIN" not in cert_pem:
+        return None
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode())
+        return cert.not_valid_after_utc.date()
+    except Exception:
+        return None
+
 def _generar_tra() -> bytes:
     tz = timezone(timedelta(hours=-3))
     now = datetime.now(tz)
@@ -334,6 +344,19 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                      factura_original_tipo: int | None = None,
                      factura_original_numero: str = "") -> dict:
     cfg = cfg or _resolver_cfg()
+
+    # Aviso claro si el certificado venció: no tiene sentido pedir CAE a ARCA
+    # con un cert vencido (ARCA lo rechaza con un error confuso).
+    expira = cert_expiracion(cfg.get("cert"))
+    if expira:
+        hoy = datetime.now(timezone.utc).date()
+        if expira < hoy:
+            raise RuntimeError(
+                f"Tu certificado digital de ARCA venció el {expira.strftime('%d/%m/%Y')}. "
+                "Generá un certificado nuevo en AFIP (Web Services → Administrador de Certificados) "
+                "y actualizalo en Perfil → Facturación fiscal (ARCA)."
+            )
+
     ta = _login(cfg)
     pto_vta = int(cfg.get("pto_venta", 2))
     auth_cuit = cfg["cuit"]

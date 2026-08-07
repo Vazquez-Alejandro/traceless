@@ -25,6 +25,10 @@
     {
       "path": "/api/facturas/procesar-programadas?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/facturas/verificar-certificados?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "schedule": "0 9 * * *"
     }
   ]
 }

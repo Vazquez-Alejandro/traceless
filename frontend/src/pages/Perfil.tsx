@@ -31,6 +31,11 @@ export default function Perfil() {
     return `${ref.label}/mes`;
   };
 
+  const certExpired = user.arca_cert_expira ? new Date(user.arca_cert_expira) < new Date() : false;
+  const certWarning =
+    !user.arca_cert_expira ? "" :
+    user.arca_cert_expira.split("-").reverse().join("/");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -310,6 +315,13 @@ export default function Perfil() {
                 ? "Tu facturación fiscal está conectada y verificada. Emitís facturas con CAE válido ante AFIP."
                 : "Conectá tu CUIT y certificado digital para emitir facturas fiscales con CAE. Mientras tanto emitís comprobantes simples (sin CAE)."}
             </p>
+            {certWarning && (
+              <div className={`mb-3 p-3 rounded-lg text-sm border ${certExpired ? "bg-red-900/30 border-red-700/40 text-red-300" : "bg-amber-900/30 border-amber-700/40 text-amber-200"}`}>
+                {certExpired
+                  ? `⚠ Tu certificado digital de ARCA venció el ${certWarning}. No vas a poder emitir facturas con CAE hasta que lo renueves en AFIP y lo actualices aquí.`
+                  : `⚠ Tu certificado digital de ARCA vence el ${certWarning}. Renovalo en AFIP antes de esa fecha para no interrumpir la emisión.`}
+              </div>
+            )}
             {arcaMsg && (
               <div className={`mb-3 p-3 rounded-lg text-sm border ${
                 arcaState === "ok" ? "bg-green-900/30 border-green-700/40 text-green-200"
