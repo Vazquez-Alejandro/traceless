@@ -80,12 +80,11 @@ def health():
 
 @app.get("/api/keepalive")
 def keepalive(secret: str = "", telegram: str = ""):
-    """Mantiene vivos servicios externos (p.ej. el notifier en Render) para
-    que no duerman en planes gratuitos y no se pierdan avisos."""
-    if secret and secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(401, "Secret inválido")
+    """Mantiene vivo el notificador en Render para que no duerma en el plan
+    gratuito y no se pierdan avisos. El ping solo toca /health (inofensivo),
+    por eso no requiere autenticación."""
     result = "noop"
-    if telegram.lower() == "1" or telegram.lower() == "on":
+    if telegram.lower() in ("1", "on", "true"):
         try:
             import httpx
             r = httpx.get(f"{os.getenv('TELEGRAM_NOTIFIER_URL', 'https://telegram-notifier-pmcs.onrender.com')}/health", timeout=15)
