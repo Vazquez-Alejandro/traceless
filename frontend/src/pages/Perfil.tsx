@@ -12,6 +12,7 @@ export default function Perfil() {
   const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: true, recordatorio_monotributo: true, recordatorio_vencidas: true });
+  const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function Perfil() {
       const u = d.user || d;
       setUser(u);
       setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: u.recordatorios_whatsapp !== false, recordatorio_monotributo: u.recordatorio_monotributo !== false, recordatorio_vencidas: u.recordatorio_vencidas !== false });
+      setArca({ arca_cuit: u.arca_cuit || "", arca_cert: "", arca_key: "", arca_punto_venta: u.arca_punto_venta || 2, arca_env: u.arca_env || "produccion" });
     });
   }, []);
 
@@ -37,6 +39,26 @@ export default function Perfil() {
     setEdit(false);
     setMsg("Perfil actualizado");
     setTimeout(() => setMsg(""), 3000);
+  };
+
+  const handleArcaSave = async () => {
+    const token = localStorage.getItem("token");
+    const body: any = {
+      arca_cuit: arca.arca_cuit.trim(),
+      arca_punto_venta: Number(arca.arca_punto_venta) || 2,
+      arca_env: arca.arca_env,
+    };
+    if (arca.arca_cert.trim()) body.arca_cert = arca.arca_cert.trim();
+    if (arca.arca_key.trim()) body.arca_key = arca.arca_key.trim();
+    const r = await fetch(`${BASE_URL}/api/auth/me`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    setMsg(d.mensaje || (r.ok ? "Facturación fiscal conectada" : "Error al guardar"));
+    setUser({ ...user, arca_configurado: Boolean(body.arca_cert && body.arca_key), arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
+    setTimeout(() => setMsg(""), 4000);
   };
 
   const handleUpgrade = async (planKey: string) => {
@@ -237,6 +259,58 @@ export default function Perfil() {
                 Guardar preferencias
               </button>
             )}
+          </div>
+          <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-gray-400">Facturación fiscal (ARCA)</h2>
+              <span className={`text-[10px] px-2 py-1 rounded-full ${user.arca_configurado ? "bg-green-900/50 text-green-300" : "bg-amber-900/50 text-amber-300"}`}>
+                {user.arca_configurado ? "● Conectada" : "● Sin conectar"}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              {user.arca_configurado
+                ? "Tu facturación fiscal está conectada. Emitís facturas con CAE válido ante AFIP."
+                : "Conectá tu CUIT y certificado digital para emitir facturas fiscales con CAE. Mientras tanto emitís comprobantes simples (sin CAE)."}
+            </p>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="text-gray-500 text-xs">CUIT del emisor</label>
+                <input value={arca.arca_cuit} onChange={e => setArca({ ...arca, arca_cuit: e.target.value })} placeholder="Ej: 20332211224"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-500 text-xs">Certificado digital (.pem)</label>
+                <textarea value={arca.arca_cert} onChange={e => setArca({ ...arca, arca_cert: e.target.value })} rows={4} placeholder="Contenido del archivo cert.pem (dejalo vacío si ya lo cargaste)"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1 font-mono" />
+              </div>
+              <div>
+                <label className="text-gray-500 text-xs">Clave privada (.pem)</label>
+                <textarea value={arca.arca_key} onChange={e => setArca({ ...arca, arca_key: e.target.value })} rows={4} placeholder="Contenido del archivo key.pem"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1 font-mono" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-500 text-xs">Punto de venta</label>
+                  <input type="number" value={arca.arca_punto_venta} onChange={e => setArca({ ...arca, arca_punto_venta: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1" />
+                </div>
+                <div>
+                  <label className="text-gray-500 text-xs">Entorno</label>
+                  <select value={arca.arca_env} onChange={e => setArca({ ...arca, arca_env: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm mt-1">
+                    <option value="produccion">Producción</option>
+                    <option value="homologacion">Homologación (pruebas)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="text-[11px] text-gray-500 bg-gray-900/50 border border-gray-800/40 rounded-lg p-3">
+                ¿Dónde consigo el certificado? Ingresá a <strong>afip.gob.ar</strong> con tu CUIT y clave fiscal →
+                <strong> Web Services → Administrador de Certificados</strong> y generá el certificado para el servicio <strong>wsfe</strong>.
+              </div>
+              <button onClick={handleArcaSave} className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+                Guardar facturación fiscal
+              </button>
+            </div>
           </div>
         </div>
       </div>

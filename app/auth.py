@@ -478,6 +478,7 @@ def me(authorization: str = Header("")):
             "arca_configurado": bool(perfil_data.get("arca_cert") and perfil_data.get("arca_key") and perfil_data.get("arca_cuit")),
             "arca_cuit": perfil_data.get("arca_cuit", "") if perfil_data else "",
             "arca_env": (perfil_data.get("arca_env", "produccion") if perfil_data else "produccion"),
+            "arca_punto_venta": perfil_data.get("arca_punto_venta", 2) if perfil_data else 2,
             "telefono": perfil_data.get("telefono", "") if perfil_data else "",
             "cuit": perfil_data.get("cuit", "") if perfil_data else "",
             "direccion": perfil_data.get("direccion", "") if perfil_data else "",
