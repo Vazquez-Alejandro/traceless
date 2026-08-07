@@ -339,6 +339,8 @@ async def crear_nota_credito(req: NotaCreditoCreate, authorization: str = Header
             descripcion=f"Nota de crédito s/ Factura {orig.get('numero', '')} — {req.motivo}",
             ultimo_numero=ultimo_numero,
             fiscal=_fiscal_cfg_emisor(_emisor),
+            factura_original_tipo=orig.get("tipo"),
+            factura_original_numero=orig.get("numero", ""),
         )
     except Exception as e:
         raise HTTPException(502, f"Error emitiendo nota de crédito en ARCA: {e}")

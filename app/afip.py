@@ -279,7 +279,9 @@ def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
                           tipo: int, importe: float,
                           condicion_iva: str, descripcion: str,
                           ultimo_numero: int = 0,
-                          fiscal: dict | None = None) -> dict:
+                          fiscal: dict | None = None,
+                          factura_original_tipo: int | None = None,
+                          factura_original_numero: str = "") -> dict:
     cfg = _resolver_cfg(fiscal)
 
     # El usuario necesita sí o sí su certificado para emitir con CAE fiscal.
@@ -290,7 +292,8 @@ def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
 
     if cfg.get("use_real"):
         try:
-            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero, cfg)
+            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero, cfg,
+                                   factura_original_tipo, factura_original_numero)
         except Exception as e:
             from tenacity import RetryError
             if isinstance(e, RetryError) and e.last_attempt.exception():
@@ -327,16 +330,18 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                      tipo: int, importe: float,
                      condicion_iva: str, descripcion: str,
                      ultimo_numero: int = 0,
-                     cfg: dict | None = None) -> dict:
+                     cfg: dict | None = None,
+                     factura_original_tipo: int | None = None,
+                     factura_original_numero: str = "") -> dict:
     cfg = cfg or _resolver_cfg()
     ta = _login(cfg)
     pto_vta = int(cfg.get("pto_venta", 2))
     auth_cuit = cfg["cuit"]
     doc_tipo, doc_nro = _doc_tipo(cliente_cuit)
 
-    es_factura_c = (tipo == 11)
+    es_iva_c = (tipo in (11, 13))  # Factura C y NC C: no discriminan IVA
 
-    if es_factura_c:
+    if es_iva_c:
         neto = round(importe, 2)
         iva_imp = 0
         iva_id = None
@@ -380,7 +385,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
         "MonCotiz": 1,
     }
 
-    if not es_factura_c and iva_id is not None:
+    if not es_iva_c and iva_id is not None:
         det_request["Iva"] = {
             "AlicIva": {
                 "Id": iva_id,
@@ -388,6 +393,21 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
                 "Importe": iva_imp,
             }
         }
+
+    # Para comprobantes débito/crédito (NC/ND) ARCA exige la referencia al comprobante original.
+    if factura_original_tipo and factura_original_numero:
+        try:
+            orig_pto, orig_nro = factura_original_numero.split("-")
+            det_request["CbtesAsoc"] = {
+                "CbteAsoc": {
+                    "Tipo": factura_original_tipo,
+                    "PtoVta": int(orig_pto),
+                    "Nro": int(orig_nro),
+                    "Cuit": auth_cuit,
+                }
+            }
+        except Exception:
+            det_request.pop("CbtesAsoc", None)
 
     req = {
         "Auth": auth,
@@ -416,9 +436,12 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
 
     if ed.Resultado == "R":
         from zeep.helpers import serialize_object
-        obs = serialize_object(ed.get("Observaciones", {}))
+        try:
+            obs = serialize_object(ed.Observaciones) if hasattr(ed, "Observaciones") and ed.Observaciones else {}
+        except Exception:
+            obs = {}
         msgs = [o.get("Msg", "") for o in (obs.get("Obs", []) if isinstance(obs, dict) else [])]
-        raise RuntimeError(f"ARCA rechazó: {'; '.join(msgs)}")
+        raise RuntimeError(f"ARCA rechazó: {'; '.join(msgs)}" if msgs else "ARCA rechazó el comprobante")
 
     return {
         "cae": ed.CAE,
