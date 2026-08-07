@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getPricing, formatUSD, formatARS } from "../pricing";
 
 const SHOW_TESTIMONIALS = false; // Cambiar a true cuando tengamos testimonios reales
 
@@ -32,7 +34,7 @@ const PLANS = [
   {
     key: "pro",
     name: "Profesional",
-    price: "$18.000/mes",
+    price: "price_pro",
     desc: "Para profesionales y negocios",
     features: ["Facturas ilimitadas", "100 msg WhatsApp incluidos", "$70/msg extra", "Analytics de pagos", "Facturas recurrentes"],
     highlighted: true,
@@ -40,7 +42,7 @@ const PLANS = [
   {
     key: "team",
     name: "Equipo",
-    price: "$32.000/mes",
+    price: "price_team",
     desc: "Para estudios, PyMEs y empresas",
     features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
@@ -48,6 +50,27 @@ const PLANS = [
 ];
 
 export default function Landing() {
+  const [pricing, setPricing] = useState<{ pro?: { label: string; label_ars: string; ars: number }; team?: { label: string; label_ars: string; ars: number } }>({});
+  useEffect(() => {
+    getPricing().then((p) => {
+      if (p && p.prices) {
+        setPricing({ pro: p.prices.pro, team: p.prices.team });
+      }
+    });
+  }, []);
+
+  const priceText = (p: (typeof PLANS)[number]) => {
+    const ref = p.price === "price_pro" ? pricing.pro : pricing.team;
+    if (!ref) return p.price === "price_pro" ? "USD 12" : "USD 22";
+    return `${ref.label}/mes`;
+  };
+
+  const priceSub = (p: (typeof PLANS)[number]) => {
+    const ref = p.price === "price_pro" ? pricing.pro : pricing.team;
+    if (!ref) return "";
+    return `≈ ${formatARS(ref.ars)}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
@@ -177,7 +200,8 @@ export default function Landing() {
                   </div>
                 )}
                 <h3 className="text-base font-semibold mb-1">{p.name}</h3>
-                <div className="text-2xl font-bold mb-1">{p.price}</div>
+                <div className="text-2xl font-bold mb-1">{priceText(p)}</div>
+                {p.price !== "Gratis" && <div className="text-[10px] text-gray-500 mb-2">{priceSub(p)}</div>}
                 <p className="text-xs text-gray-400 mb-4">{p.desc}</p>
                 <ul className="space-y-1.5 mb-6 flex-1">
                   {p.features.map((f, i) => (

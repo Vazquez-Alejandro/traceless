@@ -612,8 +612,9 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
     if not plan:
         raise HTTPException(400, "Parámetro 'plan' requerido")
     uid = get_user_id(authorization)
-    from app.mercadopago import MP_PRICES, MP_TOKEN
-    if plan not in MP_PRICES:
+    from app.dolares import PRICES_USD, ars_from_usd
+    from app.mercadopago import MP_TOKEN
+    if plan not in PRICES_USD:
         raise HTTPException(400, "Plan no válido")
     perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
     email = perfil.data.get("email", "") if perfil.data else ""
@@ -621,9 +622,9 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
     body = {
         "items": [{
             "id": plan,
-            "title": f"TraceLess Plan {MP_PRICES[plan]['name']}",
+            "title": f"TraceLess Plan {PRICES_USD[plan]['name']}",
             "quantity": 1,
-            "unit_price": MP_PRICES[plan]["amount"],
+            "unit_price": ars_from_usd(PRICES_USD[plan]["usd"]),
             "currency_id": "ARS",
         }],
         "payer": {"email": email},

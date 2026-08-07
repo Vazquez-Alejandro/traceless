@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { getPricing, formatARS } from "../pricing";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANS_LIST = [
   { key: "free", name: "Gratis", price: "$0", desc: "20 facturas/mes, sin WhatsApp API" },
-  { key: "pro", name: "Profesional", price: "$18.000/mes", desc: "Ilimitado + 100 msg WhatsApp, $70/msg extra" },
-  { key: "team", name: "Equipo", price: "$32.000/mes", desc: "Ilimitado + 250 msg WhatsApp, $60/msg extra" },
+  { key: "pro", name: "Profesional", price: "price_pro", desc: "Ilimitado + 100 msg WhatsApp, $70/msg extra" },
+  { key: "team", name: "Equipo", price: "price_team", desc: "Ilimitado + 250 msg WhatsApp, $60/msg extra" },
 ];
 
 export default function Perfil() {
@@ -15,6 +16,19 @@ export default function Perfil() {
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
   const [msg, setMsg] = useState("");
+  const [pricing, setPricing] = useState<Record<string, { label: string; label_ars: string; ars: number }>>({});
+  useEffect(() => {
+    getPricing().then((p) => {
+      if (p && p.prices) setPricing({ pro: p.prices.pro, team: p.prices.team });
+    });
+  }, []);
+
+  const priceFor = (key: string) => {
+    if (key === "free") return "$0";
+    const ref = pricing[key === "pro" ? "pro" : "team"];
+    if (!ref) return key === "pro" ? "USD 12" : "USD 22";
+    return `${ref.label}/mes`;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -216,7 +230,10 @@ export default function Perfil() {
                     <div className="text-xs text-gray-500">{p.desc}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs font-semibold">{p.price}</div>
+                    <div className="text-xs font-semibold">{priceFor(p.key)}</div>
+                    {p.key !== "free" && (
+                      <div className="text-[10px] text-gray-500">≈ {formatARS(pricing[p.key]?.ars ?? 0)}</div>
+                    )}
                     {p.name !== user.plan && p.key !== "free" && (
                       <button onClick={() => handleUpgrade(p.key)}
                         className="text-[10px] text-blue-400 hover:underline mt-0.5">

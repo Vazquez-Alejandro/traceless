@@ -22,8 +22,8 @@ PLANS = {
     },
     "pro": {
         "name": "Profesional",
-        "price": 18000,
-        "price_label": "$18.000/mes",
+        "price_usd": float(os.getenv("PRICE_PRO_USD", "12")),
+        "price_label": "USD 12",
         "invoices_per_month": None,
         "whatsapp": True,
         "whatsapp_monthly_limit": 100,
@@ -35,8 +35,8 @@ PLANS = {
     },
     "team": {
         "name": "Equipo",
-        "price": 32000,
-        "price_label": "$32.000/mes",
+        "price_usd": float(os.getenv("PRICE_TEAM_USD", "22")),
+        "price_label": "USD 22",
         "invoices_per_month": None,
         "whatsapp": True,
         "whatsapp_monthly_limit": 250,

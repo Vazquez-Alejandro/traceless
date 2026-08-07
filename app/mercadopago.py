@@ -17,11 +17,26 @@ MP_WEBHOOK_SECRET = os.getenv("MP_WEBHOOK_SECRET", "")
 
 MP_BASE = "https://api.mercadopago.com"
 
-# Precios en ARS por plan (actualizables)
-MP_PRICES = {
-    "pro": {"amount": 18000, "name": "Profesional"},
-    "team": {"amount": 32000, "name": "Equipo"},
-}
+from app.dolares import ars_from_usd, PRICES_USD
+
+
+def MP_PRICES(mode: str = "ars"):
+    """Devuelve los precios por plan (obsoleto a mantener compatibilidad)."""
+    out = {}
+    for key, cfg in PRICES_USD.items():
+        val = ars_from_usd(cfg["usd"]) if mode == "ars" else cfg["usd"]
+        out[key] = {
+            "amount": val,
+            "name": cfg["name"],
+            "usd": cfg["usd"],
+            "currency": mode.upper(),
+        }
+    return out
+
+
+def _monto_ars(plan_key: str) -> int:
+    usd = PRICES_USD[plan_key]["usd"]
+    return ars_from_usd(usd)
 
 
 def _mp_headers():
@@ -39,7 +54,7 @@ def crear_checkout(plan_key: str, authorization: str = Header("")):
     if not MP_TOKEN:
         raise HTTPException(500, "Mercado Pago no configurado (falta MP_ACCESS_TOKEN)")
 
-    plan = MP_PRICES[plan_key]
+    plan = PRICES_USD[plan_key]
     perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
     email = perfil.data.get("email", "") if perfil.data else ""
 
@@ -49,7 +64,7 @@ def crear_checkout(plan_key: str, authorization: str = Header("")):
                 "id": plan_key,
                 "title": f"TraceLess Plan {plan['name']}",
                 "quantity": 1,
-                "unit_price": plan["amount"],
+                "unit_price": _monto_ars(plan_key),
                 "currency_id": "ARS",
             }
         ],
@@ -73,12 +88,12 @@ def crear_checkout(plan_key: str, authorization: str = Header("")):
 @router.post("/create-subscription")
 def crear_suscripcion(plan_key: str, authorization: str = Header("")):
     uid = get_user_id(authorization)
-    if plan_key not in MP_PRICES:
+    if plan_key not in PRICES_USD:
         raise HTTPException(400, "Plan no válido")
     if not MP_TOKEN:
         raise HTTPException(500, "Mercado Pago no configurado")
 
-    plan = MP_PRICES[plan_key]
+    plan = PRICES_USD[plan_key]
     perfil = supabase.table("perfiles").select("email").eq("id", uid).single().execute()
     email = perfil.data.get("email", "") if perfil.data else ""
 
@@ -88,7 +103,7 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
         "auto_recurring": {
             "frequency": 1,
             "frequency_type": "months",
-            "transaction_amount": plan["amount"],
+            "transaction_amount": _monto_ars(plan_key),
             "currency_id": "ARS",
         },
         "payer_email": email,
@@ -224,5 +239,6 @@ def _set_user_plan_mp(user_id: str, plan_key: str):
 
 
 @router.get("/prices")
-def precios_ars():
-    return {"prices": MP_PRICES, "currency": "ARS"}
+def precios():
+    from app.dolares import get_prices
+    return get_prices()

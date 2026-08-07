@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import PasswordInput from "../components/PasswordInput";
+import { getPricing, formatARS } from "../pricing";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
 const PLANES = [
   { key: "free", name: "Gratis", price: "$0", desc: "20 facturas/mes", color: "border-gray-600" },
-  { key: "pro", name: "Profesional", price: "$18.000/mes", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
-  { key: "team", name: "Equipo", price: "$32.000/mes", desc: "Hasta 5 usuarios", color: "border-yellow-500" },
+  { key: "pro", name: "Profesional", price: "price_pro", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
+  { key: "team", name: "Equipo", price: "price_team", desc: "Hasta 5 usuarios", color: "border-yellow-500" },
 ];
 
 export default function Register() {
@@ -18,6 +19,19 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [pricing, setPricing] = useState<Record<string, { label: string; label_ars: string; ars: number }>>({});
+  useEffect(() => {
+    getPricing().then((p) => {
+      if (p && p.prices) setPricing({ pro: p.prices.pro, team: p.prices.team });
+    });
+  }, []);
+
+  const priceFor = (key: string) => {
+    if (key === "free") return "$0";
+    const ref = pricing[key === "pro" ? "pro" : "team"];
+    if (!ref) return key === "pro" ? "USD 12" : "USD 22";
+    return `${ref.label}/mes`;
+  };
   const [referralValid, setReferralValid] = useState<boolean | null>(null);
   const [referralPromo, setReferralPromo] = useState("");
   const [error, setError] = useState("");
@@ -171,7 +185,14 @@ export default function Register() {
                   <div className="font-semibold">{p.name}</div>
                   <div className="text-xs text-gray-400">{p.desc}</div>
                 </div>
-                <div className="text-lg font-bold">{p.price}</div>
+                <div className="text-lg font-bold text-right">
+                  {priceFor(p.key)}
+                  {p.price !== "$0" && (
+                    <div className="text-[10px] font-normal text-gray-500">
+                      ≈ {formatARS(pricing[p.key]?.ars ?? 0)}
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>
@@ -191,7 +212,7 @@ export default function Register() {
         <div className="text-center mb-8">
           <Link to="/" className="text-2xl font-bold">TraceLess</Link>
           <p className="text-gray-400 text-sm mt-2">
-            {selectedPlan !== "free" ? `Plan ${planName} — ${PLANES.find(p => p.key === selectedPlan)?.price}` : "Crear cuenta gratuita"}
+            {selectedPlan !== "free" ? `Plan ${planName} — ${priceFor(selectedPlan)}` : "Crear cuenta gratuita"}
           </p>
           <button onClick={() => setSelectedPlan(null)} className="text-xs text-blue-400 hover:underline mt-1">← Cambiar plan</button>
         </div>
