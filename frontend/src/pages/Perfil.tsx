@@ -15,6 +15,7 @@ export default function Perfil() {
   const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: true, recordatorio_monotributo: true, recordatorio_vencidas: true });
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
+  const [arcaState, setArcaState] = useState<"idle" | "validating" | "ok" | "error">("idle");
   const [msg, setMsg] = useState("");
   const [pricing, setPricing] = useState<Record<string, { label: string; label_ars: string; ars: number }>>({});
   useEffect(() => {
@@ -58,6 +59,13 @@ export default function Perfil() {
 
   const handleArcaSave = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return;
+    if (!arca.arca_cuit.trim()) {
+      setArcaState("error");
+      setArcaMsg("Ingresá el CUIT del emisor.");
+      return;
+    }
+    setArcaState("validating");
     setArcaMsg("Validando certificado con ARCA…");
     const body = {
       arca_cuit: arca.arca_cuit.trim().replace(/\./g, ""),
@@ -66,22 +74,26 @@ export default function Perfil() {
       arca_punto_venta: Number(arca.arca_punto_venta) || 2,
       arca_env: arca.arca_env,
     };
-    const r = await fetch(`${BASE_URL}/api/auth/arca/connect`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      setArcaMsg(`❌ ${d.detail || d.mensaje || "No se pudo conectar la facturación fiscal."}`);
-      setTimeout(() => { if (!arca.arca_ok) setArcaMsg(""); }, 8000);
-      return;
+    try {
+      const r = await fetch(`${BASE_URL}/api/auth/arca/connect`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setArcaState("error");
+        setArcaMsg(`❌ ${d.detail || d.mensaje || "No se pudo conectar la facturación fiscal."}`);
+        return;
+      }
+      setArcaState("ok");
+      setArcaMsg(`✓ Facturación fiscal conectada y verificada (CUIT ${body.arca_cuit}).`);
+      setUser({ ...user, arca_configurado: true, arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
+      setArca({ ...arca, arca_cert: "", arca_key: "" });
+    } catch (e) {
+      setArcaState("error");
+      setArcaMsg("❌ Error de conexión. Verificá tu internet e intentá de nuevo.");
     }
-    setMsg(d.mensaje || "Facturación fiscal conectada");
-    setArcaMsg("");
-    setUser({ ...user, arca_configurado: true, arca_cuit: body.arca_cuit, arca_env: body.arca_env, arca_punto_venta: body.arca_punto_venta });
-    setArca({ ...arca, arca_cert: "", arca_key: "" });
-    setTimeout(() => setMsg(""), 5000);
   };
 
   const handleUpgrade = async (planKey: string) => {
@@ -299,8 +311,21 @@ export default function Perfil() {
                 : "Conectá tu CUIT y certificado digital para emitir facturas fiscales con CAE. Mientras tanto emitís comprobantes simples (sin CAE)."}
             </p>
             {arcaMsg && (
-              <div className={`mb-3 p-3 rounded-lg text-sm ${arcaMsg.startsWith("❌") ? "bg-red-900/30 border border-red-700/40 text-red-300" : "bg-gray-800/60 border border-gray-700/40 text-gray-200"}`}>
+              <div className={`mb-3 p-3 rounded-lg text-sm border ${
+                arcaState === "ok" ? "bg-green-900/30 border-green-700/40 text-green-200"
+                : arcaState === "validating" ? "bg-blue-900/30 border-blue-700/40 text-blue-200"
+                : arcaState === "error" ? "bg-red-900/30 border-red-700/40 text-red-300"
+                : "bg-gray-800/60 border-gray-700/40 text-gray-200"
+              }`}>
+                {arcaState === "validating" && (
+                  <span className="inline-flex mr-2">
+                    <span className="w-3 h-3 border-2 border-blue-300 border-t-transparent rounded-full animate-spin" />
+                  </span>
+                )}
                 {arcaMsg}
+                {arcaState !== "validating" && (
+                  <button onClick={() => setArcaMsg("")} className="float-right text-xs opacity-70 hover:opacity-100">✕</button>
+                )}
               </div>
             )}
             <div className="space-y-3 text-sm">
@@ -338,8 +363,12 @@ export default function Perfil() {
                 ¿Dónde consigo el certificado? Ingresá a <strong>afip.gob.ar</strong> con tu CUIT y clave fiscal →
                 <strong> Web Services → Administrador de Certificados</strong> y generá el certificado para el servicio <strong>wsfe</strong>.
               </div>
-              <button onClick={handleArcaSave} className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
-                Validar y conectar con ARCA
+              <button onClick={handleArcaSave} disabled={arcaState === "validating"}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/60 disabled:cursor-wait text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2">
+                {arcaState === "validating" && (
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                {arcaState === "validating" ? "Validando con ARCA…" : user.arca_configurado ? "Reconectar certificado" : "Validar y conectar con ARCA"}
               </button>
             </div>
           </div>
