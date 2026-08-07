@@ -1,18 +1,33 @@
 # TraceLess Roadmap
 
-## Pendiente (hacer mañana)
+## Pendiente (antes de lanzar)
 
-### Configuración Supabase (5 min)
-- [ ] **Email Templates**: Cambiar URL base a `https://www.traceless.com.ar` en Confirm signup y Reset Password
-- [ ] **URL Configuration**: 
-  - Site URL: `https://www.traceless.com.ar`
-  - Redirect URLs: agregar `https://www.traceless.com.ar/verify-email` y `https://www.traceless.com.ar/reset-password`
+### Activar keep-alive del notificador de Telegram (2 min)
+- [ ] Crear monitor **HTTPS** en `uptimerobot.com` (gratis)
+  - URL: `https://www.traceless.com.ar/api/keepalive?telegram=1`
+  - Intervalo: **5 minutos**
+  - Motivo: el notifier corre en Render plan gratuito y se "duerme" por inactividad, perdiendo avisos de soporte/registros. El endpoint `/api/keepalive` ya está desplegado en producción; el monitor es quien lo dispara cada 5 min.
 
 ### Verificar funcionalidad
 - [ ] Probar registro → recibir email de verificación → verificar → login
 - [ ] Probar forgot password → recibir email → restablecer → login
 
+### Configuración Supabase (5 min)
+- [ ] **Email Templates**: Cambiar URL base a `https://www.traceless.com.ar` en Confirm signup y Reset Password
+- [ ] **URL Configuration**:
+  - Site URL: `https://www.traceless.com.ar`
+  - Redirect URLs: agregar `https://www.traceless.com.ar/verify-email` y `https://www.traceless.com.ar/reset-password`
+
 ## Completado
+
+### 2026-08-07 — Pricing USD + facturación ARCA
+- [x] Precios anclados en **USD** (Pro USD 12, Equipo USD 22) con conversión automática a ARS usando cotización diaria (dolarapi, modo oficial, configurable `DOLAR_MODE`) y caché de 1h
+- [x] Checkout/suscripción MercadoPago y `/me/plan` cobran el equivalente en pesos calculado al generar el pago (MP no convierte solo)
+- [x] `/api/mercadopago/prices` devuelve USD + ARS + tipo de cambio; frontend (Landing, Register, Perfil) muestra USD con "≈ pesos"
+- [x] Landing: plan Gratis → "Freemium" (nombre) / "Gratis" (precio), fix precio incorrecto en card
+- [x] Test real de factura con CAE contra ARCA (producción): CAE válido, punto de venta 2 habilitado
+- [x] **Fix notas de crédito**: emisión real ante ARCA (CbteAsoc, NC C sin IVA, extracción de observaciones). Canceladas las 3 facturas de prueba con CAE
+- [x] Endpoint `/api/keepalive` (ping inofensivo a `/health` del notifier) desplegado en producción
 
 ### 2026-07-21 — Simplificación a 3 planes
 - [x] **Planes reducidos a 3**: Gratis ($0), Profesional ($15.000/mes), Equipo ($29.000/mes)
