@@ -191,7 +191,7 @@ def _login(cfg: dict | None = None) -> dict:
     from zeep.transports import Transport
     global _arca_transport
     if _arca_transport is None:
-        _arca_transport = Transport(session=_arca_ses)
+        _arca_transport = Transport(session=_arca_ses, timeout=30)
     client = zeep.Client(
         wsdl=_wsdl_wsaa(cfg.get("homologacion", True)),
         settings=zeep.Settings(strict=False),
@@ -349,7 +349,7 @@ def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
     from zeep.transports import Transport
     global _arca_transport
     if _arca_transport is None:
-        _arca_transport = Transport(session=_arca_ses)
+        _arca_transport = Transport(session=_arca_ses, timeout=30)
     client = zeep.Client(wsdl=_wsdl_wsfe(cfg.get("homologacion", True)), transport=_arca_transport, settings=zeep.Settings(strict=False))
     auth = {"Token": ta["token"], "Sign": ta["sign"], "Cuit": auth_cuit}
 
