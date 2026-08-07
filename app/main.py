@@ -78,6 +78,22 @@ def health():
         "service_key_len": len(_SERVICE_KEY) if _SERVICE_KEY else 0,
     }
 
+@app.get("/api/keepalive")
+def keepalive(secret: str = "", telegram: str = ""):
+    """Mantiene vivos servicios externos (p.ej. el notifier en Render) para
+    que no duerman en planes gratuitos y no se pierdan avisos."""
+    if secret and secret != os.getenv("CRON_SECRET", ""):
+        raise HTTPException(401, "Secret inválido")
+    result = "noop"
+    if telegram.lower() == "1" or telegram.lower() == "on":
+        try:
+            import httpx
+            r = httpx.get(f"{os.getenv('TELEGRAM_NOTIFIER_URL', 'https://telegram-notifier-pmcs.onrender.com')}/health", timeout=15)
+            result = f"telegram:{r.status_code}"
+        except Exception as e:
+            result = f"telegram:error:{str(e)[:80]}"
+    return {"status": "ok", "keepalive": result}
+
 @app.get("/api/planes")
 def listar_planes(authorization: str = Header("")):
     try:

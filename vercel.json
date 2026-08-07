@@ -7,6 +7,10 @@
   ],
   "crons": [
     {
+      "path": "/api/keepalive?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI&telegram=1",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/facturas/recordatorios?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
       "schedule": "0 12 * * 1"
     },
