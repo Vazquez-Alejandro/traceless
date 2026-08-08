@@ -111,10 +111,12 @@ alter table whatsapp_log enable row level security;
 create policy "Usuarios pueden ver su propio log de WhatsApp"
   on whatsapp_log for select using (auth.uid() = user_id);
 
+-- El backend (service_role) insert los logs; el rol client no inserta ajenos.
 create policy "Sistema puede insertar logs de WhatsApp"
-  on whatsapp_log for insert with check (true);
+  on whatsapp_log for insert with check (auth.uid() = user_id);
 
 -- Facturas pendientes de reintento ARCA
+-- Pendientes de facturación (cola de reintentos del backend)
 create table if not exists facturas_pendientes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -137,8 +139,9 @@ alter table facturas_pendientes enable row level security;
 create policy "Usuarios pueden ver sus facturas pendientes"
   on facturas_pendientes for select using (auth.uid() = user_id);
 
-create policy "Sistema puede gestionar facturas pendientes"
-  on facturas_pendientes for all using (true);
+-- El backend inserta/actualiza con service_role (bypasa RLS). RO publico no inserta filas ajenas.
+create policy "Sistema gestiona facturas pendientes"
+  on facturas_pendientes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Creditos para WhatsApp
 create table if not exists creditos (
@@ -155,8 +158,7 @@ alter table creditos enable row level security;
 create policy "Usuarios pueden ver sus creditos"
   on creditos for select using (auth.uid() = user_id);
 
-create policy "Sistema puede insertar creditos"
-  on creditos for insert with check (true);
+-- El backend con service_role inserta creditos. ROLE ANON/authenticated NO puede autocreditarse.
 
 -- Notificaciones in-app
 create table if not exists notificaciones (
@@ -182,11 +184,11 @@ create policy "Usuarios pueden eliminar sus notificaciones"
   on notificaciones for delete using (auth.uid() = user_id);
 
 create policy "Sistema puede insertar notificaciones"
-  on notificaciones for insert with check (true);
+  on notificaciones for insert with check (auth.uid() = user_id);
 
 create index if not exists idx_notificaciones_user on notificaciones(user_id, created_at desc);
 
--- Cache (ARCA TA token cache)
+-- Cache (ARCA TA token cache + rate limiting + preapprovals MP)
 create table if not exists cache (
   key text primary key,
   token text,
@@ -194,6 +196,11 @@ create table if not exists cache (
   expires timestamptz,
   created_at timestamptz default now()
 );
+
+-- NO exponer cache al rol publico: guarda tokens de sesion ARCA/AFIP.
+alter table cache enable row level security;
+revoke all on table cache from anon, authenticated;
+-- El backend accede con service_role (bypasa RLS por diseño).
 
 -- Reembolsos
 create table if not exists reembolsos (

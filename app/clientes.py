@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel
 from typing import Optional
 from app.db import supabase, get_user_id
+from app.utils import normalizar_cuit, validar_cuit_afip
 
 router = APIRouter(prefix="/api/clientes", tags=["clientes"])
 
@@ -24,13 +25,16 @@ def listar_clientes(authorization: str = Header(""), limit: int = Query(20, ge=1
 @router.post("")
 def crear_cliente(req: ClienteCreate, authorization: str = Header("")):
     uid = get_user_id(authorization)
+    cuit = normalizar_cuit(req.cuit) if req.cuit else ""
+    if cuit and not validar_cuit_afip(cuit):
+        raise HTTPException(400, "CUIT inválido")
     res = supabase.table("clientes").insert({
         "user_id": uid,
         "nombre": req.nombre,
         "apellido": req.apellido,
         "email": req.email,
         "telefono": req.telefono,
-        "cuit": req.cuit,
+        "cuit": cuit,
         "direccion": req.direccion,
         "condicion_iva": req.condicion_iva,
     }).execute()
@@ -39,7 +43,13 @@ def crear_cliente(req: ClienteCreate, authorization: str = Header("")):
 @router.put("/{cliente_id}")
 def actualizar_cliente(cliente_id: str, req: ClienteCreate, authorization: str = Header("")):
     uid = get_user_id(authorization)
-    res = supabase.table("clientes").update(req.model_dump()).eq("id", cliente_id).eq("user_id", uid).execute()
+    data = req.model_dump()
+    if data.get("cuit"):
+        cuit = normalizar_cuit(data["cuit"])
+        if not validar_cuit_afip(cuit):
+            raise HTTPException(400, "CUIT inválido")
+        data["cuit"] = cuit
+    res = supabase.table("clientes").update(data).eq("id", cliente_id).eq("user_id", uid).execute()
     if not res.data:
         raise HTTPException(404, "Cliente no encontrado")
     return {"cliente": res.data[0]}

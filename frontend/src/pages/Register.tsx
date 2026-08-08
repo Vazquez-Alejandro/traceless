@@ -114,6 +114,7 @@ export default function Register() {
       }
       const res = await api.auth.login({ email, password });
       localStorage.setItem("token", res.token);
+      if (res.refresh_token) localStorage.setItem("refresh_token", res.refresh_token);
 
       // Apply referral code if valid
       if (referralValid && referralCode) {

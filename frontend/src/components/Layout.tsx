@@ -78,6 +78,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
     localStorage.removeItem("onboarding_done");
     window.location.href = "/login";
   };

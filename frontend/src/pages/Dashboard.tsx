@@ -36,20 +36,20 @@ export default function Dashboard() {
       api.facturas.list(),
       fetch(`${BASE_URL}/api/facturas/estadisticas`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/facturas/analytics/clientes`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/planes`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/facturas/resumen`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      }).then(r => r.json()).catch(() => ({})),
       api.auth.me(),
       fetch(`${BASE_URL}/api/whatsapp/stats`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      }).then(r => r.json()).catch(() => ({})),
     ]).then(([c, f, e, a, p, r, me, wp]) => {
       const facturas = f.facturas || [];
       setStats({
@@ -82,6 +82,9 @@ export default function Dashboard() {
         .map(([mes, total]) => ({ mes, total }))
         .sort((a, b) => a.mes.localeCompare(b.mes))
         .slice(-6));
+      setLoading(false);
+    }).catch((err) => {
+      console.error("Error cargando dashboard:", err);
       setLoading(false);
     });
   }, []);
@@ -292,7 +295,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
         <Link to="/facturas" className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">Nueva Factura</Link>
         <Link to="/clientes" className="px-5 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm">Nuevo Cliente</Link>
       </div>

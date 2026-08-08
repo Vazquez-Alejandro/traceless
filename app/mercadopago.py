@@ -1,5 +1,6 @@
 import os
 import logging
+import json as _json
 import httpx
 import hashlib
 import hmac
@@ -39,6 +40,21 @@ def _monto_ars(plan_key: str) -> int:
     return ars_from_usd(usd)
 
 
+def _parse_plan_ref(external_ref: str) -> tuple[str, str]:
+    """Parsea el external_reference de MP: 'traceless_plan:{plan_key}:{uid}'.
+
+    Devuelve (plan_key, uid). Compatible con el viejo formato '{uid}' (plan default 'pro').
+    """
+    ref = external_ref or ""
+    if ref.startswith("traceless_plan:"):
+        partes = ref.split(":")
+        if len(partes) >= 3:
+            plan_key, uid = partes[1], ":".join(partes[2:])
+            if plan_key in PRICES_USD:
+                return plan_key, uid
+    return "pro", ref
+
+
 def _mp_headers():
     return {
         "Authorization": f"Bearer {MP_TOKEN}",
@@ -69,8 +85,10 @@ def crear_checkout(plan_key: str, authorization: str = Header("")):
             }
         ],
         "payer": {"email": email},
-        "external_reference": uid,
+        "external_reference": f"traceless_plan:{plan_key}:{uid}",
         "statement_descriptor": "TRACELESS",
+        "back_urls": {"success": f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/perfil", "pending": f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/perfil", "failure": f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/perfil"},
+        "auto_return": "approved",
         "expires": True,
         "expiration_date_from": datetime.now(timezone.utc).isoformat(),
         "expiration_date_to": datetime(2026, 12, 31, tzinfo=timezone.utc).isoformat(),
@@ -107,7 +125,7 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
             "currency_id": "ARS",
         },
         "payer_email": email,
-        "external_reference": uid,
+        "external_reference": f"traceless_plan:{plan_key}:{uid}",
         "statement_descriptor": "TRACELESS",
     }
 
@@ -229,6 +247,18 @@ async def mp_webhook(request: Request):
             status = payment.get("status", "")
             external_ref = payment.get("external_reference", "")
             if status == "approved" and external_ref:
+                # Idempotencia: evitar duplicar el procesamiento si MP reintenta el webhook
+                try:
+                    existente = supabase.table("cache").select("token").eq("key", f"mp_paid:{data_id}").execute()
+                    if existente.data:
+                        logger.info(f"Payment {data_id} ya procesado, se omite")
+                        return {"ok": True}
+                    supabase.table("cache").insert({
+                        "key": f"mp_paid:{data_id}",
+                        "token": _json.dumps({"status": "processed"}),
+                    }).execute()
+                except Exception as e:
+                    logger.warning(f"No se pudo verificar idempotencia para {data_id}: {e}")
                 if external_ref.startswith("factura_"):
                     factura_id = external_ref.replace("factura_", "")
                     try:
@@ -253,9 +283,10 @@ async def mp_webhook(request: Request):
                     except Exception as e:
                         logger.error(f"Error acreditando crédito a {user_id}: {e}")
                 else:
-                    _set_user_plan_mp(external_ref, "pro")
-                    logger.info(f"Payment approved for user {external_ref}")
-                    crear_notificacion(external_ref, "plan_renovado", "Plan Profesional activado", "Tu plan ha sido activado exitosamente", "/perfil")
+                    plan_key, uid = _parse_plan_ref(external_ref)
+                    _set_user_plan_mp(uid, plan_key)
+                    logger.info(f"Payment approved for user {uid}: plan {plan_key}")
+                    crear_notificacion(uid, "plan_renovado", f"Plan {PRICES_USD[plan_key]['name']} activado", "Tu plan ha sido activado exitosamente", "/perfil")
 
     elif event_type == "subscription_preapproval":
         r = httpx.get(f"{MP_BASE}/preapproval/{data_id}", headers=_mp_headers(), timeout=15)
@@ -264,24 +295,30 @@ async def mp_webhook(request: Request):
             status = sub.get("status", "")
             external_ref = sub.get("external_reference", "")
             if status == "authorized" and external_ref:
+                plan_key, uid = _parse_plan_ref(external_ref)
+                if not uid:
+                    plan_key, uid = "pro", external_ref
                 # Persistir la preaprobación para permitir cancelación posterior
                 try:
                     import json as _json
                     supabase.table("cache").upsert({
-                        "key": f"mp_preapproval:{external_ref}",
-                        "token": _json.dumps({"preapproval_id": str(data_id), "plan_key": "pro"}),
+                        "key": f"mp_preapproval:{uid}",
+                        "token": _json.dumps({"preapproval_id": str(data_id), "plan_key": plan_key}),
                     }).execute()
                 except Exception as e:
                     logger.warning(f"No se pudo persistir preapproval (webhook): {e}")
-                _set_user_plan_mp(external_ref, "pro")
-                crear_notificacion(external_ref, "plan_renovado", "Suscripción activada", "Tu suscripción está activa", "/perfil")
+                _set_user_plan_mp(uid, plan_key)
+                crear_notificacion(uid, "plan_renovado", "Suscripción activada", "Tu suscripción está activa", "/perfil")
             elif status in ("cancelled", "paused") and external_ref:
-                _set_user_plan_mp(external_ref, "free")
+                _, uid = _parse_plan_ref(external_ref)
+                if not uid:
+                    uid = external_ref
+                _set_user_plan_mp(uid, "free")
                 try:
-                    supabase.table("cache").delete().eq("key", f"mp_preapproval:{external_ref}").execute()
+                    supabase.table("cache").delete().eq("key", f"mp_preapproval:{uid}").execute()
                 except Exception:
                     pass
-                crear_notificacion(external_ref, "plan_cancelado", "Suscripción cancelada", "Tu plan ha vuelto a Gratis", "/perfil")
+                crear_notificacion(uid, "plan_cancelado", "Suscripción cancelada", "Tu plan ha vuelto a Gratis", "/perfil")
 
     return {"ok": True}
 

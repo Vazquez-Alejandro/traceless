@@ -616,6 +616,9 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
     cuit = req.arca_cuit.strip().replace(".", "")
     if not cuit or not cuit.isdigit() or len(cuit) != 11:
         raise HTTPException(400, "CUIT inválido. Debe tener 11 dígitos.")
+    from app.utils import validar_cuit_afip
+    if not validar_cuit_afip(cuit):
+        raise HTTPException(400, "CUIT inválido (dígito verificador incorrecto).")
 
     cert, key = req.arca_cert, req.arca_key
 

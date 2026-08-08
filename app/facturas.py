@@ -38,6 +38,23 @@ def _get_user_lock(user_id: str) -> threading.Lock:
             _user_locks[user_id] = threading.Lock()
         return _user_locks[user_id]
 
+def _extract_numero(texto: str) -> int:
+    """Extrae la parte numérica final de '0001-00000012' (falla segura a 0)."""
+    try:
+        return int(texto.split("-")[-1])
+    except (ValueError, IndexError):
+        return 0
+
+def _ultimo_numero_usuario(uid: str) -> int:
+    """Último número de factura emitida (excluye programadas sin número real)."""
+    try:
+        last = supabase.table("facturas").select("numero").eq("user_id", uid).neq("numero", "").neq("estado", "programada").order("created_at", desc=True).limit(1).execute()
+        if last.data and last.data[0].get("numero"):
+            return _extract_numero(last.data[0]["numero"])
+    except Exception:
+        pass
+    return 0
+
 def _fiscal_cfg_emisor(emisor: dict, modo: str = "fiscal") -> dict:
     import base64
     tiene_cert = bool(emisor.get("arca_cert") and emisor.get("arca_key"))
@@ -97,6 +114,10 @@ async def crear_factura(req: FacturaCreate, authorization: str = Header("")):
     if req.recurrente and not has_feature(uid, "recurrentes"):
         raise HTTPException(403, "Facturas recurrentes disponibles en plan Profesional y Equipo")
 
+    importe_total = sum(d.cantidad * d.precio_unitario for d in req.detalles) if req.detalles else (req.importe or 0)
+    if importe_total <= 0:
+        raise HTTPException(400, "El importe debe ser mayor a 0")
+
     try:
         result = await _crear_factura_interna(uid, req)
         return result
@@ -136,6 +157,9 @@ async def preview_factura(req: FacturaCreate, authorization: str = Header("")):
         importe_total = round(sum(d.cantidad * d.precio_unitario for d in req.detalles), 2)
     else:
         importe_total = req.importe or 0
+
+    if importe_total <= 0:
+        raise HTTPException(400, "El importe debe ser mayor a 0")
 
     neto, iva = _faecal(importe_total, req.tipo)
     preview_factura_dict = {
@@ -205,13 +229,7 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     # Use per-user lock to prevent duplicate invoice numbers
     user_lock = _get_user_lock(uid)
     with user_lock:
-        last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
-        ultimo_numero = 0
-        if last.data:
-            try:
-                ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
-            except (ValueError, IndexError):
-                ultimo_numero = 0
+        ultimo_numero = _ultimo_numero_usuario(uid)
 
     afip_result = generar_factura_afip(
         cliente_cuit=cliente.data.get("cuit", ""),
@@ -372,13 +390,7 @@ async def crear_nota_credito(req: NotaCreditoCreate, authorization: str = Header
     # Use per-user lock for invoice number
     user_lock = _get_user_lock(uid)
     with user_lock:
-        last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
-        ultimo_numero = 0
-        if last.data:
-            try:
-                ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
-            except (ValueError, IndexError):
-                ultimo_numero = 0
+        ultimo_numero = _ultimo_numero_usuario(uid)
 
     try:
         afip_result = generar_factura_afip(
@@ -532,7 +544,7 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
         if not f.data or not f.data.get("clientes"):
             errores.append({"id": fid, "error": "Factura o cliente no encontrado"})
             continue
-        pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/pdf"
+        pdf_url = f"{os.getenv('BASE_URL', 'https://www.traceless.com.ar')}/api/facturas/{fid}/public"
         mp_link = f.data.get("mp_link", "")
         estado_actual = f.data.get("estado", "")
 
@@ -673,13 +685,7 @@ async def importar_facturas(req: list[FacturaImportItem], authorization: str = H
 
             user_lock = _get_user_lock(uid)
             with user_lock:
-                last = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
-                ultimo_numero = 0
-                if last.data:
-                    try:
-                        ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
-                    except (ValueError, IndexError):
-                        ultimo_numero = 0
+                ultimo_numero = _ultimo_numero_usuario(uid)
 
             afip_result = generar_factura_afip(
                 cliente_cuit=cuit_limpio,
@@ -1000,13 +1006,7 @@ async def procesar_programadas(secret: str = "", authorization: str = Header("")
                 desc = desc_raw
                 detalles = []
 
-            last = supabase.table("facturas").select("numero").eq("user_id", uid).neq("estado", "programada").order("created_at", desc=True).limit(1).execute()
-            ultimo_numero = 0
-            if last.data:
-                try:
-                    ultimo_numero = int(last.data[0]["numero"].split("-")[-1])
-                except (ValueError, IndexError):
-                    ultimo_numero = 0
+            ultimo_numero = _ultimo_numero_usuario(uid)
 
             from app.afip import generar_factura_afip
             afip_result = generar_factura_afip(
@@ -1050,7 +1050,7 @@ async def procesar_programadas(secret: str = "", authorization: str = Header("")
 
             plan = get_user_plan(uid)
             base_url = os.getenv("BASE_URL", "https://www.traceless.com.ar")
-            pdf_url_full = f"{base_url}{html_url}"
+            pdf_url_full = f"{base_url}/api/facturas/{f['id']}/public"
             enviado = False
 
             # Intentar WhatsApp si el plan lo permite

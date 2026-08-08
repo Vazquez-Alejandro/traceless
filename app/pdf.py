@@ -152,7 +152,11 @@ def _detalles(f):
 
 def _detalle_html(d):
     subt = d["cantidad"] * d["precio_unitario"]
-    return f'<tr><td>{d["descripcion"]}</td><td style="text-align:center">{d["cantidad"]}</td><td style="text-align:right">${d["precio_unitario"]:,.2f}</td><td style="text-align:right">${subt:,.2f}</td></tr>'
+    desc = html_mod.escape(str(d["descripcion"]))
+    cant = html_mod.escape(str(d["cantidad"]))
+    precio = html_mod.escape(f'{d["precio_unitario"]:,.2f}')
+    sub = html_mod.escape(f'{subt:,.2f}')
+    return f'<tr><td>{desc}</td><td style="text-align:center">{cant}</td><td style="text-align:right">${precio}</td><td style="text-align:right">${sub}</td></tr>'
 
 def _default_item(f):
     desc = f.get("descripcion", "Servicios")
@@ -166,7 +170,9 @@ def _default_item(f):
                 extra = '<div style="font-size:10px;color:#7c3aed;margin-top:2px">♻️ Factura recurrente</div>'
         except Exception:
             pass
-    return f'<tr><td colspan="3">{desc}{extra}</td><td style="text-align:right">${f["total"]:,.2f}</td></tr>'
+    desc_esc = html_mod.escape(str(desc))
+    monto = html_mod.escape(f'{f["total"]:,.2f}')
+    return f'<tr><td colspan="3">{desc_esc}{extra}</td><td style="text-align:right">${monto}</td></tr>'
 
 def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     return generar_html_factura(factura, cliente, emisor).encode("utf-8")

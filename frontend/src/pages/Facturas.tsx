@@ -26,6 +26,7 @@ interface Factura {
   pdf_url?: string;
   mp_link?: string;
   scheduled_send?: string;
+  es_fiscal?: boolean;
 }
 
 interface DetalleItem {
@@ -205,6 +206,7 @@ export default function Facturas() {
       descripcion: desc,
       recurrente: false,
       scheduled_send: "",
+      modo: "fiscal",
     });
     setDetalles([]);
     setUsarItems(false);
@@ -347,6 +349,7 @@ export default function Facturas() {
       descripcion: desc,
       recurrente: false,
       scheduled_send: f.scheduled_send || "",
+      modo: "fiscal",
     });
     setUsarItems(hasItems);
     setEditingId(f.id);
@@ -459,7 +462,15 @@ export default function Facturas() {
     if (usarItems) {
       body.detalles = detalles.filter(d => d.descripcion && d.precio_unitario > 0);
     }
-    const res = await api.facturas.create(body);
+    let res;
+    try {
+      res = await api.facturas.create(body);
+    } catch (err: any) {
+      setToast("Error: " + (err.message || "No se pudo emitir la factura"));
+      setTimeout(() => setToast(""), 5000);
+      setLoading(false);
+      return;
+    }
     if (res.error) {
       setToast("Error: " + res.error);
       setTimeout(() => setToast(""), 5000);
