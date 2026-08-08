@@ -17,8 +17,8 @@
 - [x] **Tests**: +3 tests de rate limit (25 total)
 
 ## Pendiente
-- [ ] **Run schema.sql** on Supabase SQL Editor to add the `cache` table
-- [ ] **Rotate .env secrets** — credentials were committed to git at some point
+- [ ] **Run schema.sql** on Supabase SQL Editor to add the `cache` table (verificado: existe en prod, columnas key/token/sign/expires)
+- [ ] **CRON_SECRET de Vercel != local** — las crons de producción responden 403 con el secret local; alinear el CRON_SECRET en Vercel con el .env (o viceversa) para que los 7 crons autentiquen
 - [ ] **MP_WEBHOOK_SECRET** — fill in for MercadoPago webhook verification
 - [ ] **CRON_SECRET in vercel.json** — hardcoded; consider using env var (Vercel limitation: crons need static paths)
 - [ ] **WhatsApp phone number** — verify is registered in Meta Business
