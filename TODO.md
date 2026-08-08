@@ -18,7 +18,7 @@
 
 ## Pendiente
 - [ ] **Run schema.sql** on Supabase SQL Editor to add the `cache` table (verificado: existe en prod, columnas key/token/sign/expires)
-- [ ] **CRON_SECRET de Vercel != local** — las crons de producción responden 403 con el secret local; alinear el CRON_SECRET en Vercel con el .env (o viceversa) para que los 7 crons autentiquen
+- [x] **CRON_SECRET de Vercel != local** — alineado: Production ahora usa el valor del `.env`; 7/7 crons responden 200 con `Authorization: Bearer CRON_SECRET`
 - [ ] **MP_WEBHOOK_SECRET** — fill in for MercadoPago webhook verification
 - [ ] **CRON_SECRET in vercel.json** — hardcoded; consider using env var (Vercel limitation: crons need static paths)
 - [ ] **WhatsApp phone number** — verify is registered in Meta Business
