@@ -734,7 +734,10 @@ async def importar_facturas(req: list[FacturaImportItem], authorization: str = H
 
 @router.get("/public/{factura_id}")
 def factura_publica(factura_id: str):
-    f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva, telefono)").eq("id", factura_id).single().execute()
+    try:
+        f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva, telefono)").eq("id", factura_id).single().execute()
+    except Exception:
+        raise HTTPException(404, "Factura no encontrada")
     if not f.data:
         raise HTTPException(404, "Factura no encontrada")
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
@@ -747,7 +750,10 @@ def factura_publica(factura_id: str):
 @router.get("/{factura_id}/pdf")
 def factura_pdf(factura_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)
-    f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).eq("user_id", uid).single().execute()
+    try:
+        f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva)").eq("id", factura_id).eq("user_id", uid).single().execute()
+    except Exception:
+        raise HTTPException(404, "Factura no encontrada")
     if not f.data:
         raise HTTPException(404, "Factura no encontrada")
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
