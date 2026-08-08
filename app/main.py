@@ -23,6 +23,17 @@ async def global_exception_handler(request, exc):
     from fastapi.responses import JSONResponse
     if isinstance(exc, HTTPException):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    try:
+        from app.telegram_notify import notify_telegram
+        import asyncio
+        ruta = str(getattr(request, "url", ""))
+        asyncio.create_task(notify_telegram(
+            app="traceless",
+            event="🛑 Error 500",
+            message=f"Ruta: {ruta}\n{type(exc).__name__}: {str(exc)[:300]}",
+        ))
+    except Exception:
+        pass
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno del servidor"},
@@ -49,6 +60,7 @@ from app.contact import router as contact_router
 from app.notifications import router as notifications_router
 from app.reembolsos import router as reembolsos_router
 from app.referrals import router as referrals_router
+from app.backup import router as backup_router
 
 app.include_router(auth_router)
 app.include_router(clientes_router)
@@ -61,6 +73,7 @@ app.include_router(contact_router)
 app.include_router(notifications_router)
 app.include_router(reembolsos_router)
 app.include_router(referrals_router)
+app.include_router(backup_router)
 
 @app.get("/")
 def root():
@@ -69,10 +82,17 @@ def root():
 @app.get("/api/health")
 def health():
     import os
-    from app.db import _ANON_KEY, _SERVICE_KEY
+    from app.db import _ANON_KEY, _SERVICE_KEY, supabase
+    db_ok = False
+    try:
+        supabase.table("perfiles").select("id").limit(1).execute()
+        db_ok = True
+    except Exception:
+        db_ok = False
     return {
-        "status": "ok",
+        "status": "ok" if db_ok else "degraded",
         "version": "v2-resend",
+        "db": "ok" if db_ok else "error",
         "anon_key_len": len(_ANON_KEY) if _ANON_KEY else 0,
         "service_key_len": len(_SERVICE_KEY) if _SERVICE_KEY else 0,
     }
@@ -90,7 +110,8 @@ def keepalive(secret: str = "", telegram: str = ""):
             result = f"telegram:{r.status_code}"
         except Exception as e:
             result = f"telegram:error:{str(e)[:80]}"
-    return {"status": "ok", "keepalive": result}
+    db_ok = health().get("db") == "ok"
+    return {"status": "ok" if db_ok else "degraded", "keepalive": result, "db": "ok" if db_ok else "error"}
 
 @app.get("/api/planes")
 def listar_planes(authorization: str = Header("")):
