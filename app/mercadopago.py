@@ -117,26 +117,102 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
         raise HTTPException(500, "Error al crear suscripción")
 
     data = r.json()
-    return {"url": data["init_point"], "id": data.get("id")}
+    preapproval_id = str(data.get("id", ""))
+
+    # Persistir la preaprobación para poder cancelarla luego
+    try:
+        supabase.table("cache").upsert({
+            "key": f"mp_preapproval:{uid}",
+            "value": {"preapproval_id": preapproval_id, "plan_key": plan_key},
+        }).execute()
+    except Exception as e:
+        logger.warning(f"No se pudo persistir preapproval de {uid}: {e}")
+
+    return {"url": data["init_point"], "id": preapproval_id}
+
+
+@router.post("/cancel-subscription")
+def cancelar_suscripcion(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    if not MP_TOKEN:
+        raise HTTPException(500, "Mercado Pago no configurado (falta MP_ACCESS_TOKEN)")
+
+    # Buscar la preaprobación activa del usuario
+    try:
+        row = supabase.table("cache").select("value").eq("key", f"mp_preapproval:{uid}").execute()
+        preapproval_id = (row.data[0]["value"].get("preapproval_id", "") if row.data else "")
+    except Exception:
+        preapproval_id = ""
+
+    if not preapproval_id:
+        # Fallback: consultar las preaprobaciones autorizadas de MP asociadas por external_reference=uid
+        r = httpx.get(
+            f"{MP_BASE}/preapproval/search",
+            params={"external_reference": uid, "status": "authorized"},
+            headers=_mp_headers(), timeout=15,
+        )
+        if r.status_code == 200 and r.json().get("results"):
+            preapproval_id = str(r.json()["results"][0]["id"])
+    if not preapproval_id:
+        raise HTTPException(404, "No tenés una suscripción activa para cancelar")
+
+    # Cancelar en MercadoPago
+    r = httpx.put(
+        f"{MP_BASE}/preapproval/{preapproval_id}",
+        json={"status": "cancelled"},
+        headers=_mp_headers(), timeout=15,
+    )
+    if r.status_code not in (200, 201):
+        logger.error(f"MP cancel error: {r.status_code} {r.text}")
+        raise HTTPException(502, "MercadoPago no pudo cancelar la suscripción")
+
+    # Bajar el plan a Gratis
+    _set_user_plan_mp(uid, "free")
+    from app.lemon import invalidate_plan_cache
+    invalidate_plan_cache(uid)
+
+    # Limpiar la referencia guardada
+    try:
+        supabase.table("cache").delete().eq("key", f"mp_preapproval:{uid}").execute()
+    except Exception as e:
+        logger.warning(f"No se pudo limpiar cache de preapproval {uid}: {e}")
+
+    crear_notificacion(uid, "plan_cancelado", "Suscripción cancelada",
+                       "Tu suscripción se canceló en MercadoPago. Tu plan vuelve a Gratis.", "/perfil")
+    logger.info(f"Suscripción de {uid} cancelada (preapproval {preapproval_id})")
+    return {"ok": True, "message": "Suscripción cancelada. Volviste al plan Gratis."}
 
 
 @router.post("/webhook")
 async def mp_webhook(request: Request):
     body = await request.body()
+    import json
+    data = json.loads(body)
 
-    # Verificar firma del webhook
+    # Verificar firma del webhook. MercadoPago firma con el header:
+    #   x-signature: ts=<timestamp>,v1=<hmac_sha256>
+    # donde el HMAC se calcula sobre el "manifest":
+    #   id:<data.id>;ts:<ts>;  (y request-id si viene x-request-id)
     if MP_WEBHOOK_SECRET:
         signature = request.headers.get("x-signature", "")
         if not signature:
             logger.warning("MP webhook: missing signature")
             raise HTTPException(401, "Firma requerida")
-        sig = hmac.HMAC(MP_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(f"sha256={sig}", signature):
+        parts = {}
+        for kv in signature.split(","):
+            if "=" in kv:
+                k, v = kv.strip().split("=", 1)
+                parts[k] = v
+        ts = parts.get("ts", "")
+        v1 = parts.get("v1", "")
+        data_id = str(data.get("data", {}).get("id", ""))
+        req_id = request.headers.get("x-request-id", "")
+        manifest = f"id:{data_id};request-id:{req_id};ts:{ts};"
+        sig = hmac.new(MP_WEBHOOK_SECRET.encode(), manifest.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, v1):
             logger.warning("MP webhook: invalid signature")
             raise HTTPException(401, "Firma inválida")
 
-    import json
-    data = json.loads(body)
     logger.info(f"MP webhook received: {data.get('type', 'unknown')}")
 
     event_type = data.get("type", "")
@@ -184,10 +260,22 @@ async def mp_webhook(request: Request):
             status = sub.get("status", "")
             external_ref = sub.get("external_reference", "")
             if status == "authorized" and external_ref:
+                # Persistir la preaprobación para permitir cancelación posterior
+                try:
+                    supabase.table("cache").upsert({
+                        "key": f"mp_preapproval:{external_ref}",
+                        "value": {"preapproval_id": str(data_id), "plan_key": "pro"},
+                    }).execute()
+                except Exception as e:
+                    logger.warning(f"No se pudo persistir preapproval (webhook): {e}")
                 _set_user_plan_mp(external_ref, "pro")
                 crear_notificacion(external_ref, "plan_renovado", "Suscripción activada", "Tu suscripción está activa", "/perfil")
             elif status in ("cancelled", "paused") and external_ref:
                 _set_user_plan_mp(external_ref, "free")
+                try:
+                    supabase.table("cache").delete().eq("key", f"mp_preapproval:{external_ref}").execute()
+                except Exception:
+                    pass
                 crear_notificacion(external_ref, "plan_cancelado", "Suscripción cancelada", "Tu plan ha vuelto a Gratis", "/perfil")
 
     return {"ok": True}

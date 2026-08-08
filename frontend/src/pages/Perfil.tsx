@@ -138,6 +138,22 @@ export default function Perfil() {
     if (d.url) window.location.href = d.url;
   };
 
+  const handleCancelSubscription = async () => {
+    if (!window.confirm("¿Cancelar tu suscripción? Volverás al plan Gratis al finalizar el período actual.")) return;
+    const token = localStorage.getItem("token");
+    try {
+      const r = await fetch(`${BASE_URL}/api/mercadopago/cancel-subscription`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json();
+      setMsg(d.message || (d.error?.message || (r.ok ? "Suscripción cancelada" : "Error al cancelar")));
+      if (r.ok) setUser({ ...user, plan: user.plan === "Profesional" ? "Gratis" : user.plan, plan_key: "free" });
+    } catch (e) {
+      setMsg("❌ No se pudo cancelar la suscripción. Intentá de nuevo.");
+    }
+  };
+
   return (
     <div className="w-full">
       <h1 className="text-2xl font-bold mb-6">Mi Perfil</h1>
@@ -272,6 +288,14 @@ export default function Perfil() {
             <p className="text-xs text-gray-500">
               {user.whatsapp_configurado ? "🟢 Envío directo por API" : "🟡 Envío por wa.me (sin configurar)"}
             </p>
+            {user.plan_key && user.plan_key !== "free" && (
+              <button
+                onClick={handleCancelSubscription}
+                className="mt-4 w-full px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-700/40 text-red-300 text-sm font-semibold rounded-xl transition-colors"
+              >
+                Cancelar suscripción
+              </button>
+            )}
           </div>
 
           <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40">
