@@ -9,6 +9,13 @@
 - [x] `.env.example`: Created
 - [x] `.gitignore`: Fixed .env* to only ignore .env and .env.local
 
+## Mejoras (2026-08-07)
+- [x] **PWA**: iconos PNG 192/512 + apple-touch-icon generados y referenciados en manifest.json e index.html
+- [x] **Crons**: fix ruta `/api/facturas/recurrentes` que no existía (cron fallaba todos los días); 7/7 crons con ruta
+- [x] **Rate limiting**: signup/login/forgot/reset limitados por IP sobre la tabla `cache` (funciona multi-instancia en Vercel); tarjeta de blowout en auth.py
+- [x] **Fix schema cache**: código usaba columna `value` inexistente en `cache` (es `token`); rate limit + preapproval persistido en `token` como JSON
+- [x] **Tests**: +3 tests de rate limit (25 total)
+
 ## Pendiente
 - [ ] **Run schema.sql** on Supabase SQL Editor to add the `cache` table
 - [ ] **Rotate .env secrets** — credentials were committed to git at some point

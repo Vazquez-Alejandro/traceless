@@ -121,9 +121,10 @@ def crear_suscripcion(plan_key: str, authorization: str = Header("")):
 
     # Persistir la preaprobación para poder cancelarla luego
     try:
+        import json as _json
         supabase.table("cache").upsert({
             "key": f"mp_preapproval:{uid}",
-            "value": {"preapproval_id": preapproval_id, "plan_key": plan_key},
+            "token": _json.dumps({"preapproval_id": preapproval_id, "plan_key": plan_key}),
         }).execute()
     except Exception as e:
         logger.warning(f"No se pudo persistir preapproval de {uid}: {e}")
@@ -139,8 +140,11 @@ def cancelar_suscripcion(authorization: str = Header("")):
 
     # Buscar la preaprobación activa del usuario
     try:
-        row = supabase.table("cache").select("value").eq("key", f"mp_preapproval:{uid}").execute()
-        preapproval_id = (row.data[0]["value"].get("preapproval_id", "") if row.data else "")
+        import json as _json
+        row = supabase.table("cache").select("token").eq("key", f"mp_preapproval:{uid}").execute()
+        preapproval_id = ""
+        if row.data and row.data[0].get("token"):
+            preapproval_id = (_json.loads(row.data[0]["token"]).get("preapproval_id", "") or "")
     except Exception:
         preapproval_id = ""
 
@@ -262,9 +266,10 @@ async def mp_webhook(request: Request):
             if status == "authorized" and external_ref:
                 # Persistir la preaprobación para permitir cancelación posterior
                 try:
+                    import json as _json
                     supabase.table("cache").upsert({
                         "key": f"mp_preapproval:{external_ref}",
-                        "value": {"preapproval_id": str(data_id), "plan_key": "pro"},
+                        "token": _json.dumps({"preapproval_id": str(data_id), "plan_key": "pro"}),
                     }).execute()
                 except Exception as e:
                     logger.warning(f"No se pudo persistir preapproval (webhook): {e}")

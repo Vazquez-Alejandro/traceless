@@ -889,6 +889,8 @@ async def verificar_certificados(secret: str = "", authorization: str = Header("
                                f"Tu certificado digital vence el {exp.strftime('%d/%m/%Y')} ({restantes} días). Renovalo en AFIP para no interrumpir la emisión de facturas.", "/perfil")
             avisados["proximos"] += 1
     return {"ok": True, **avisados}
+
+@router.get("/recurrentes")
 async def procesar_recurrentes(secret: str = "", authorization: str = Header("")):
     _validar_cron(secret, authorization)
     hoy = datetime.now().strftime("%Y-%m-%d")

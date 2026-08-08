@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from pydantic import BaseModel
 from typing import Optional
 from supabase import Client
@@ -9,6 +9,51 @@ from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 logger = logging.getLogger("auth")
+
+def _client_ip(request) -> str:
+    """Resuelve la IP del cliente detrás de un proxy (Vercel)."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def rate_limit(request, action: str, max_per_window: int = 10, window_sec: int = 300) -> None:
+    """Rate limiting distribuido sobre la tabla cache (funciona en Vercel, multi-instancia).
+
+    key: rl:{action}:{ip}
+    value: {"count": N, "window_start": ts}
+    Bloquea con 429 cuando se supera max_per_window dentro de window_sec segundos.
+    """
+    key = f"rl:{action}:{_client_ip(request)}"
+    try:
+        import json as _json
+        now = time.time()
+        row = supabase.table("cache").select("token").eq("key", key).execute()
+        if row.data and row.data[0].get("token"):
+            try:
+                val = _json.loads(row.data[0]["token"])
+            except Exception:
+                val = {}
+            count = val.get("count", 0)
+            start = val.get("window_start", 0)
+            if now - start > window_sec:
+                count = 0
+                start = now
+            count += 1
+            if count > max_per_window:
+                raise HTTPException(429, "Demasiados intentos. Esperá un momento y volvé a intentar.")
+        else:
+            count = 1
+            start = now
+        supabase.table("cache").upsert({
+            "key": key,
+            "token": _json.dumps({"count": count, "window_start": start}),
+        }).execute()
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Nunca bloquear si la infraestructura de rate limit falla
+        logger.warning(f"rate_limit falló para {action}: {e}")
 
 def _arca_configurado(p: dict | None) -> bool:
     if not p:
@@ -170,7 +215,8 @@ def get_user_id(authorization: str = "") -> str:
     return _get_user_id(authorization)
 
 @router.post("/signup")
-def signup(req: SignupRequest):
+def signup(req: SignupRequest, request: Request):
+    rate_limit(request, "signup", max_per_window=10, window_sec=300)
     import httpx, re
     from datetime import datetime, timedelta, timezone
 
@@ -261,10 +307,11 @@ def signup(req: SignupRequest):
     return {"user": {"email": req.email, "needs_verification": True}}
 
 @router.post("/login")
-def login(req: LoginRequest):
+def login(req: LoginRequest, request: Request):
     import httpx
+    rate_limit(request, "login", max_per_window=30, window_sec=60)
 
-    # Rate limiting
+    # Rate limiting por email (en memoria)
     now = time.time()
     email_key = req.email.lower().strip()
     _login_attempts[email_key] = [t for t in _login_attempts[email_key] if now - t < LOCKOUT_SECONDS]
@@ -311,7 +358,8 @@ def login(req: LoginRequest):
     }
 
 @router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest):
+def forgot_password(req: ForgotPasswordRequest, request: Request):
+    rate_limit(request, "forgot", max_per_window=10, window_sec=300)
     now = time.time()
     email_key = req.email.lower().strip()
     _forgot_attempts[email_key] = [t for t in _forgot_attempts[email_key] if now - t < EMAIL_LOCKOUT_SECONDS]
@@ -323,7 +371,7 @@ def forgot_password(req: ForgotPasswordRequest):
     return {"ok": True, "mensaje": "Si el email existe, recibiste un link para restablecer tu contraseña."}
 
 @router.post("/reset-password")
-def reset_password(req: ResetPasswordRequest):
+def reset_password(req: ResetPasswordRequest, request: Request):
     import re, httpx
     email = verify_reset_token(req.token)
     if not email:
