@@ -69,11 +69,10 @@ def root():
 @app.get("/api/health")
 def health():
     import os
-    from app.db import _URL, _ANON_KEY, _SERVICE_KEY
+    from app.db import _ANON_KEY, _SERVICE_KEY
     return {
         "status": "ok",
         "version": "v2-resend",
-        "supabase_url": _URL[:30] + "..." if _URL else "MISSING",
         "anon_key_len": len(_ANON_KEY) if _ANON_KEY else 0,
         "service_key_len": len(_SERVICE_KEY) if _SERVICE_KEY else 0,
     }

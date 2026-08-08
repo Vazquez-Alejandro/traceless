@@ -11,6 +11,19 @@ from app.retry_queue import queue_factura
 from app.notifications import crear_notificacion
 import os, logging, threading
 
+def _validar_cron(secret: str = "", authorization: str = ""):
+    """Valida invocaciones de cron de Vercel: acepta el header Authorization
+    (Bearer CRON_SECRET, que Vercel envía automáticamente) o el query param
+    ?secret= (usado históricamente)."""
+    esperado = os.getenv("CRON_SECRET", "")
+    if not esperado:
+        raise HTTPException(403, "Cron deshabilitado")
+    if authorization.replace("Bearer ", "").strip() == esperado:
+        return
+    if secret and secret == esperado:
+        return
+    raise HTTPException(403, "No autorizado")
+
 logger = logging.getLogger("facturas")
 
 router = APIRouter(prefix="/api/facturas", tags=["facturas"])
@@ -747,9 +760,8 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
         return HTMLResponse(html)
 
 @router.get("/recordatorios")
-async def enviar_recordatorios(secret: str = ""):
-    if secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(403, "No autorizado")
+async def enviar_recordatorios(secret: str = "", authorization: str = Header("")):
+    _validar_cron(secret, authorization)
     from app.whatsapp import enviar_recordatorio_whatsapp
     import asyncio
     now = datetime.now()
@@ -805,9 +817,8 @@ async def enviar_recordatorios(secret: str = ""):
     return {"ok": True, "recordatorios_enviados": enviados}
 
 @router.get("/recordatorio-monotributo")
-async def recordatorio_monotributo(secret: str = ""):
-    if secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(403, "No autorizado")
+async def recordatorio_monotributo(secret: str = "", authorization: str = Header("")):
+    _validar_cron(secret, authorization)
     from app.whatsapp import enviar_recordatorio_monotributo_whatsapp
     import asyncio
     from app.db import supabase as _sb
@@ -845,11 +856,10 @@ async def recordatorio_monotributo(secret: str = ""):
     return {"ok": True, "enviados": enviados}
 
 @router.get("/verificar-certificados")
-async def verificar_certificados(secret: str = ""):
+async def verificar_certificados(secret: str = "", authorization: str = Header("")):
     """Cron diario: notifica a usuarios cuyo certificado ARCA esté por vencer (30 días)
     o ya vencido, para que lo renueven a tiempo y no interrumpan la emisión."""
-    if secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(403, "No autorizado")
+    _validar_cron(secret, authorization)
     from app.afip import cert_expiracion
     import base64
     ahora = datetime.now(timezone.utc).date()
@@ -879,9 +889,8 @@ async def verificar_certificados(secret: str = ""):
                                f"Tu certificado digital vence el {exp.strftime('%d/%m/%Y')} ({restantes} días). Renovalo en AFIP para no interrumpir la emisión de facturas.", "/perfil")
             avisados["proximos"] += 1
     return {"ok": True, **avisados}
-async def procesar_recurrentes(secret: str = ""):
-    if secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(403, "No autorizado")
+async def procesar_recurrentes(secret: str = "", authorization: str = Header("")):
+    _validar_cron(secret, authorization)
     hoy = datetime.now().strftime("%Y-%m-%d")
     emitidas = 0
     errores = 0
@@ -964,9 +973,8 @@ async def procesar_recurrentes(secret: str = ""):
     return {"ok": True, "emitidas": emitidas, "errores": errores}
 
 @router.get("/procesar-programadas")
-async def procesar_programadas(secret: str = ""):
-    if secret != os.getenv("CRON_SECRET", ""):
-        raise HTTPException(403, "No autorizado")
+async def procesar_programadas(secret: str = "", authorization: str = Header("")):
+    _validar_cron(secret, authorization)
     hoy = datetime.now().strftime("%Y-%m-%d")
     procesadas = 0
     errores = 0

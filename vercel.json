@@ -7,27 +7,27 @@
   ],
   "crons": [
     {
-      "path": "/api/facturas/recordatorios?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/facturas/recordatorios",
       "schedule": "0 12 * * 1"
     },
     {
-      "path": "/api/facturas/recurrentes?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/facturas/recurrentes",
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/facturas/recordatorio-monotributo?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/facturas/recordatorio-monotributo",
       "schedule": "0 10 20 * *"
     },
     {
-      "path": "/api/retry/process?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/retry/process",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/facturas/procesar-programadas?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/facturas/procesar-programadas",
       "schedule": "0 7 * * *"
     },
     {
-      "path": "/api/facturas/verificar-certificados?secret=IG9813NKTNXDNsbEo4nJYq-oWKH5zgxXGASbUZ6iXsI",
+      "path": "/api/facturas/verificar-certificados",
       "schedule": "0 9 * * *"
     }
   ]

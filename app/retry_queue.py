@@ -123,9 +123,12 @@ def process_pending_retries():
 
 
 @router.get("/process")
-def procesar_cola(secret: str = ""):
+def procesar_cola(secret: str = "", authorization: str = Header("")):
     import os
-    if secret != os.getenv("CRON_SECRET", ""):
+    esperado = os.getenv("CRON_SECRET", "")
+    if not esperado:
+        raise HTTPException(403, "Cron deshabilitado")
+    if authorization.replace("Bearer ", "").strip() != esperado and secret != esperado:
         raise HTTPException(403, "No autorizado")
     results = process_pending_retries()
     return {"ok": True, **results}
