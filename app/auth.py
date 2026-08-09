@@ -4,6 +4,7 @@ from typing import Optional
 from supabase import Client
 from app.db import supabase, admin_insert, _URL, _SERVICE_KEY, _ANON_KEY, get_user_id as _get_user_id
 from app.creditos import get_saldo
+from app.crypto import cifrar_secreto
 import os, logging, jwt, time
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
@@ -67,14 +68,8 @@ def _arca_configurado(p: dict | None) -> bool:
 def _arca_decode_cert(p: dict | None) -> str:
     if not p:
         return ""
-    cert = p.get("arca_cert") or ""
-    import base64
-    if cert.startswith("arza_b64:"):
-        try:
-            return base64.b64decode(cert.split(":", 1)[1]).decode()
-        except Exception:
-            return ""
-    return cert
+    from app.crypto import descifrar_secreto
+    return descifrar_secreto(p.get("arca_cert") or "")
 
 def _arca_cert_expira(p: dict | None) -> str | None:
     from app.afip import cert_expiracion
@@ -654,8 +649,8 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
 
     base_data = {
         "arca_cuit": cuit,
-        "arca_cert": "arza_b64:" + base64.b64encode(cert_pem.encode()).decode(),
-        "arca_key": "arza_b64:" + base64.b64encode(key_pem.encode()).decode(),
+        "arca_cert": cifrar_secreto(cert_pem),
+        "arca_key": cifrar_secreto(key_pem),
         "arca_punto_venta": req.arca_punto_venta,
         "arca_env": req.arca_env,
     }

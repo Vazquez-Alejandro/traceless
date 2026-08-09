@@ -301,14 +301,8 @@ def generar_factura_afip(cliente_cuit: str, cliente_nombre: str,
         return _simple_generate(cfg, cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
     if cfg.get("use_real"):
-        try:
-            return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero, cfg,
-                                   factura_original_tipo, factura_original_numero)
-        except Exception as e:
-            from tenacity import RetryError
-            if isinstance(e, RetryError) and e.last_attempt.exception():
-                raise e.last_attempt.exception()
-            raise
+        return _wsfe_solicitar(cliente_cuit, cliente_nombre, tipo, importe, condicion_iva, descripcion, ultimo_numero, cfg,
+                               factura_original_tipo, factura_original_numero)
     return _simple_generate(cfg, cliente_cuit, tipo, importe, descripcion, ultimo_numero)
 
 def _faecal(importe: float, tipo: int) -> tuple[float, float]:
@@ -334,15 +328,13 @@ def _simple_generate(cfg: dict, cliente_cuit: str, tipo: int, importe: float, de
         "es_fiscal": False,
     }
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=3, max=30),
-       retry=retry_if_exception_type((RuntimeError, ConnectionError, TimeoutError)))
 def _wsfe_solicitar(cliente_cuit: str, cliente_nombre: str,
-                     tipo: int, importe: float,
-                     condicion_iva: str, descripcion: str,
-                     ultimo_numero: int = 0,
-                     cfg: dict | None = None,
-                     factura_original_tipo: int | None = None,
-                     factura_original_numero: str = "") -> dict:
+                    tipo: int, importe: float,
+                    condicion_iva: str, descripcion: str,
+                    ultimo_numero: int = 0,
+                    cfg: dict | None = None,
+                    factura_original_tipo: int | None = None,
+                    factura_original_numero: str = "") -> dict:
     cfg = cfg or _resolver_cfg()
 
     # Aviso claro si el certificado venció: no tiene sentido pedir CAE a ARCA

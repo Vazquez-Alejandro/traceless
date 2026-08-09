@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import * as XLSX from "xlsx";
+import { leerExcel, descargarExcel } from "../lib/excel";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 
@@ -218,10 +218,7 @@ export default function Facturas() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+      const rows = await leerExcel(file);
 
       const mapped = rows.map((row: any) => {
         const find = (keys: string[]) => {
@@ -564,12 +561,10 @@ export default function Facturas() {
             Exportar Excel
           </button>
           <button onClick={() => {
-            const ws = XLSX.utils.json_to_sheet([{
-              cliente_cuit: "20300000000", cliente_nombre: "Juan Pérez", tipo: 11, importe: 1000, descripcion: "Honorarios", fecha: "2026-08-05"
-            }]);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Facturas");
-            XLSX.writeFile(wb, "template_facturas.xlsx");
+            descargarExcel("template_facturas.xlsx", "Facturas",
+              ["cliente_cuit", "cliente_nombre", "tipo", "importe", "descripcion", "fecha"],
+              [["20300000000", "Juan Pérez", 11, 1000, "Honorarios", "2026-08-05"]]
+            );
           }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
             Descargar template
           </button>

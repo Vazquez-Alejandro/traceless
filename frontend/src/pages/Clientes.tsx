@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import * as XLSX from "xlsx";
+import { leerExcel, descargarExcel, descargarExcelObjetos } from "../lib/excel";
 
 interface Cliente {
   id: string;
@@ -104,10 +104,7 @@ export default function Clientes() {
     if (!file) return;
     setImportando(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+      const rows = await leerExcel(file);
 
       const mapped = rows.map((row: any) => {
         const find = (keys: string[]) => {
@@ -153,27 +150,22 @@ export default function Clientes() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => {
-            const ws = XLSX.utils.aoa_to_sheet([
+            descargarExcel("template_clientes.xlsx", "Clientes",
               ["nombre", "apellido", "email", "telefono", "cuit", "direccion", "condicion_iva"],
-              ["Juan", "Pérez", "juan@email.com", "1155551234", "20300000000", "Calle 123 456", "Consumidor Final"],
-              ["María", "López", "maria@email.com", "1166667890", "27300000000", "Av. Siempre Viva 789", "Monotributo"]
-            ]);
-            ws["!cols"] = [{wch:15},{wch:15},{wch:25},{wch:15},{wch:15},{wch:30},{wch:22}];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-            XLSX.writeFile(wb, "template_clientes.xlsx");
+              [
+                ["Juan", "Pérez", "juan@email.com", "1155551234", "20300000000", "Calle 123 456", "Consumidor Final"],
+                ["María", "López", "maria@email.com", "1166667890", "27300000000", "Av. Siempre Viva 789", "Monotributo"],
+              ],
+              [15, 15, 25, 15, 15, 30, 22]
+            );
           }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
             Descargar template
           </button>
           {clientes.length > 0 && (
             <button onClick={() => {
-              const data = clientes.map(c => ({
+              descargarExcelObjetos("mis_clientes.xlsx", "Clientes", clientes.map(c => ({
                 nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit, direccion: (c as any).direccion || "", condicion_iva: (c as any).condicion_iva || "Consumidor Final"
-              }));
-              const ws = XLSX.utils.json_to_sheet(data);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-              XLSX.writeFile(wb, "mis_clientes.xlsx");
+              })));
             }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
               Exportar mis clientes
             </button>

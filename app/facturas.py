@@ -56,7 +56,7 @@ def _ultimo_numero_usuario(uid: str) -> int:
     return 0
 
 def _fiscal_cfg_emisor(emisor: dict, modo: str = "fiscal") -> dict:
-    import base64
+    from app.crypto import descifrar_secreto
     tiene_cert = bool(emisor.get("arca_cert") and emisor.get("arca_key"))
     cfg = {
         "cuit": emisor.get("arca_cuit") or emisor.get("cuit") or "",
@@ -69,21 +69,11 @@ def _fiscal_cfg_emisor(emisor: dict, modo: str = "fiscal") -> dict:
         "cert": None,
         "key": None,
     }
-    cert = emisor.get("arca_cert") or ""
-    key = emisor.get("arca_key") or ""
-    if cert.startswith("arza_b64:"):
-        try:
-            cfg["cert"] = base64.b64decode(cert.split(":", 1)[1]).decode()
-        except Exception:
-            cfg["cert"] = None
-    elif cert:
+    cert = descifrar_secreto(emisor.get("arca_cert") or "")
+    key = descifrar_secreto(emisor.get("arca_key") or "")
+    if cert:
         cfg["cert"] = cert
-    if key.startswith("arza_b64:"):
-        try:
-            cfg["key"] = base64.b64decode(key.split(":", 1)[1]).decode()
-        except Exception:
-            cfg["key"] = None
-    elif key:
+    if key:
         cfg["key"] = key
     return cfg
 
@@ -882,11 +872,11 @@ async def verificar_certificados(secret: str = "", authorization: str = Header("
         if not p.get("arca_validado"):
             continue
         cert = p.get("arca_cert") or ""
-        if cert.startswith("arza_b64:"):
-            try:
-                cert = base64.b64decode(cert.split(":", 1)[1]).decode()
-            except Exception:
-                continue
+        try:
+            from app.crypto import descifrar_secreto
+            cert = descifrar_secreto(cert)
+        except Exception:
+            continue
         exp = cert_expiracion(cert)
         if not exp:
             continue
