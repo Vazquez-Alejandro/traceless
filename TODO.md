@@ -1,43 +1,40 @@
 # TraceLess — TODO de Produccion
 
-## Bugs corregidos (Audit 2026-08-01)
-- [x] `.env`: Rename AFIP_* → ARCA_* (code reads ARCA_*)
-- [x] `.env`: Add ARCA_ENV=produccion (was defaulting to homologacion)
-- [x] `.env`: Add ARCA_USE_REAL=1 (was always in mock mode)
-- [x] `schema.sql`: Add `cache` table (ARCA TA token cache)
-- [x] `email_sender.py`: Remove dead code (double api_key assignment)
-- [x] `.env.example`: Created
-- [x] `.gitignore`: Fixed .env* to only ignore .env and .env.local
+## Estado: MVP listo para uso real
 
-## Mejoras (2026-08-07)
-- [x] **PWA**: iconos PNG 192/512 + apple-touch-icon generados y referenciados en manifest.json e index.html
-- [x] **Crons**: fix ruta `/api/facturas/recurrentes` que no existía (cron fallaba todos los días); 7/7 crons con ruta
-- [x] **Rate limiting**: signup/login/forgot/reset limitados por IP sobre la tabla `cache` (funciona multi-instancia en Vercel); tarjeta de blowout en auth.py
-- [x] **Fix schema cache**: código usaba columna `value` inexistente en `cache` (es `token`); rate limit + preapproval persistido en `token` como JSON
-- [x] **Tests**: +3 tests de rate limit (25 total)
+## Auditoría (2026-08-09) — aplicada y desplegada
+- [x] **RLS en producción**: cache, creditos, facturas_pendientes (verificado 401 con anon key)
+- [x] **XSS pdf.py**: escape HTML en detalles
+- [x] **Numeración**: helper `_ultimo_numero_usuario` (dedupe programadas)
+- [x] **Webhook MP**: idempotencia (`mp_paid:{id}`) + plan real (`traceless_plan:{key}:{uid}`)
+- [x] **Checkout**: back_urls + auto_return
+- [x] **Links PDF**: `/api/facturas/{id}/public` + fix 404 `.single()`
+- [x] **CUIT**: validación dígito verificador + rechazo factura $0
+- [x] **Frontend**: catch Dashboard/Facturas, refresh_token Register/logout, flex-wrap mobile, tsc limpio
+- [x] **npm audit**: xlsx → read-excel-file + write-excel-file (sin CVEs)
+- [x] **Secrets ARCA**: cifrados con Fernet + migrados los usuarios de prod
+- [x] **Sin retry SOAP**: solo retry de login (idempotente), el resto lo hace la cola
 
-## Pendiente
-- [ ] **Run schema.sql** on Supabase SQL Editor to add the `cache` table (verificado: existe en prod, columnas key/token/sign/expires)
-- [x] **CRON_SECRET de Vercel != local** — alineado: Production ahora usa el valor del `.env`; 7/7 crons responden 200 con `Authorization: Bearer CRON_SECRET`
-- [ ] **MP_WEBHOOK_SECRET** — fill in for MercadoPago webhook verification
-- [ ] **CRON_SECRET in vercel.json** — hardcoded; consider using env var (Vercel limitation: crons need static paths)
-- [ ] **WhatsApp phone number** — verify is registered in Meta Business
-- [ ] **Domain** — verify DNS records are correct
-- [ ] **PWA manifest.json** — references icon-192.png and icon-512.png that don't exist; create SVG icons or fix manifest
-- [ ] **Frontend env vars** — verify Vercel has all env vars set (SUPABASE_URL, SUPABASE_ANON_KEY, MP_PUBLIC_KEY, etc.)
-- [ ] **Cron jobs** — verify all 5 Vercel crons are working
-- [ ] **Notifications** — verify TELEGRAM_NOTIFIER_URL is reachable
-- [ ] **Resend domain** — verify traceless.com.ar is verified in Resend
+## Verificación de infraestructura (confirmado en prod)
+- [x] `cache` existe en prod (key/token/sign/expires/created_at)
+- [x] CRON_SECRET alineado: Production == local; 7/7 crons responden 200
+- [x] PWA icons 192/512 + apple-touch-icon generados
+- [x] RLS activo en cache/creditos/facturas_pendientes
+
+## Pendiente manual (requiere al usuario)
+- [ ] Test real: emitir factura con CAE y pagar link MP (sandbox) → verificar webhook en logs
+- [ ] Cancelar suscripción de prueba → confirmar plan Gratis
+- [ ] Confirmar `ARCA_ENC_KEY`/`MP_WEBHOOK_SECRET` seteado en Vercel Production/Preview
+- [ ] Importar planilla Excel de prueba (clientes + facturas)
+
+## Deuda técnica opcional (no bloquea MVP)
+- [ ] Error tracking (Sentry o similar)
+- [ ] Request logging
+- [ ] Health check dashboard
+- [ ] Code-splitting del bundle (chunk > 500KB en frontend)
+- [ ] Stripe/MercadoPago subscription management desde la app
+- [ ] Mover env vars definitivamente fuera del repo (solo en Vercel)
 
 ## Marketing
-- [ ] Crear landing page en la app (actualmente no tiene)
-- [ ] Configurar Google Analytics / Umami
-- [ ] Crear post de lanzamiento para redes sociales
-
-## Technical improvements
-- [ ] Move .env to Vercel env vars only (remove from repo)
-- [ ] Add error tracking (Sentry or similar)
-- [ ] Add rate limiting to API endpoints
-- [ ] Add request logging
-- [ ] Add health check dashboard
-- [ ] Consider adding Stripe/MercadoPago subscription management
+- [ ] Google Analytics / Umami
+- [ ] Post de lanzamiento para redes sociales

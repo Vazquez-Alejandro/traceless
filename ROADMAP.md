@@ -2,12 +2,30 @@
 
 ## Pendiente (antes de lanzar)
 
+### Validación manual final (tareas que requieren el usuario)
+- [ ] Test real de uso: emitir factura con CAE, pagar un link MP en sandbox y confirmar el webhook en logs de Vercel
+- [ ] Cancelar una suscripción de prueba y verificar que el plan vuelve a Gratis
+- [ ] Confirmar que `ARCA_ENC_KEY` (o `MP_WEBHOOK_SECRET`) está seteado en Vercel Production/Preview para el cifrado de secrets
+- [ ] Revisar el intake: importar planilla Excel de clientes y facturas (verificar lectura/escritura con las libs nuevas)
+
+## Completado
+
+### 2026-08-09 — Auditoría de seguridad + robustez (MVP ready)
+- [x] **RLS en producción**: `cache` (tokens ARCA/AFIP + rate-limit), `creditos`, `facturas_pendientes` con políticas corregidas; verificado: anon insert/read → 401
+- [x] **XSS en PDF**: escapes HTML en detalle/items del comprobante (`app/pdf.py`)
+- [x] **Numeración**: dedupe de facturas programadas (helper `_ultimo_numero_usuario`); 4 usos centralizados
+- [x] **Webhook MP**: idempotencia (`mp_paid:{id}` en `cache`) + parseo de plan real (`traceless_plan:{key}:{uid}`) en vez de forzar "pro"; checkout con `back_urls` + `auto_return`
+- [x] **Links PDF a clientes**: migrados a `/api/facturas/{id}/public` (sin auth) + fix 404 (`.single()` lanza APIError con 0 filas)
+- [x] **Validación CUIT** (dígito verificador AFIP, `app/utils.py`) en clientes y emisor + rechazo de factura $0
+- [x] **Frontend**: catch en Dashboard (`Promise.all`) y Facturas (submit); `refresh_token` en Register y logout; onboarding flag; botonera mobile `flex-wrap`; `vite-env.d.ts` + tsc limpio
+- [x] **npm audit**: reemplazo `xlsx` → `read-excel-file` + `write-excel-file` (se elimina el único CVE alto)
+- [x] **Secrets ARCA cifrados** con Fernet (`app/crypto.py`, clave de `MP_WEBHOOK_SECRET`/`ARCA_ENC_KEY`); migrados los 2 usuarios de prod a `enc_arc:`
+- [x] **Sin retry SOAP ARCA**: quede solo el retry de login (idempotente); la emisión la reintenta la cola (evita duplicados)
+
 ### Activar keep-alive del notificador de Telegram ✔
 - [x] Monitor **HTTPS** creado en `uptimerobot.com`
   - URL: `https://www.traceless.com.ar/api/keepalive?telegram=1` (intervalo 5 min)
   - Verificado en producción: responde `200` con `{"status":"ok","keepalive":"telegram:200"}`
-
-## Completado
 
 ### 2026-08-07 — Pricing USD + facturación ARCA
 - [x] Precios anclados en **USD** (Pro USD 12, Equipo USD 22) con conversión automática a ARS usando cotización diaria (dolarapi, modo oficial, configurable `DOLAR_MODE`) y caché de 1h
