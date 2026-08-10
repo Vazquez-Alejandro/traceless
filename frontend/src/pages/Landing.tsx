@@ -108,7 +108,7 @@ function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
         onClick={onToggle}
         className={`w-full h-full p-6 bg-gray-900/40 border transition-all text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 flex flex-col ${
           expanded
-            ? 'rounded-t-2xl border-blue-500/40 bg-gray-900 border-b-0'
+            ? 'rounded-t-2xl border-blue-500/40 border-b-0'
             : 'rounded-2xl border-gray-800/40 hover:border-gray-700/60'
         }`}
         aria-expanded={expanded}
@@ -134,7 +134,7 @@ function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
 
       {expanded && (
         <div
-          className="absolute left-0 right-0 top-full p-6 rounded-b-2xl bg-gray-900 border border-t-0 border-blue-500/40 animate-slide-down"
+          className="absolute left-0 right-0 top-full p-6 rounded-b-2xl bg-[#0a101d] border border-t-0 border-blue-500/40 animate-slide-down"
         >
           <div className="text-xs text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
         </div>
