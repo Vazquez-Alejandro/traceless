@@ -106,9 +106,9 @@ function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
     <div className={`relative ${expanded ? 'z-30' : ''}`}>
       <button
         onClick={onToggle}
-        className={`w-full h-full p-6 bg-gray-900/40 border transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex flex-col ${
+        className={`w-full h-full p-6 bg-gray-900/40 border transition-all text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 flex flex-col ${
           expanded
-            ? 'rounded-t-2xl border-blue-500/40 bg-gray-900/60 border-b-0'
+            ? 'rounded-t-2xl border-blue-500/40 bg-gray-900 border-b-0'
             : 'rounded-2xl border-gray-800/40 hover:border-gray-700/60'
         }`}
         aria-expanded={expanded}
@@ -134,7 +134,7 @@ function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
 
       {expanded && (
         <div
-          className="absolute left-0 right-0 top-full p-6 rounded-b-2xl bg-gray-900/95 border border-t-0 border-blue-500/40 shadow-2xl z-20 animate-slide-down"
+          className="absolute left-0 right-0 top-full p-6 rounded-b-2xl bg-gray-900 border border-t-0 border-blue-500/40 animate-slide-down"
         >
           <div className="text-xs text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
         </div>
@@ -234,7 +234,7 @@ export default function Landing() {
           <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
             No necesitás un sistema complicado. Es justo lo que necesitás para facturar, enviar y cobrar.
           </p>
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+          <div className="grid md:grid-cols-3 gap-6 items-stretch md:auto-rows-fr">
             {FEATURES.map((f, i) => (
               <FeatureCard
                 key={i}
