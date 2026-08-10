@@ -56,49 +56,96 @@ interface Feature {
   longDesc: string;
 }
 
+const FEATURES: Feature[] = [
+  {
+    icon: "🧾",
+    title: "Facturas A, B, C y E",
+    shortDesc: "Con validez ARCA. Números correlativos automáticos.",
+    longDesc: "Emití facturas con CAE real ante ARCA (AFIP) en segundos. Tipos A, B, C y E según tu condición fiscal. <strong>También podés emitir comprobantes simples sin CAE</strong> para presupuestos, notas de venta o clientes que no requieren factura fiscal. Números correlativos automáticos por punto de venta. PDF profesional con QR de pago y branding."
+  },
+  {
+    icon: "📱",
+    title: "Envío por WhatsApp",
+    shortDesc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs.",
+    longDesc: "La factura llega directo al chat de WhatsApp de tu cliente con un link público. No necesita descargar nada, se ve perfecto en el celular. Dos modos: <strong>wa.me (gratis, sin configuración)</strong> abre WhatsApp con el mensaje listo para enviar, o <strong>Meta Cloud API</strong> para envío 100% automático desde la app. Incluye link de pago MP y QR transferencia."
+  },
+  {
+    icon: "📊",
+    title: "Dashboard inteligente",
+    shortDesc: "Vé qué clientes pagan a tiempo y quiénes se atrasan siempre.",
+    longDesc: "Vista ejecutiva de tu facturación: total del mes, comparación vs mes anterior, facturas por cobrar, pagadas y vencidas. <strong>Analytics de clientes</strong> (plan Pro+): ranking de mejores pagadores, frecuencia de pago, atraso promedio por cliente. Exportación a Excel para tu contador. Todo en una pantalla sin navegar."
+  },
+  {
+    icon: "🔄",
+    title: "Facturas recurrentes",
+    shortDesc: "Se emiten solas cada mes. No te olvidés nunca más.",
+    longDesc: "Configurá una vez: cliente, importe, descripción, día del mes. TraceLess la emite automáticamente con CAE real y la envía por WhatsApp/Email. <strong>Si ARCA no responde, entra en cola de reintentos</strong> con backoff exponencial y se emite apenas vuelve. Notificación por WhatsApp si falla 3 veces. Editable o cancelable en cualquier momento."
+  },
+  {
+    icon: "⏰",
+    title: "Recordatorios automáticos",
+    shortDesc: "WhatsApp semanal a los clientes que deben. Sin hacer nada.",
+    longDesc: "Cada lunes TraceLess envía recordatorios por WhatsApp a facturas impagas. A los 30 días el mensaje se intensifica y la factura pasa a estado <strong>vencida</strong>. Recordatorio de monotributo el día 20 de cada mes para planes pagos. <strong>El cliente puede responder 'ALTO' para desuscribirse</strong> y vos configurás qué recordatorios querés desde tu perfil."
+  },
+  {
+    icon: "📎",
+    title: "Links públicos",
+    shortDesc: "Compartí la factura por cualquier medio. Sin registro del cliente.",
+    longDesc: "Cada factura tiene su link público único (<code>/api/facturas/{id}/public</code>) que muestra la factura en HTML limpio con QR de pago, link de MercadoPago y datos del emisor. <strong>Funciona sin login del cliente</strong> — se lo mandás por Email, Telegram, SMS, lo que quieras. Open Graph tags para preview bonito en WhatsApp/Slack. PDF descargable con un click."
+  },
+];
+
 interface FeatureCardProps {
   feature: Feature;
+  expanded: boolean;
+  onToggle: () => void;
 }
 
-function FeatureCard({ feature }: FeatureCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
+function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
   return (
-    <button
-      onClick={() => setExpanded(!expanded)}
-      className={`w-full h-full p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex flex-col ${
-        expanded ? 'border-blue-500/40 bg-gray-900/60' : ''
-      }`}
-      aria-expanded={expanded}
-    >
-      <div className="flex items-start gap-3">
-        <div className="text-2xl mb-3 flex-shrink-0">{feature.icon}</div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
-          <p className="text-xs text-gray-400 leading-relaxed">{feature.shortDesc}</p>
-          {expanded && (
-            <div className="mt-3 pt-3 border-t border-gray-800/40 text-xs text-gray-300 leading-relaxed animate-slide-down">
-              <span dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
-            </div>
-          )}
+    <div className={`relative ${expanded ? 'z-30' : ''}`}>
+      <button
+        onClick={onToggle}
+        className={`w-full h-full p-6 bg-gray-900/40 border transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex flex-col ${
+          expanded
+            ? 'rounded-t-2xl border-blue-500/40 bg-gray-900/60 border-b-0'
+            : 'rounded-2xl border-gray-800/40 hover:border-gray-700/60'
+        }`}
+        aria-expanded={expanded}
+      >
+        <div className="flex items-start gap-3">
+          <div className="text-2xl mb-3 flex-shrink-0">{feature.icon}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">{feature.shortDesc}</p>
+          </div>
+          <div className="flex-shrink-0 ml-2 mt-1">
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
-        <div className="flex-shrink-0 ml-2 mt-1">
-          <svg
-            className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+      </button>
+
+      {expanded && (
+        <div
+          className="absolute left-0 right-0 top-full p-6 rounded-b-2xl bg-gray-900/95 border border-t-0 border-blue-500/40 shadow-2xl z-20 animate-slide-down"
+        >
+          <div className="text-xs text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
         </div>
-      </div>
-    </button>
+      )}
+    </div>
   );
 }
 
 export default function Landing() {
   const [pricing, setPricing] = useState<{ pro?: { label: string; label_ars: string; ars: number }; team?: { label: string; label_ars: string; ars: number } }>({});
+  const [openFeature, setOpenFeature] = useState<number | null>(null);
   useEffect(() => {
     getPricing().then((p) => {
       if (p && p.prices) {
@@ -188,45 +235,13 @@ export default function Landing() {
             No necesitás un sistema complicado. Es justo lo que necesitás para facturar, enviar y cobrar.
           </p>
           <div className="grid md:grid-cols-3 gap-6 items-stretch">
-            {[
-              { 
-                icon: "🧾", 
-                title: "Facturas A, B, C y E", 
-                shortDesc: "Con validez ARCA. Números correlativos automáticos.",
-                longDesc: "Emití facturas con CAE real ante ARCA (AFIP) en segundos. Tipos A, B, C y E según tu condición fiscal. <strong>También podés emitir comprobantes simples sin CAE</strong> para presupuestos, notas de venta o clientes que no requieren factura fiscal. Números correlativos automáticos por punto de venta. PDF profesional con QR de pago y branding."
-              },
-              { 
-                icon: "📱", 
-                title: "Envío por WhatsApp", 
-                shortDesc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs.",
-                longDesc: "La factura llega directo al chat de WhatsApp de tu cliente con un link público. No necesita descargar nada, se ve perfecto en el celular. Dos modos: <strong>wa.me (gratis, sin configuración)</strong> abre WhatsApp con el mensaje listo para enviar, o <strong>Meta Cloud API</strong> para envío 100% automático desde la app. Incluye link de pago MP y QR transferencia."
-              },
-              { 
-                icon: "📊", 
-                title: "Dashboard inteligente", 
-                shortDesc: "Vé qué clientes pagan a tiempo y quiénes se atrasan siempre.",
-                longDesc: "Vista ejecutiva de tu facturación: total del mes, comparación vs mes anterior, facturas por cobrar, pagadas y vencidas. <strong>Analytics de clientes</strong> (plan Pro+): ranking de mejores pagadores, frecuencia de pago, atraso promedio por cliente. Exportación a Excel para tu contador. Todo en una pantalla sin navegar."
-              },
-              { 
-                icon: "🔄", 
-                title: "Facturas recurrentes", 
-                shortDesc: "Se emiten solas cada mes. No te olvidés nunca más.",
-                longDesc: "Configurá una vez: cliente, importe, descripción, día del mes. TraceLess la emite automáticamente con CAE real y la envía por WhatsApp/Email. <strong>Si ARCA no responde, entra en cola de reintentos</strong> con backoff exponencial y se emite apenas vuelve. Notificación por WhatsApp si falla 3 veces. Editable o cancelable en cualquier momento."
-              },
-              { 
-                icon: "⏰", 
-                title: "Recordatorios automáticos", 
-                shortDesc: "WhatsApp semanal a los clientes que deben. Sin hacer nada.",
-                longDesc: "Cada lunes TraceLess envía recordatorios por WhatsApp a facturas impagas. A los 30 días el mensaje se intensifica y la factura pasa a estado <strong>vencida</strong>. Recordatorio de monotributo el día 20 de cada mes para planes pagos. <strong>El cliente puede responder 'ALTO' para desuscribirse</strong> y vos configurás qué recordatorios querés desde tu perfil."
-              },
-              { 
-                icon: "📎", 
-                title: "Links públicos", 
-                shortDesc: "Compartí la factura por cualquier medio. Sin registro del cliente.",
-                longDesc: "Cada factura tiene su link público único (<code>/api/facturas/{id}/public</code>) que muestra la factura en HTML limpio con QR de pago, link de MercadoPago y datos del emisor. <strong>Funciona sin login del cliente</strong> — se lo mandás por Email, Telegram, SMS, lo que quieras. Open Graph tags para preview bonito en WhatsApp/Slack. PDF descargable con un click."
-              },
-            ].map((f, i) => (
-              <FeatureCard key={i} feature={f} />
+            {FEATURES.map((f, i) => (
+              <FeatureCard
+                key={i}
+                feature={f}
+                expanded={openFeature === i}
+                onToggle={() => setOpenFeature(openFeature === i ? null : i)}
+              />
             ))}
           </div>
         </div>
