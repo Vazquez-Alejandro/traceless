@@ -58,51 +58,42 @@ interface Feature {
 
 interface FeatureCardProps {
   feature: Feature;
-  index: number;
 }
 
-function FeatureCard({ feature, index }: FeatureCardProps) {
+function FeatureCard({ feature }: FeatureCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const openUp = index >= 3;
 
   return (
-    <div className={`relative ${expanded ? 'z-30' : ''}`}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className={`w-full h-full p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex flex-col ${
-          expanded ? 'border-blue-500/40 bg-gray-900/60' : ''
-        }`}
-        aria-expanded={expanded}
-      >
-        <div className="flex items-start gap-3">
-          <div className="text-2xl mb-3 flex-shrink-0">{feature.icon}</div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">{feature.shortDesc}</p>
-          </div>
-          <div className="flex-shrink-0 ml-2 mt-1">
-            <svg
-              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+    <button
+      onClick={() => setExpanded(!expanded)}
+      className={`w-full h-full p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex flex-col ${
+        expanded ? 'border-blue-500/40 bg-gray-900/60' : ''
+      }`}
+      aria-expanded={expanded}
+    >
+      <div className="flex items-start gap-3">
+        <div className="text-2xl mb-3 flex-shrink-0">{feature.icon}</div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
+          <p className="text-xs text-gray-400 leading-relaxed">{feature.shortDesc}</p>
+          {expanded && (
+            <div className="mt-3 pt-3 border-t border-gray-800/40 text-xs text-gray-300 leading-relaxed animate-slide-down">
+              <span dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
+            </div>
+          )}
         </div>
-      </button>
-
-      {expanded && (
-        <div
-          className={`absolute left-0 right-0 p-6 rounded-2xl bg-gray-900/95 border border-blue-500/40 shadow-2xl z-20 animate-slide-down ${
-            openUp ? 'bottom-full mb-2' : 'top-full mt-2'
-          }`}
-        >
-          <div className="text-xs text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: feature.longDesc }} />
+        <div className="flex-shrink-0 ml-2 mt-1">
+          <svg
+            className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
-      )}
-    </div>
+      </div>
+    </button>
   );
 }
 
@@ -235,7 +226,7 @@ export default function Landing() {
                 longDesc: "Cada factura tiene su link público único (<code>/api/facturas/{id}/public</code>) que muestra la factura en HTML limpio con QR de pago, link de MercadoPago y datos del emisor. <strong>Funciona sin login del cliente</strong> — se lo mandás por Email, Telegram, SMS, lo que quieras. Open Graph tags para preview bonito en WhatsApp/Slack. PDF descargable con un click."
               },
             ].map((f, i) => (
-              <FeatureCard key={i} feature={f} index={i} />
+              <FeatureCard key={i} feature={f} />
             ))}
           </div>
         </div>
