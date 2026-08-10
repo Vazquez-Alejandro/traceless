@@ -91,7 +91,7 @@ const FEATURES: Feature[] = [
     icon: "📎",
     title: "Links públicos",
     shortDesc: "Compartí la factura por cualquier medio. Sin registro del cliente.",
-    longDesc: "Cada factura tiene su link público único (<code>/api/facturas/{id}/public</code>) que muestra la factura en HTML limpio con QR de pago, link de MercadoPago y datos del emisor. <strong>Funciona sin login del cliente</strong> — se lo mandás por Email, Telegram, SMS, lo que quieras. Open Graph tags para preview bonito en WhatsApp/Slack. PDF descargable con un click."
+    longDesc: "Cada factura tiene su link propio que podés compartir con cualquiera. Quien lo abre ve la factura lista en su navegador, con QR de pago, link de MercadoPago y tus datos. <strong>No hace falta que el cliente tenga cuenta ni app</strong> — se lo mandás por WhatsApp, Email o el medio que prefieras. Se ve bonito al compartirlo en WhatsApp y el PDF se descarga con un click."
   },
 ];
 
