@@ -582,6 +582,7 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
                 pdf_url=pdf_url,
                 fecha=f.data.get("fecha", ""),
                 mp_link=mp_link,
+                vencimiento=f.data.get("vencimiento", ""),
             )
             log_whatsapp_send(uid, fid, "factura")
             plan = get_user_plan(uid)
@@ -1063,6 +1064,7 @@ async def procesar_programadas(secret: str = "", authorization: str = Header("")
                             pdf_url=pdf_url_full,
                             fecha=hoy,
                             mp_link=mp_link,
+                            vencimiento=f.get("vencimiento", ""),
                         ))
                         log_whatsapp_send(uid, f["id"], "factura")
                         enviado = True

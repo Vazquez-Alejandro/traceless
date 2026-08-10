@@ -265,8 +265,7 @@ def signup(req: SignupRequest, request: Request):
     except Exception as e:
         logger.warning(f"Error insertando perfil: {e}")
 
-    trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-    app_meta = {"plan": "free", "trial_end": trial_end}
+    app_meta = {"plan": "free"}
     if req.referral_code:
         app_meta["referral_code"] = req.referral_code.upper()
     try:

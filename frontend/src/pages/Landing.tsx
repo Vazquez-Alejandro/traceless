@@ -25,9 +25,9 @@ const TESTIMONIALS = [
 const PLANS = [
   {
     key: "free",
-    name: "Freemium",
+    name: "Gratis",
     price: "Gratis",
-    desc: "Para probar la plataforma",
+    desc: "Para siempre. 20 facturas/mes.",
     features: ["20 facturas por mes", "Sin WhatsApp API", "1 usuario"],
     highlighted: false,
   },
@@ -35,7 +35,7 @@ const PLANS = [
     key: "pro",
     name: "Profesional",
     price: "price_pro",
-    desc: "Para profesionales y negocios",
+    desc: "Para profesionales que facturan mucho.",
     features: ["Facturas ilimitadas", "100 msg WhatsApp incluidos", "$70/msg extra", "Analytics de pagos", "Facturas recurrentes"],
     highlighted: true,
   },
@@ -43,11 +43,57 @@ const PLANS = [
     key: "team",
     name: "Equipo",
     price: "price_team",
-    desc: "Para estudios, PyMEs y empresas",
+    desc: "Para estudios, PyMEs y empresas.",
     features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
   },
 ];
+
+interface Feature {
+  icon: string;
+  title: string;
+  shortDesc: string;
+  longDesc: string;
+}
+
+interface FeatureCardProps {
+  feature: Feature;
+  index: number;
+}
+
+function FeatureCard({ feature, index }: FeatureCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${expanded ? 'border-blue-500/40 bg-gray-900/60' : ''}`}
+        aria-expanded={expanded}
+      >
+        <div className="flex items-start gap-3">
+          <div className="text-2xl mb-3 flex-shrink-0">{feature.icon}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
+            <p className="text-xs text-gray-400 leading-relaxed transition-opacity duration-200">
+              {expanded ? feature.longDesc : feature.shortDesc}
+            </p>
+          </div>
+          <div className="flex-shrink-0 ml-2 mt-1">
+            <svg 
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
+}
 
 export default function Landing() {
   const [pricing, setPricing] = useState<{ pro?: { label: string; label_ars: string; ars: number }; team?: { label: string; label_ars: string; ars: number } }>({});
@@ -83,7 +129,7 @@ export default function Landing() {
           </span>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-xs text-gray-400 hover:text-white">Iniciar Sesión</Link>
-            <Link to="/register" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Comenzar</Link>
+            <Link to="/register" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Empezar Gratis</Link>
           </div>
         </div>
       </nav>
@@ -108,7 +154,7 @@ export default function Landing() {
               Empezar Gratis — Sin tarjeta
             </Link>
           </div>
-          <p className="text-[10px] text-gray-600 mt-3">20 facturas por mes. Sin tarjeta de crédito.</p>
+          <p className="text-[10px] text-gray-600 mt-3">Plan Gratis para siempre: 20 facturas/mes. Sin tarjeta de crédito.</p>
         </div>
       </section>
 
@@ -141,18 +187,44 @@ export default function Landing() {
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: "🧾", title: "Facturas A, B, C y E", desc: "Con validez ARCA. Números correlativos automáticos." },
-              { icon: "📱", title: "Envío por WhatsApp", desc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs." },
-              { icon: "📊", title: "Dashboard inteligente", desc: "Vé qué clientes pagan a tiempo y quiénes se atrasan siempre." },
-              { icon: "🔄", title: "Facturas recurrentes", desc: "Se emiten solas cada mes. No te olvidés nunca más." },
-              { icon: "⏰", title: "Recordatorios automáticos", desc: "WhatsApp semanal a los clientes que deben. Sin hacer nada." },
-              { icon: "📎", title: "Links públicos", desc: "Compartí la factura por cualquier medio. Sin registro del cliente." },
+              { 
+                icon: "🧾", 
+                title: "Facturas A, B, C y E", 
+                shortDesc: "Con validez ARCA. Números correlativos automáticos.",
+                longDesc: "Emití facturas con CAE real ante ARCA (AFIP) en segundos. Tipos A, B, C y E según tu condición fiscal. <strong>También podés emitir comprobantes simples sin CAE</strong> para presupuestos, notas de venta o clientes que no requieren factura fiscal. Números correlativos automáticos por punto de venta. PDF profesional con QR de pago y branding."
+              },
+              { 
+                icon: "📱", 
+                title: "Envío por WhatsApp", 
+                shortDesc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs.",
+                longDesc: "La factura llega directo al chat de WhatsApp de tu cliente con un link público. No necesita descargar nada, se ve perfecto en el celular. Dos modos: <strong>wa.me (gratis, sin configuración)</strong> abre WhatsApp con el mensaje listo para enviar, o <strong>Meta Cloud API</strong> para envío 100% automático desde la app. Incluye link de pago MP y QR transferencia."
+              },
+              { 
+                icon: "📊", 
+                title: "Dashboard inteligente", 
+                shortDesc: "Vé qué clientes pagan a tiempo y quiénes se atrasan siempre.",
+                longDesc: "Vista ejecutiva de tu facturación: total del mes, comparación vs mes anterior, facturas por cobrar, pagadas y vencidas. <strong>Analytics de clientes</strong> (plan Pro+): ranking de mejores pagadores, frecuencia de pago, atraso promedio por cliente. Exportación a Excel para tu contador. Todo en una pantalla sin navegar."
+              },
+              { 
+                icon: "🔄", 
+                title: "Facturas recurrentes", 
+                shortDesc: "Se emiten solas cada mes. No te olvidés nunca más.",
+                longDesc: "Configurá una vez: cliente, importe, descripción, día del mes. TraceLess la emite automáticamente con CAE real y la envía por WhatsApp/Email. <strong>Si ARCA no responde, entra en cola de reintentos</strong> con backoff exponencial y se emite apenas vuelve. Notificación por WhatsApp si falla 3 veces. Editable o cancelable en cualquier momento."
+              },
+              { 
+                icon: "⏰", 
+                title: "Recordatorios automáticos", 
+                shortDesc: "WhatsApp semanal a los clientes que deben. Sin hacer nada.",
+                longDesc: "Cada lunes TraceLess envía recordatorios por WhatsApp a facturas impagas. A los 30 días el mensaje se intensifica y la factura pasa a estado <strong>vencida</strong>. Recordatorio de monotributo el día 20 de cada mes para planes pagos. <strong>El cliente puede responder 'ALTO' para desuscribirse</strong> y vos configurás qué recordatorios querés desde tu perfil."
+              },
+              { 
+                icon: "📎", 
+                title: "Links públicos", 
+                shortDesc: "Compartí la factura por cualquier medio. Sin registro del cliente.",
+                longDesc: "Cada factura tiene su link público único (<code>/api/facturas/{id}/public</code>) que muestra la factura en HTML limpio con QR de pago, link de MercadoPago y datos del emisor. <strong>Funciona sin login del cliente</strong> — se lo mandás por Email, Telegram, SMS, lo que quieras. Open Graph tags para preview bonito en WhatsApp/Slack. PDF descargable con un click."
+              },
             ].map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 hover:border-gray-700/60 transition-all">
-                <div className="text-2xl mb-3">{f.icon}</div>
-                <h3 className="text-sm font-semibold mb-1.5">{f.title}</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
-              </div>
+              <FeatureCard key={i} feature={f} index={i} />
             ))}
           </div>
         </div>
@@ -184,7 +256,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Planes simples, sin sorpresas</h2>
           <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">
-            Empezá gratis. Upgrade cuando necesités más.
+            Empezá en el plan Gratis para siempre. Subí a Pro cuando necesités WhatsApp automático o facturas ilimitadas.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {PLANS.map((p) => (
@@ -232,10 +304,10 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Dejá de perseguir facturas</h2>
           <p className="text-gray-400 mb-6 max-w-md mx-auto text-sm">
-            Probá TraceLess gratis. En 5 minutos tenés tu primera factura lista.
+            Empezá con el plan Gratis para siempre. En 5 minutos tenés tu primera factura lista.
           </p>
           <Link to="/register" className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-xl shadow-blue-600/25 text-sm">
-            Probar Gratis
+            Empezar Gratis — Sin tarjeta
           </Link>
         </div>
       </section>

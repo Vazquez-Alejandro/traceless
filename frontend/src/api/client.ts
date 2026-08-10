@@ -130,12 +130,15 @@ export const api = {
       request(`/clientes/${id}`, { method: "DELETE" }),
     importBulk: (data: any[]) =>
       request("/clientes/import", { method: "POST", body: JSON.stringify(data) }),
+    import: (data: any[]) =>
+      request("/clientes/import", { method: "POST", body: JSON.stringify(data) }),
   },
   facturas: {
-    list: (limit = 20, offset = 0, filters?: { cliente_id?: string; estado?: string }) => {
+    list: (limit = 20, offset = 0, filters?: { cliente_id?: string; estado?: string; por_cobrar?: boolean }) => {
       let url = `/facturas?limit=${limit}&offset=${offset}`;
       if (filters?.cliente_id) url += `&cliente_id=${filters.cliente_id}`;
       if (filters?.estado) url += `&estado=${filters.estado}`;
+      if (filters?.por_cobrar) url += `&por_cobrar=true`;
       return request(url);
     },
     create: (data: { cliente_id: string; tipo: number; importe: number; descripcion: string; canal?: string }) =>

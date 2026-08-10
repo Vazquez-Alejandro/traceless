@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [resumen, setResumen] = useState<{ mes_actual: number; mes_anterior: number; anio: number; mes_nombre: string } | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [whatsappStats, setWhatsappStats] = useState({ used: 0, limit: 0, remaining: 0 });
+  const [me, setMe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
@@ -70,6 +71,7 @@ export default function Dashboard() {
       setPlanKey(user.plan_key || "free");
       setFeatures(user.features || { analytics: false, recurrentes: false, multi_user: false, retry_queue: false });
       if (wp) setWhatsappStats(wp);
+      setMe(user);
 
       const mesesMap: Record<string, number> = {};
       facturas.forEach((f: any) => {
@@ -128,6 +130,21 @@ export default function Dashboard() {
           {whatsappStats.used / whatsappStats.limit > 0.8 && (
             <p className="text-[10px] text-yellow-400 mt-1.5">Cerca del límite. Los mensajes de WhatsApp cuestan por envío.</p>
           )}
+        </div>
+      )}
+
+      {typeof me?.creditos === "number" && me.creditos < 10 && (
+        <div className="mb-6 p-4 rounded-xl bg-yellow-900/20 border border-yellow-800/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-yellow-300">Créditos bajos</p>
+              <p className="text-xs text-yellow-400/80">Te quedan {me.creditos} créditos WhatsApp. <Link to="/perfil" className="underline hover:text-yellow-200">Comprá más</Link>.</p>
+            </div>
+          </div>
+          <Link to="/perfil" className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg">Comprar créditos</Link>
         </div>
       )}
 

@@ -65,16 +65,22 @@ export default function Facturas() {
   const [ncModal, setNcModal] = useState<{ open: boolean; factura: Factura | null; motivo: string; importe: string; loading: boolean }>({ open: false, factura: null, motivo: "", importe: "", loading: false });
   const [refModal, setRefModal] = useState<{ open: boolean; factura: Factura | null; metodo: string; referencia: string; importe: string; notas: string; loading: boolean }>({ open: false, factura: null, metodo: "transferencia", referencia: "", importe: "", notas: "", loading: false });
   const [importModal, setImportModal] = useState<{ open: boolean; items: any[]; loading: boolean; results: any[] | null }>({ open: false, items: [], loading: false, results: null });
+  const [importClientesModal, setImportClientesModal] = useState<{ open: boolean; items: any[]; loading: boolean; results: any[] | null }>({ open: false, items: [], loading: false, results: null });
   const [pendientes, setPendientes] = useState<any[]>([]);
   const [tab, setTab] = useState<"facturas" | "cola">("facturas");
   const fileRef = useRef<HTMLInputElement>(null);
+  const fileClientesRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (reset = true) => {
     const newOffset = reset ? 0 : offset;
     if (reset) setOffset(0);
-    const filters: { cliente_id?: string; estado?: string } = {};
+    const filters: { cliente_id?: string; estado?: string; por_cobrar?: boolean } = {};
     if (filterCliente) filters.cliente_id = filterCliente;
-    if (filterEstado) filters.estado = filterEstado;
+    if (filterEstado === "por_cobrar") {
+      filters.por_cobrar = true;
+    } else if (filterEstado) {
+      filters.estado = filterEstado;
+    }
     const res = await api.facturas.list(PAGE_SIZE, newOffset, filters);
     if (reset) {
       setFacturas(res.facturas || []);
@@ -88,9 +94,13 @@ export default function Facturas() {
     setLoadingMore(true);
     const nextOffset = offset + PAGE_SIZE;
     setOffset(nextOffset);
-    const filters: { cliente_id?: string; estado?: string } = {};
+    const filters: { cliente_id?: string; estado?: string; por_cobrar?: boolean } = {};
     if (filterCliente) filters.cliente_id = filterCliente;
-    if (filterEstado) filters.estado = filterEstado;
+    if (filterEstado === "por_cobrar") {
+      filters.por_cobrar = true;
+    } else if (filterEstado) {
+      filters.estado = filterEstado;
+    }
     const res = await api.facturas.list(PAGE_SIZE, nextOffset, filters);
     setFacturas(prev => [...prev, ...(res.facturas || [])]);
     setTotal(res.total || 0);
@@ -266,6 +276,57 @@ export default function Facturas() {
     } catch (err: any) {
       setImportModal(prev => ({ ...prev, loading: false }));
       setToast("Error al importar: " + (err.message || "desconocido"));
+    }
+  };
+
+  const handleImportClientesExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await leerExcel(file);
+
+      const mapped = rows.map((row: any) => {
+        const find = (keys: string[]) => {
+          for (const k of keys) {
+            const found = Object.keys(row).find(col => col.toLowerCase().trim() === k);
+            if (found && row[found]) return String(row[found]).trim();
+          }
+          return "";
+        };
+
+        return {
+          nombre: find(["nombre", "name", "first_name"]),
+          apellido: find(["apellido", "last_name"]),
+          telefono: find(["telefono", "whatsapp", "phone", "celular", "movil"]),
+          cuit: find(["cuit", "documento", "dni", "rut", "rif"]),
+          email: find(["email", "e-mail", "mail", "correo"]),
+          direccion: find(["direccion", "address", "domicilio"]),
+          condicion_iva: find(["condicion_iva", "iva", "condicion", "tipo_iva"]) || "Consumidor Final",
+        };
+      }).filter((item: any) => item.nombre && item.cuit);
+
+      if (mapped.length === 0) {
+        setToast("No se encontraron clientes válidos (se necesita nombre y CUIT)");
+        return;
+      }
+      setImportClientesModal({ open: true, items: mapped, loading: false, results: null });
+    } catch (err: any) {
+      setToast("Error al leer el archivo: " + (err.message || "desconocido"));
+    }
+    if (fileClientesRef.current) fileClientesRef.current.value = "";
+  };
+
+  const handleConfirmImportClientes = async () => {
+    setImportClientesModal(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await api.clientes.import(importClientesModal.items);
+      setImportClientesModal(prev => ({ ...prev, loading: false, results: res.resultados }));
+      setToast(`Clientes importados: ${res.exitosos} éxitos, ${res.fallidos} fallos`);
+      const list = await api.clientes.list(100, 0);
+      setClientes(list.clientes || []);
+    } catch (err: any) {
+      setImportClientesModal(prev => ({ ...prev, loading: false }));
+      setToast("Error al importar clientes: " + (err.message || "desconocido"));
     }
   };
 
@@ -673,6 +734,18 @@ export default function Facturas() {
                     className="flex-1 min-w-[120px] px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm" />
                   <button type="button" onClick={crearClienteRapido} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg whitespace-nowrap">Crear Cliente</button>
                 </div>
+                <div className="flex gap-2 flex-wrap pt-2 border-t border-gray-800/40">
+                  <input ref={fileClientesRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportClientesExcel} className="hidden" />
+                  <button onClick={() => fileClientesRef.current?.click()} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+                    Importar Clientes Excel
+                  </button>
+                  <button onClick={() => descargarExcel("template_clientes.xlsx", "Clientes",
+                    ["nombre", "apellido", "telefono", "cuit", "email", "direccion", "condicion_iva"],
+                    [["Juan", "Pérez", "5491155551234", "20300000000", "juan@test.com", "Av. Siempre Viva 123", "Responsable Inscripto"]]
+                  )} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+                    Descargar template clientes
+                  </button>
+                </div>
               </div>
             )}
             <select value={form.tipo} onChange={e => setForm({ ...form, tipo: parseInt(e.target.value) })}
@@ -782,12 +855,24 @@ export default function Facturas() {
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {["", "emitida", "enviada", "pagada", "vencida", "programada", "anulada"].map(estado => (
-            <button key={estado} onClick={() => setFilterEstado(estado)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === estado ? "bg-blue-600 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"}`}>
-              {estado === "" ? "Todas" : estado === "emitida" ? "Emitidas" : estado === "enviada" ? "Enviadas" : estado === "pagada" ? "Pagadas" : estado === "vencida" ? "Vencidas" : estado === "programada" ? "Programadas" : "Anuladas"}
-            </button>
-          ))}
+          {["", "por_cobrar", "emitida", "enviada", "pagada", "vencida", "programada", "anulada"].map(estado => {
+            const labels: Record<string, string> = {
+              "": "Todas",
+              "por_cobrar": "Por cobrar",
+              "emitida": "Emitidas",
+              "enviada": "Enviadas",
+              "pagada": "Pagadas",
+              "vencida": "Vencidas",
+              "programada": "Programadas",
+              "anulada": "Anuladas"
+            };
+            return (
+              <button key={estado} onClick={() => setFilterEstado(estado)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterEstado === estado ? "bg-blue-600 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"}`}>
+                {labels[estado]}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1077,6 +1162,81 @@ export default function Facturas() {
                   <button onClick={handleConfirmImport} disabled={importModal.loading}
                     className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
                     {importModal.loading ? "Importando..." : `Confirmar importación (${importModal.items.length})`}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importClientesModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <h3 className="text-lg font-bold">Importar Clientes ({importClientesModal.items.length})</h3>
+              {!importClientesModal.results && (
+                <button onClick={() => setImportClientesModal({ open: false, items: [], loading: false, results: null })} className="text-gray-400 hover:text-white">✕</button>
+              )}
+            </div>
+            <div className="overflow-auto flex-1 p-4">
+              {importClientesModal.results ? (
+                <div className="space-y-2">
+                  {importClientesModal.results.map((r: any) => (
+                    <div key={r.fila} className={`p-3 rounded-xl text-sm ${r.ok ? 'bg-green-900/30 border border-green-800/40' : 'bg-red-900/30 border border-red-800/40'}`}>
+                      <div className="flex justify-between">
+                        <span>Fila {r.fila}: {r.ok ? `${r.cliente_nombre} ${r.cliente_apellido} — CUIT ${r.cuit}` : r.error}</span>
+                        <span>{r.ok ? '✓' : '✕'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-gray-400 text-left border-b border-gray-800">
+                        <th className="pb-2 pr-2">Nombre</th>
+                        <th className="pb-2 pr-2">Apellido</th>
+                        <th className="pb-2 pr-2">WhatsApp</th>
+                        <th className="pb-2 pr-2">CUIT</th>
+                        <th className="pb-2 pr-2">Email</th>
+                        <th className="pb-2 pr-2">Dirección</th>
+                        <th className="pb-2">Cond. IVA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importClientesModal.items.map((item: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-800/50">
+                          <td className="py-2 pr-2">{item.nombre}</td>
+                          <td className="py-2 pr-2">{item.apellido || '—'}</td>
+                          <td className="py-2 pr-2 font-mono text-xs">{item.telefono || '—'}</td>
+                          <td className="py-2 pr-2 font-mono text-xs">{item.cuit}</td>
+                          <td className="py-2 pr-2 text-gray-400">{item.email || '—'}</td>
+                          <td className="py-2 pr-2 text-gray-400">{item.direccion || '—'}</td>
+                          <td className="py-2 text-gray-400">{item.condicion_iva}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-800 flex justify-end gap-3">
+              {importClientesModal.results ? (
+                <button onClick={() => setImportClientesModal({ open: false, items: [], loading: false, results: null })}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">
+                  Cerrar
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setImportClientesModal({ open: false, items: [], loading: false, results: null })}
+                    className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm">
+                    Cancelar
+                  </button>
+                  <button onClick={handleConfirmImportClientes} disabled={importClientesModal.loading}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm">
+                    {importClientesModal.loading ? "Importando..." : `Confirmar importación (${importClientesModal.items.length})`}
                   </button>
                 </>
               )}
