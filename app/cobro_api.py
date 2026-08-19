@@ -94,7 +94,7 @@ def cobrar_turno(
         raise HTTPException(502, "Error al crear la preferencia de pago")
 
     data = r.json()
-    return {
+    result = {
         "payment_url": data.get("init_point"),
         "sandbox_url": data.get("sandbox_init_point"),
         "preference_id": data.get("id"),
@@ -103,3 +103,33 @@ def cobrar_turno(
         "amount": amount,
         "currency": currency,
     }
+
+    # Facturación AFIP por negocio (scaffold): el negocio envía sus credenciales
+    # en el bloque "afip"; si están, emitimos la factura correspondiente.
+    afip_in = body.get("afip")
+    if isinstance(afip_in, dict) and afip_in.get("cuit"):
+        fiscal = {
+            "cuit": afip_in.get("cuit"),
+            "cert": afip_in.get("cert_pem"),
+            "key": afip_in.get("key_pem"),
+            "pto_venta": afip_in.get("pto_venta", 2),
+            "use_real": bool(afip_in.get("use_real", False)),
+            "homologacion": bool(afip_in.get("homologacion", True)),
+        }
+        try:
+            from app.afip import generar_factura_afip
+
+            result["invoice"] = generar_factura_afip(
+                cliente_cuit=afip_in.get("cliente_cuit", ""),
+                cliente_nombre=afip_in.get("cliente_nombre", business_name),
+                tipo=int(afip_in.get("tipo", 11)),
+                importe=amount,
+                condicion_iva=afip_in.get("condicion_iva", "Consumidor Final"),
+                descripcion=concepto,
+                fiscal=fiscal,
+            )
+        except Exception as e:
+            logger.warning("AFIP invoice error: %s", e)
+            result["invoice_error"] = str(e)
+
+    return result
