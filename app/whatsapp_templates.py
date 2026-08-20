@@ -23,12 +23,12 @@ TEMPLATES = {
         "components": [
             {
                 "type": "BODY",
-                "text": "Hola {{1}}, te envío la factura *{{2}}* por *${{3}}*. Podés verla y pagarla en el siguiente link: {{4}}"
+                "text": "Hola {{customer_name}}, te envío la factura *{{invoice_number}}* por *${{amount}}*. Podés verla y pagarla en el siguiente link: {{payment_link}} Gracias."
             }
         ],
-        "variables": ["cliente_nombre", "numero_factura", "monto", "link_factura"],
+        "variables": ["customer_name", "invoice_number", "amount", "payment_link"],
         "example": {
-            "body_text": [["Leonardo", "0002-00000001", "15.000", "https://www.traceless.com.ar/api/facturas/public/xxx"]]
+            "body_text": [["Leonardo", "0002-00000001", "15000.00", "https://www.traceless.com.ar/api/facturas/public/xxxxx"]]
         }
     },
 
@@ -40,12 +40,12 @@ TEMPLATES = {
         "components": [
             {
                 "type": "BODY",
-                "text": "Hola {{1}}, le recordamos que la factura *{{2}}* por *${{3}}* venció hace {{4}} días. Si ya la pagó, disculpe las molestias. Quedamos a disposición."
+                "text": "Hola {{customer_name}}, le recordamos que la factura *{{invoice_number}}* por *${{amount}}* venció hace {{days_overdue}} días. Si ya la pagó, disculpe las molestias. Quedamos a disposición."
             }
         ],
-        "variables": ["cliente_nombre", "numero_factura", "monto", "dias_vencido"],
+        "variables": ["customer_name", "invoice_number", "amount", "days_overdue"],
         "example": {
-            "body_text": [["Leonardo", "0002-00000001", "15.000", "30"]]
+            "body_text": [["Leonardo", "0002-00000001", "15000.00", "30"]]
         }
     },
 
@@ -57,10 +57,10 @@ TEMPLATES = {
         "components": [
             {
                 "type": "BODY",
-                "text": "Hola {{1}}, te recordamos que hoy vence la cuota del monotributo. No olvides pagarla para evitar recargos. ¡Éxitos con tu negocio!"
+                "text": "Hola {{customer_name}}, te recordamos que hoy vence la cuota del monotributo. No olvides pagarla para evitar recargos. ¡Éxitos con tu negocio!"
             }
         ],
-        "variables": ["usuario_nombre"],
+        "variables": ["customer_name"],
         "example": {
             "body_text": [["Alejandro"]]
         }
@@ -94,25 +94,28 @@ TEMPLATE 1 - Envío de factura:
   Idioma: Spanish (Latin America) - es_AR
   Categoría: Utility
   Cuerpo:
-    Hola {{1}}, te envío la factura *{{2}}* por *${{3}}*.
-    Podés verla y pagarla en el siguiente link: {{4}}
+    Hola {{customer_name}}, te envío la factura *{{invoice_number}}* por *${{amount}}*.
+    Podés verla y pagarla en el siguiente link: {{payment_link}} Gracias.
+  Ejemplos: customer_name=Leonardo, invoice_number=0002-00000001, amount=15000.00, payment_link=https://www.traceless.com.ar/api/facturas/public/xxxxx
 
 TEMPLATE 2 - Recordatorio de cobro:
   Nombre: traceless_reminder
   Idioma: Spanish (Latin America) - es_AR
   Categoría: Utility
   Cuerpo:
-    Hola {{1}}, le recordamos que la factura *{{2}}* por *${{3}}*
-    venció hace {{4}} días. Si ya la pagó, disculpe las molestias.
+    Hola {{customer_name}}, le recordamos que la factura *{{invoice_number}}* por *${{amount}}*
+    venció hace {{days_overdue}} días. Si ya la pagó, disculpe las molestias.
     Quedamos a disposición.
+  Ejemplos: customer_name=Leonardo, invoice_number=0002-00000001, amount=15000.00, days_overdue=30
 
 TEMPLATE 3 - Recordatorio monotributo:
   Nombre: traceless_monotributo
   Idioma: Spanish (Latin America) - es_AR
   Categoría: Utility
   Cuerpo:
-    Hola {{1}}, te recordamos que hoy vence la cuota del monotributo.
+    Hola {{customer_name}}, te recordamos que hoy vence la cuota del monotributo.
     No olvides pagarla para evitar recargos. ¡Éxitos con tu negocio!
+  Ejemplos: customer_name=Alejandro
 
 4. Esperar aprobación de Meta (1-24 horas)
 5. Configurar en Vercel:

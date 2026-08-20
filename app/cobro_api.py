@@ -79,6 +79,7 @@ def cobrar_turno(
             "failure": os.getenv("BASE_URL", "https://www.traceless.com.ar") + "/perfil",
         },
         "auto_return": "approved",
+        "notification_url": os.getenv("BASE_URL", "https://www.traceless.com.ar") + "/api/mercadopago/webhook",
         "expires": True,
         "expiration_date_to": None,
     }

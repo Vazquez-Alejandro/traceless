@@ -205,6 +205,36 @@ def cancelar_suscripcion(authorization: str = Header("")):
     return {"ok": True, "message": "Suscripción cancelada. Volviste al plan Gratis."}
 
 
+def _notify_operativa(payment: dict):
+    """Avisa a OperativaAI que un turno fue pagado (cierra el loop de cobro).
+
+    Se dispara para pagos con external_reference 'operativa:...'. Requiere
+    OPERATIVA_WEBHOOK_URL (y opcional OPERATIVA_WEBHOOK_KEY como X-Operativa-Key).
+    """
+    url = os.getenv("OPERATIVA_WEBHOOK_URL", "")
+    if not url:
+        logger.info("OPERATIVA_WEBHOOK_URL no configurada: no se notifica a OperativaAI")
+        return
+    key = os.getenv("OPERATIVA_WEBHOOK_KEY", "")
+    headers = {"X-Operativa-Key": key} if key else {}
+    payload = {
+        "external_reference": payment.get("external_reference", ""),
+        "payment_id": str(payment.get("id", "")),
+        "status": payment.get("status", ""),
+        "amount": payment.get("transaction_amount"),
+        "currency": payment.get("currency_id", "ARS"),
+        "date_approved": payment.get("date_approved"),
+    }
+    try:
+        r = httpx.post(url, json=payload, headers=headers, timeout=10)
+        if r.status_code != 200:
+            logger.warning(f"OperativaAI respondió {r.status_code}: {r.text[:200]}")
+        else:
+            logger.info(f"Pago {payload['payment_id']} notificado a OperativaAI")
+    except Exception as e:
+        logger.error(f"Notificación a OperativaAI falló: {e}")
+
+
 @router.post("/webhook")
 async def mp_webhook(request: Request):
     body = await request.body()
@@ -259,7 +289,9 @@ async def mp_webhook(request: Request):
                     }).execute()
                 except Exception as e:
                     logger.warning(f"No se pudo verificar idempotencia para {data_id}: {e}")
-                if external_ref.startswith("factura_"):
+                if external_ref.startswith("operativa:"):
+                    _notify_operativa(payment)
+                elif external_ref.startswith("factura_"):
                     factura_id = external_ref.replace("factura_", "")
                     try:
                         supabase.table("facturas").update({"estado": "pagada", "fecha_pago": datetime.now().strftime("%Y-%m-%d")}).eq("id", factura_id).execute()

@@ -23,3 +23,5 @@ backend/
 .lemon-webhook-secret
 certs/
 .env*
+token
+token.txt
