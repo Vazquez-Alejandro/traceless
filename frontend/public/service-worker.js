@@ -2,7 +2,7 @@ const CACHE_NAME = 'traceless-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/favicon.svg',
+  '/logonegro.svg',
   '/manifest.json',
 ];
 
