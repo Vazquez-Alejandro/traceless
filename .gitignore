@@ -25,3 +25,4 @@ certs/
 .env*
 token
 token.txt
+pdf/
