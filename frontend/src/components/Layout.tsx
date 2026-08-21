@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-full mx-auto flex items-center justify-between h-14 px-4 md:px-6">
           <div className="flex items-center gap-4 md:gap-6">
             <Link to="/dashboard" className="flex items-center gap-2">
-              <img src="/logonegro.svg" alt="TraceLess" className="w-7 h-7 rounded-lg" />
+              <img src="/logonegro.svg" alt="TraceLess" className="w-10 h-10 rounded-xl" />
               <span className="font-bold text-lg">TraceLess</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">

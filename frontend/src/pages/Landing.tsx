@@ -173,7 +173,7 @@ export default function Landing() {
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-4">
           <span className="flex items-center gap-2">
-            <img src="/logonegro.svg" alt="TraceLess" className="w-7 h-7 rounded-lg" />
+            <img src="/logonegro.svg" alt="TraceLess" className="w-10 h-10 rounded-xl" />
             <span className="font-bold text-lg">TraceLess</span>
           </span>
           <div className="flex items-center gap-3">
