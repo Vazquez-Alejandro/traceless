@@ -172,14 +172,14 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800/40 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-4">
-          <span className="flex items-center gap-2">
-            <img src="/logonegro.svg" alt="TraceLess" className="w-14 h-14 rounded-2xl" />
-            <span className="font-bold text-lg">TraceLess</span>
+        <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-3 sm:px-4 gap-2">
+          <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-shrink">
+            <img src="/logonegro.svg" alt="TraceLess" className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl sm:rounded-2xl flex-shrink-0" />
+            <span className="font-bold text-base sm:text-lg truncate">TraceLess</span>
           </span>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="text-xs text-gray-400 hover:text-white">Iniciar Sesión</Link>
-            <Link to="/register" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Empezar Gratis</Link>
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+            <Link to="/login" className="text-[11px] sm:text-xs text-gray-400 hover:text-white whitespace-nowrap ml-2 sm:ml-3">Iniciar Sesión</Link>
+            <Link to="/register" className="inline-flex items-center justify-center text-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[11px] sm:text-xs font-semibold rounded-lg whitespace-nowrap leading-none">Empezar Gratis</Link>
           </div>
         </div>
       </nav>
