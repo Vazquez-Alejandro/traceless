@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getPricing, formatUSD, formatARS } from "../pricing";
+import Carousel from "../components/Carousel";
 
 const SHOW_TESTIMONIALS = false; // Cambiar a true cuando tengamos testimonios reales
 
@@ -206,6 +207,8 @@ export default function Landing() {
           <p className="text-[10px] text-gray-600 mt-3">Plan Gratis para siempre: 20 facturas/mes. Sin tarjeta de crédito.</p>
         </div>
       </section>
+
+      <Carousel />
 
       <section className="py-12 sm:py-20">
         <div className="max-w-5xl mx-auto px-4">
