@@ -312,9 +312,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4">
-        <Link to="/facturas" className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm">Nueva Factura</Link>
-        <Link to="/clientes" className="px-5 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm">Nuevo Cliente</Link>
+      <div className="flex flex-wrap gap-3 sm:gap-4">
+        <Link to="/facturas" className="px-4 sm:px-5 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm">Nueva Factura</Link>
+        <Link to="/clientes" className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-xs sm:text-sm">Nuevo Cliente</Link>
       </div>
       </>)}
     </div>

@@ -594,9 +594,9 @@ export default function Facturas() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Facturas</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6">
+        <div className="flex-shrink-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Facturas</h1>
           {userPlan.invoices_limit !== null && (
             <p className="text-xs text-gray-500 mt-1">
               {userPlan.invoices_limit - userPlan.invoices_used > 0
@@ -611,14 +611,14 @@ export default function Facturas() {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 sm:justify-end">
           <button onClick={async () => {
             const t = localStorage.getItem("token");
             const res = await fetch('/api/facturas/export', { headers: { Authorization: `Bearer ${t}` } });
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             window.open(url, "_blank");
-          }} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+          }} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             Exportar Excel
           </button>
           <button onClick={() => {
@@ -626,10 +626,10 @@ export default function Facturas() {
               ["cliente_cuit", "cliente_nombre", "tipo", "importe", "descripcion", "fecha"],
               [["20300000000", "Juan Pérez", 11, 1000, "Honorarios", "2026-08-05"]]
             );
-          }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+          }} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             Descargar template
           </button>
-          <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+          <button onClick={() => fileRef.current?.click()} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             Importar Excel
           </button>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportExcel} className="hidden" />
@@ -639,7 +639,7 @@ export default function Facturas() {
               return;
             }
             setEditingId(null); setShowForm(!showForm); setDetalles([]); setUsarItems(false);
-          }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+          }} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             {showForm ? "Cancelar" : "+ Nueva Factura"}
           </button>
         </div>

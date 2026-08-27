@@ -143,12 +143,12 @@ export default function Clientes() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6">
+        <div className="flex-shrink-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
           {total > 0 && <p className="text-xs text-gray-500 mt-1">{total} clientes</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 sm:justify-end">
           <button onClick={() => {
             descargarExcel("template_clientes.xlsx", "Clientes",
               ["nombre", "apellido", "email", "telefono", "cuit", "direccion", "condicion_iva"],
@@ -158,7 +158,7 @@ export default function Clientes() {
               ],
               [15, 15, 25, 15, 15, 30, 22]
             );
-          }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+          }} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             Descargar template
           </button>
           {clientes.length > 0 && (
@@ -166,15 +166,15 @@ export default function Clientes() {
               descargarExcelObjetos("mis_clientes.xlsx", "Clientes", clientes.map(c => ({
                 nombre: c.nombre, apellido: c.apellido, email: c.email, telefono: c.telefono, cuit: c.cuit, direccion: (c as any).direccion || "", condicion_iva: (c as any).condicion_iva || "Consumidor Final"
               })));
-            }} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-xl">
+            }} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
               Exportar mis clientes
             </button>
           )}
-          <button onClick={() => fileRef.current?.click()} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">
+          <button onClick={() => fileRef.current?.click()} className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             {importando ? "Importando..." : "Importar Excel"}
           </button>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportExcel} className="hidden" />
-          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">
+          <button onClick={() => setShowForm(!showForm)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap">
             {showForm ? "Cancelar" : "+ Nuevo Cliente"}
           </button>
         </div>
