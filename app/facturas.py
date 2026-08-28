@@ -601,9 +601,8 @@ async def enviar_whatsapp_bulk(req: BulkWhatsApp, authorization: str = Header(""
     return {"ok": True, "enviados": enviados, "errores": errores, "fallback_wa_me_ids": fallback_wa_me_ids, "enviados_email": enviados_email}
 
 @router.get("/export")
-def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = "", token: str = ""):
-    auth = authorization or f"Bearer {token}"
-    uid = get_user_id(auth)
+def exportar_facturas(authorization: str = Header(""), desde: str = "", hasta: str = ""):
+    uid = get_user_id(authorization)
     q = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit)").eq("user_id", uid)
     if desde:
         q = q.gte("fecha", desde)

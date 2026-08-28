@@ -245,25 +245,29 @@ async def mp_webhook(request: Request):
     #   x-signature: ts=<timestamp>,v1=<hmac_sha256>
     # donde el HMAC se calcula sobre el "manifest":
     #   id:<data.id>;ts:<ts>;  (y request-id si viene x-request-id)
-    if MP_WEBHOOK_SECRET:
-        signature = request.headers.get("x-signature", "")
-        if not signature:
-            logger.warning("MP webhook: missing signature")
-            raise HTTPException(401, "Firma requerida")
-        parts = {}
-        for kv in signature.split(","):
-            if "=" in kv:
-                k, v = kv.strip().split("=", 1)
-                parts[k] = v
-        ts = parts.get("ts", "")
-        v1 = parts.get("v1", "")
-        data_id = str(data.get("data", {}).get("id", ""))
-        req_id = request.headers.get("x-request-id", "")
-        manifest = f"id:{data_id};request-id:{req_id};ts:{ts};"
-        sig = hmac.new(MP_WEBHOOK_SECRET.encode(), manifest.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig, v1):
-            logger.warning("MP webhook: invalid signature")
-            raise HTTPException(401, "Firma inválida")
+    # Fail-closed: si no hay MP_WEBHOOK_SECRET configurado, rechazar el webhook
+    # en vez de procesarlo sin validar la firma.
+    if not MP_WEBHOOK_SECRET:
+        logger.error("MP_WEBHOOK_SECRET no configurado; rechazando webhook sin firma")
+        raise HTTPException(401, "Webhook deshabilitado: secreto no configurado")
+    signature = request.headers.get("x-signature", "")
+    if not signature:
+        logger.warning("MP webhook: missing signature")
+        raise HTTPException(401, "Firma requerida")
+    parts = {}
+    for kv in signature.split(","):
+        if "=" in kv:
+            k, v = kv.strip().split("=", 1)
+            parts[k] = v
+    ts = parts.get("ts", "")
+    v1 = parts.get("v1", "")
+    data_id = str(data.get("data", {}).get("id", ""))
+    req_id = request.headers.get("x-request-id", "")
+    manifest = f"id:{data_id};request-id:{req_id};ts:{ts};"
+    sig = hmac.new(MP_WEBHOOK_SECRET.encode(), manifest.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, v1):
+        logger.warning("MP webhook: invalid signature")
+        raise HTTPException(401, "Firma inválida")
 
     logger.info(f"MP webhook received: {data.get('type', 'unknown')}")
 

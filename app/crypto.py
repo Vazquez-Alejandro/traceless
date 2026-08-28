@@ -15,17 +15,15 @@ def _clave() -> bytes:
 def cifrar_secreto(plano: str) -> str:
     """Cifra el PEM de ARCA con Fernet y lo deja listo para guardar en la DB.
 
-    Si no hay clave configurada, cae en el viejo formato arza_b64 (legacy).
+    Requiere una clave de cifrado configurada (ARCA_ENC_KEY preferida, fallback
+    MP_WEBHOOK_SECRET). Si no hay clave, falla en lugar de guardar en claro.
     """
     if not plano:
         return ""
-    if os.getenv("ARCA_ENC_KEY") or os.getenv("MP_WEBHOOK_SECRET"):
-        try:
-            token = Fernet(_clave()).encrypt(plano.encode())
-            return _ENC_PREFIX + token.decode()
-        except Exception:
-            pass
-    return "arza_b64:" + base64.b64encode(plano.encode()).decode()
+    if not os.getenv("ARCA_ENC_KEY") and not os.getenv("MP_WEBHOOK_SECRET"):
+        raise ValueError("No hay clave de cifrado configurada (ARCA_ENC_KEY o MP_WEBHOOK_SECRET); no se guardan claves ARCA en texto plano.")
+    token = Fernet(_clave()).encrypt(plano.encode())
+    return _ENC_PREFIX + token.decode()
 
 
 def descifrar_secreto(guardado: str) -> str:

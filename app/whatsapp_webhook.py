@@ -52,14 +52,17 @@ async def verify_webhook(request: Request):
 async def receive_webhook(request: Request):
     """Recibe eventos de WhatsApp (mensajes entrantes, estados de envío)."""
     signature = request.headers.get("x-hub-signature-256", "")
-    if WHATSAPP_APP_SECRET:
-        raw_body = await request.body()
-        expected = "sha256=" + hmac.new(WHATSAPP_APP_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(signature, expected):
-            logger.warning("WhatsApp webhook: firma inválida")
-            raise HTTPException(401, "Invalid signature")
-    else:
-        raw_body = await request.body()
+    raw_body = await request.body()
+    if not WHATSAPP_APP_SECRET:
+        logger.error("WHATSAPP_APP_SECRET no configurado; rechazando webhook sin firma")
+        raise HTTPException(401, "Invalid signature: secret no configurado")
+    if not signature:
+        logger.warning("WhatsApp webhook: falta firma")
+        raise HTTPException(401, "Missing signature")
+    expected = "sha256=" + hmac.new(WHATSAPP_APP_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        logger.warning("WhatsApp webhook: firma inválida")
+        raise HTTPException(401, "Invalid signature")
 
     import json
     body = json.loads(raw_body)
