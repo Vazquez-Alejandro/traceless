@@ -14,6 +14,10 @@ interface ClienteAnalytics {
   atraso_promedio: number;
 }
 
+function Skeleton({ className }: { className: string }) {
+  return <div className={`animate-pulse bg-gray-800/50 ${className}`} />;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState({ clientes: 0, facturas: 0, total: 0, emitidas: 0, enviadas: 0, por_cobrar: 0, pagadas: 0, notas_credito: 0 });
   const [plan, setPlan] = useState("Gratis");
@@ -25,70 +29,58 @@ export default function Dashboard() {
   const [profileComplete, setProfileComplete] = useState(false);
   const [whatsappStats, setWhatsappStats] = useState({ used: 0, limit: 0, remaining: 0 });
   const [me, setMe] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [criticalLoaded, setCriticalLoaded] = useState(false);
+  const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
+    // Fase 1: crítico para primer pintado (4 requests, payload mínimo)
     Promise.all([
-      api.clientes.list(),
-      api.facturas.list(),
-      fetch(`${BASE_URL}/api/facturas/estadisticas`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({})),
-      fetch(`${BASE_URL}/api/facturas/analytics/clientes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({})),
-      fetch(`${BASE_URL}/api/planes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({})),
-      fetch(`${BASE_URL}/api/facturas/resumen`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({})),
       api.auth.me(),
-      fetch(`${BASE_URL}/api/whatsapp/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({})),
-    ]).then(([c, f, e, a, p, r, me, wp]) => {
-      const facturas = f.facturas || [];
-      setStats({
-        clientes: (c.clientes || []).length,
-        facturas: facturas.length,
-        total: facturas.reduce((s: number, f: any) => s + (f.total || 0), 0),
-        emitidas: e.emitidas || 0,
-        enviadas: e.enviadas || 0,
-        por_cobrar: e.por_cobrar || 0,
-        pagadas: e.pagadas || 0,
-        notas_credito: e.notas_credito || 0,
-      });
-      setPlan(p.plan_actual || "Gratis");
-      setClientesAnalytics(a.clientes || []);
+      fetch(`${BASE_URL}/api/facturas/resumen`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+      fetch(`${BASE_URL}/api/facturas/estadisticas`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+      fetch(`${BASE_URL}/api/planes`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+    ]).then(([meRes, r, e, p]) => {
       setResumen(r && typeof r.mes_actual === "number" ? r : null);
-      const user = me.user || me;
+      setStats(s => ({ ...s, emitidas: e.emitidas || 0, enviadas: e.enviadas || 0, por_cobrar: e.por_cobrar || 0, pagadas: e.pagadas || 0, notas_credito: e.notas_credito || 0 }));
+      setPlan(p.plan_actual || "Gratis");
+      const user = (meRes as any).user || meRes;
+      setMe(user);
       setProfileComplete(!!(user.cuit && user.direccion));
       setPlanKey(user.plan_key || "free");
       setFeatures(user.features || { analytics: false, recurrentes: false, multi_user: false, retry_queue: false });
-      if (wp) setWhatsappStats(wp);
-      setMe(user);
+      setCriticalLoaded(true);
+    });
 
+    // Fase 2: secundario en background (no bloquea primer pintado)
+    Promise.all([
+      api.clientes.list(1, 0),
+      api.facturas.list(20, 0),
+      fetch(`${BASE_URL}/api/facturas/analytics/clientes`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+      fetch(`${BASE_URL}/api/whatsapp/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+    ]).then(([c, f, a, wp]) => {
+      const facturas = (f as any).facturas || [];
+      setStats(s => ({
+        ...s,
+        clientes: (c as any).total ?? (c as any).clientes?.length ?? 0,
+        facturas: (f as any).total ?? facturas.length,
+        total: facturas.reduce((acc: number, x: any) => acc + (x.total || 0), 0),
+      }));
+      setClientesAnalytics((a as any).clientes || []);
+      if (wp && typeof wp.used === "number") setWhatsappStats(wp);
       const mesesMap: Record<string, number> = {};
-      facturas.forEach((f: any) => {
-        if (f.fecha) {
-          const m = f.fecha.slice(0, 7);
-          mesesMap[m] = (mesesMap[m] || 0) + (f.total || 0);
+      facturas.forEach((x: any) => {
+        if (x.fecha) {
+          const m = x.fecha.slice(0, 7);
+          mesesMap[m] = (mesesMap[m] || 0) + (x.total || 0);
         }
       });
-      setMensual(Object.entries(mesesMap)
-        .map(([mes, total]) => ({ mes, total }))
-        .sort((a, b) => a.mes.localeCompare(b.mes))
-        .slice(-6));
-      setLoading(false);
-    }).catch((err) => {
-      console.error("Error cargando dashboard:", err);
-      setLoading(false);
-    });
+      setMensual(Object.entries(mesesMap).map(([mes, total]) => ({ mes, total })).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-6));
+      setSecondaryLoaded(true);
+    }).catch(() => setSecondaryLoaded(true));
   }, []);
 
   const handleUpgrade = async (planKey: string) => {
@@ -103,15 +95,24 @@ export default function Dashboard() {
 
   return (
     <div>
-      {loading && <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Cargando dashboard...</div>}
-      {!loading && (<>
+      {!criticalLoaded ? (
+        <div className="space-y-6">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-28 rounded-2xl" />
+          <div className="grid md:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
+          </div>
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+      ) : (
+      <>
       {plan === "Gratis" && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Plan Gratis</p>
             <p className="text-xs text-gray-400">20 facturas por mes · Sin WhatsApp</p>
           </div>
-          <button onClick={() => handleUpgrade("pro")} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Mejorar a Profesional</button>
+          <button onClick={() => handleUpgrade("pro")} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">Mejorar a Profesional</button>
         </div>
       )}
 
@@ -134,9 +135,9 @@ export default function Dashboard() {
       )}
 
       {typeof me?.creditos === "number" && me.creditos < 10 && (
-        <div className="mb-6 p-4 rounded-xl bg-yellow-900/20 border border-yellow-800/40 flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-xl bg-yellow-900/20 border border-yellow-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center flex-shrink-0">
               <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
             <div>
@@ -144,55 +145,55 @@ export default function Dashboard() {
               <p className="text-xs text-yellow-400/80">Te quedan {me.creditos} créditos WhatsApp. <Link to="/perfil" className="underline hover:text-yellow-200">Comprá más</Link>.</p>
             </div>
           </div>
-          <Link to="/perfil" className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg">Comprar créditos</Link>
+          <Link to="/perfil" className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">Comprar créditos</Link>
         </div>
       )}
 
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
-      {stats.facturas === 0 && (
+      {stats.facturas === 0 && criticalLoaded && (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 mb-8">
           <h2 className="text-base font-semibold mb-4">Bienvenido a TraceLess</h2>
           <p className="text-sm text-gray-400 mb-5">Seguí estos pasos para emitir tu primera factura en menos de 2 minutos:</p>
           <div className="space-y-3">
             <div className={`flex items-center gap-3 p-3 rounded-xl ${profileComplete ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${profileComplete ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${profileComplete ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
                 {profileComplete ? "✓" : "1"}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium">Completá tu perfil</div>
                 <div className="text-xs text-gray-500">CUIT y domicilio fiscal para que la factura sea válida</div>
               </div>
               {!profileComplete && (
-                <Link to="/perfil" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                <Link to="/perfil" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">
                   Completar
                 </Link>
               )}
             </div>
             <div className={`flex items-center gap-3 p-3 rounded-xl ${stats.clientes > 0 ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${stats.clientes > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${stats.clientes > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
                 {stats.clientes > 0 ? "✓" : "2"}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium">Cargá tu primer cliente</div>
                 <div className="text-xs text-gray-500">Nombre, teléfono y CUIT (si lo tenés)</div>
               </div>
               {stats.clientes === 0 && (
-                <Link to="/clientes" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                <Link to="/clientes" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">
                   Agregar
                 </Link>
               )}
             </div>
             <div className={`flex items-center gap-3 p-3 rounded-xl ${stats.facturas > 0 ? "bg-green-900/20 border border-green-700/30" : "bg-gray-900/60 border border-gray-800/40"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${stats.facturas > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${stats.facturas > 0 ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400"}`}>
                 {stats.facturas > 0 ? "✓" : "3"}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium">Emití tu primera factura</div>
                 <div className="text-xs text-gray-500">Elegí el tipo, poné el monto y listo</div>
               </div>
               {stats.facturas === 0 && (
-                <Link to="/facturas" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                <Link to="/facturas" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">
                   Facturar
                 </Link>
               )}
@@ -201,7 +202,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {resumen && typeof resumen.mes_actual === "number" && (
+      {resumen && typeof resumen.mes_actual === "number" ? (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/60 to-gray-900/30 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold text-gray-400 mb-3">Tu facturación</h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -230,7 +231,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      )}
+      ) : criticalLoaded ? null : <Skeleton className="h-32 rounded-2xl mb-8" />}
 
       <div className="grid md:grid-cols-6 gap-4 mb-8">
         {[
@@ -242,7 +243,7 @@ export default function Dashboard() {
           { label: "Notas de crédito", value: stats.notas_credito, to: "/facturas", color: "border-purple-500" },
         ].map((s, i) => (
           <Link key={i} to={s.to} className={`p-4 rounded-2xl bg-gray-900/40 border border-gray-800/40 border-t-4 ${s.color} hover:bg-gray-900/60 transition-all`}>
-            <div className="text-2xl font-bold">{s.value}</div>
+            <div className="text-2xl font-bold">{criticalLoaded ? s.value : <span className="inline-block w-8 h-6 bg-gray-800/50 animate-pulse rounded" />}</div>
             <div className="text-xs text-gray-400 mt-1">{s.label}</div>
           </Link>
         ))}
@@ -250,17 +251,19 @@ export default function Dashboard() {
 
       {!features.analytics && stats.facturas > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8 border-dashed">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold mb-1 text-gray-300">Analytics de pagos</h2>
               <p className="text-xs text-gray-500">Vedó cómo y cuándo te pagan tus clientes</p>
             </div>
-            <button onClick={() => handleUpgrade("pro")} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">Desbloquear</button>
+            <button onClick={() => handleUpgrade("pro")} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg whitespace-nowrap">Desbloquear</button>
           </div>
         </div>
       )}
 
-      {mensual.length > 0 && (
+      {!secondaryLoaded && features.analytics ? (
+        <Skeleton className="h-32 rounded-2xl mb-8" />
+      ) : mensual.length > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold mb-4 text-gray-300">Facturación mensual</h2>
           <div className="flex items-end gap-3 h-32">
@@ -280,7 +283,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {features.analytics && clientesAnalytics.length > 0 && (
+      {!secondaryLoaded && clientesAnalytics.length === 0 && features.analytics ? null : features.analytics && clientesAnalytics.length > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
           <h2 className="text-sm font-semibold mb-4 text-gray-300">Comportamiento de pagos por cliente</h2>
           <div className="overflow-x-auto">
