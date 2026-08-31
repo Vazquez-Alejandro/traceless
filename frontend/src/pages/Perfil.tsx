@@ -15,6 +15,7 @@ export default function Perfil() {
   const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: false, recordatorio_monotributo: false, recordatorio_vencidas: false });
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
+  const [confirmDeleteLogo, setConfirmDeleteLogo] = useState(false);
   const [arcaState, setArcaState] = useState<"idle" | "validating" | "ok" | "error">("idle");
   const [logoPreview, setLogoPreview] = useState("");
   const [msg, setMsg] = useState("");
@@ -158,6 +159,19 @@ export default function Perfil() {
     }
   };
 
+  const handleDeleteLogo = async () => {
+    setConfirmDeleteLogo(false);
+    setForm({ ...form, logo_url: "" });
+    setLogoPreview("");
+    await fetch("/api/auth/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: JSON.stringify({ logo_url: "" }),
+    });
+    setUser({ ...user, logo_url: "" });
+    setMsg("Logo eliminado");
+  };
+
   return (
     <div className="w-full">
       <h1 className="text-2xl font-bold mb-6">Mi Perfil</h1>
@@ -244,18 +258,7 @@ export default function Perfil() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-gray-500 text-xs">Logo</label>
-                <button onClick={async () => {
-                  if (!confirm("¿Eliminar el logo?")) return;
-                  setForm({ ...form, logo_url: "" });
-                  setLogoPreview("");
-                  await fetch("/api/auth/me", {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-                    body: JSON.stringify({ logo_url: "" }),
-                  });
-                  setUser({ ...user, logo_url: "" });
-                  setMsg("Logo eliminado");
-                }} className="text-[10px] text-red-400 hover:underline">{logoPreview || form.logo_url ? "Eliminar logo" : ""}</button>
+                <button onClick={() => setConfirmDeleteLogo(true)} className="text-[10px] text-red-400 hover:underline">{logoPreview || form.logo_url ? "Eliminar logo" : ""}</button>
               </div>
               {logoPreview && (
                 <img src={logoPreview} alt="logo" className="mt-1 max-h-12 object-contain rounded" />
@@ -475,6 +478,19 @@ export default function Perfil() {
           </div>
         </div>
       </div>
+
+      {confirmDeleteLogo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-sm font-semibold text-white mb-2">Eliminar logo</h3>
+            <p className="text-xs text-gray-400 mb-5">¿Seguro que querés eliminar tu logo? Se mostrará "TraceLess" en las facturas.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDeleteLogo(false)} className="px-4 py-2 text-xs text-gray-400 hover:text-white rounded-lg border border-gray-700 hover:border-gray-500 transition-colors">Cancelar</button>
+              <button onClick={handleDeleteLogo} className="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
