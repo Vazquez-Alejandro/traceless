@@ -1164,7 +1164,7 @@ def clientes_con_deuda(authorization: str = Header("")):
             venc = f.get("vencimiento") or f.get("fecha", "")
             if venc:
                 dias = (now - datetime.strptime(venc, "%Y-%m-%d")).days
-                if dias > deudas[cid]["dias_max_vencida"]:
+                if dias > 0 and dias > deudas[cid]["dias_max_vencida"]:
                     deudas[cid]["dias_max_vencida"] = dias
     resultado = sorted(deudas.values(), key=lambda x: x["total_debe"], reverse=True)
     total_pendiente = sum(d["total_debe"] for d in resultado)
