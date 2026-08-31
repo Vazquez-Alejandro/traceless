@@ -784,7 +784,7 @@ async def enviar_recordatorios(secret: str = "", authorization: str = Header("")
                 if prefs.get("recordatorios_whatsapp", False):
                     crear_notificacion(f["user_id"], "factura_sin_enviar", f"Factura #{num} sin enviar hace {dias_sin_enviar} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} fue emitida pero no enviada", "/facturas")
 
-    # Recordatorio y vencimiento para facturas enviadas
+    # Recordatorios automáticos de cobranza para facturas enviadas
     enviadas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "enviada").execute()
     facturas_pendientes = enviadas.data
     enviados = 0
@@ -803,17 +803,42 @@ async def enviar_recordatorios(secret: str = "", authorization: str = Header("")
         total = f.get("total", 0)
         num = f.get("numero", "")
         vencimiento = f.get("vencimiento", "")
+        fecha = f.get("fecha", "")
+        enviado_str = f.get("recordatorios_enviados", "") or ""
+        enviados_set = set(enviado_str.split(",")) if enviado_str else set()
+
         if vencimiento:
             dias_vencida = (now - datetime.strptime(vencimiento, "%Y-%m-%d")).days
+        elif fecha:
+            dias_vencida = (now - datetime.strptime(fecha, "%Y-%m-%d")).days - 30
         else:
-            dias_vencida = (now - datetime.strptime(f["fecha"], "%Y-%m-%d")).days - 30
-        if dias_vencida >= 0:
+            continue
+
+        # Determinar qué recordatorio toca hoy
+        recordatorio_tipo = None
+        if dias_vencida == -1:
+            recordatorio_tipo = "pre_1"
+        elif dias_vencida == 0:
+            recordatorio_tipo = "dia_0"
+        elif dias_vencida == 3:
+            recordatorio_tipo = "dia_3"
+        elif dias_vencida == 7:
+            recordatorio_tipo = "dia_7"
+        elif dias_vencida == 15:
+            recordatorio_tipo = "dia_15"
+
+        # Si ya venció, marcar como vencida
+        if dias_vencida > 0 and f["estado"] != "vencida":
             supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
             crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} vencida hace {dias_vencida} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} lleva {dias_vencida} días sin pagar", "/facturas")
-        elif dias_vencida >= -23:
-            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} con {7 + dias_vencida} días de atraso", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} vence en {-dias_vencida} días", "/facturas")
-        tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, max(0, dias_vencida)))
-        enviados += 1
+
+        # Enviar recordatorio si toca y no se envió antes
+        if recordatorio_tipo and recordatorio_tipo not in enviados_set:
+            tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias_vencida))
+            enviados_set.add(recordatorio_tipo)
+            supabase.table("facturas").update({"recordatorios_enviados": ",".join(sorted(enviados_set))}).eq("id", f["id"]).execute()
+            enviados += 1
+
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "recordatorios_enviados": enviados}

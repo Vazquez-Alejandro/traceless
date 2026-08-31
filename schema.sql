@@ -95,6 +95,9 @@ alter table perfiles add column if not exists recordatorio_vencidas boolean defa
 -- Notas de crédito: link a factura original
 alter table facturas add column if not exists factura_original_id uuid references facturas(id) on delete set null;
 
+-- Recordatorios de cobranza
+alter table facturas add column if not exists recordatorios_enviados text default '';
+
 -- Indices
 create index if not exists idx_clientes_user on clientes(user_id);
 create index if not exists idx_facturas_user on facturas(user_id);

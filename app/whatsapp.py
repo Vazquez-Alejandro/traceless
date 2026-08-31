@@ -107,11 +107,39 @@ async def enviar_recordatorio_whatsapp(telefono: str, cliente: str, numero: str,
     if WA_TEMPLATE_REMINDER:
         return await enviar_whatsapp_template(telefono, WA_TEMPLATE_REMINDER, [cliente, numero, f"{total:,.2f}", str(dias)])
 
-    mensaje = (
-        f"Hola {cliente}, le recordamos que la factura *{numero}* "
-        f"por *${total:,.2f}* venció hace {dias} días. "
-        f"Si ya la pagó, disculpe las molestias."
-    )
+    if dias < 0:
+        mensaje = (
+            f"Hola {cliente} 👋\n\n"
+            f"Te recordamos que la factura *{numero}* por *${total:,.2f}* "
+            f"vence mañana.\n\n"
+            f"Podés abonarla desde acá 👉 [Pagar ahora]"
+        )
+    elif dias == 0:
+        mensaje = (
+            f"Hola {cliente} 👋\n\n"
+            f"La factura *{numero}* por *${total:,.2f}* vence hoy.\n\n"
+            f"Si ya la pagaste, disculpá las molestias 🙏"
+        )
+    elif dias <= 3:
+        mensaje = (
+            f"Hola {cliente} 👋\n\n"
+            f"La factura *{numero}* por *${total:,.2f}* venció hace {dias} días.\n\n"
+            f"Si ya la pagaste, disculpá las molestias 🙏"
+        )
+    elif dias <= 7:
+        mensaje = (
+            f"Hola {cliente} 👋\n\n"
+            f"Te informamos que la factura *{numero}* por *${total:,.2f}* "
+            f"lleva {dias} días vencida.\n\n"
+            f"Si ya la pagaste, ignorá este mensaje 🙏"
+        )
+    else:
+        mensaje = (
+            f"Hola {cliente} 👋\n\n"
+            f"Último recordatorio: la factura *{numero}* por *${total:,.2f}* "
+            f"lleva {dias} días vencida.\n\n"
+            f"Si ya la pagaste, ignorá este mensaje 🙏"
+        )
     return await enviar_whatsapp(telefono, mensaje)
 
 
