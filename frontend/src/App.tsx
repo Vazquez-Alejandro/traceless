@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { api } from "./api/client";
 import Landing from "./pages/Landing";
 import LandingMonotributo from "./pages/LandingMonotributo";
+import LandingPyme from "./pages/LandingPyme";
+import LandingWhatsApp from "./pages/LandingWhatsApp";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -38,6 +40,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/factura-monotributo" element={<LandingMonotributo />} />
+      <Route path="/factura-pyme" element={<LandingPyme />} />
+      <Route path="/factura-whatsapp" element={<LandingWhatsApp />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
