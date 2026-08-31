@@ -255,7 +255,7 @@ export default function Perfil() {
                   });
                   setUser({ ...user, logo_url: "" });
                   setMsg("Logo eliminado");
-                }} className="text-[10px] text-red-400 hover:underline">Eliminar logo</button>
+                }} className="text-[10px] text-red-400 hover:underline">{logoPreview || form.logo_url ? "Eliminar logo" : ""}</button>
               </div>
               {logoPreview && (
                 <img src={logoPreview} alt="logo" className="mt-1 max-h-12 object-contain rounded" />
