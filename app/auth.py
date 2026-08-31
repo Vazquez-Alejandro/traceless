@@ -699,3 +699,34 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
     if r.status_code not in (200, 201):
         raise HTTPException(500, "Error al crear preferencia de pago")
     return {"url": r.json()["init_point"]}
+
+@router.get("/referido")
+def get_referido(authorization: str = Header("")):
+    uid = _get_user_id(authorization)
+    res = supabase.table("perfiles").select("codigo_referido").eq("id", uid).single().execute()
+    codigo = (res.data or {}).get("codigo_referido", "")
+    if not codigo:
+        import secrets
+        codigo = secrets.token_urlsafe(8).upper()
+        supabase.table("perfiles").update({"codigo_referido": codigo}).eq("id", uid).execute()
+    referidos_res = supabase.table("perfiles").select("id").eq("referido_por", uid).execute()
+    total_referidos = len(referidos_res.data or [])
+    return {"codigo": codigo, "total_referidos": total_referidos, "creditos_ganados": total_referidos * 3000}
+
+@router.post("/referido/aplicar")
+def aplicar_referido(codigo: str = "", authorization: str = Header("")):
+    uid = _get_user_id(authorization)
+    if not codigo:
+        raise HTTPException(400, "Código de referido requerido")
+    res = supabase.table("perfiles").select("id").eq("codigo_referido", codigo.upper()).neq("id", uid).execute()
+    if not res.data:
+        raise HTTPException(404, "Código de referido inválido")
+    referido_por = res.data[0]["id"]
+    existing = supabase.table("perfiles").select("referido_por").eq("id", uid).single().execute()
+    if (existing.data or {}).get("referido_por"):
+        raise HTTPException(400, "Ya usaste un código de referido")
+    supabase.table("perfiles").update({"referido_por": referido_por}).eq("id", uid).execute()
+    from app.creditos import agregar_credito
+    agregar_credito(uid, 3000, "Referido: 3000 créditos por registro")
+    agregar_credito(referido_por, 3000, "Referido: 3000 créditos por traer un usuario")
+    return {"ok": True, "mensaje": "Código aplicado. Recibiste 3000 créditos"}

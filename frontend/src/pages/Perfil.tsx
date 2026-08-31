@@ -16,6 +16,8 @@ export default function Perfil() {
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
   const [confirmDeleteLogo, setConfirmDeleteLogo] = useState(false);
+  const [referido, setReferido] = useState({ codigo: "", total_referidos: 0, creditos_ganados: 0 });
+  const [codigoInput, setCodigoInput] = useState("");
   const [arcaState, setArcaState] = useState<"idle" | "validating" | "ok" | "error">("idle");
   const [logoPreview, setLogoPreview] = useState("");
   const [msg, setMsg] = useState("");
@@ -50,6 +52,11 @@ export default function Perfil() {
       setArca({ arca_cuit: u.arca_cuit || "", arca_cert: "", arca_key: "", arca_punto_venta: u.arca_punto_venta || 2, arca_env: u.arca_env || "produccion" });
       const storedLogo = u.logo_url || "";
       if (storedLogo) setLogoPreview(storedLogo);
+      fetch(`${BASE_URL}/api/auth/referido`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()).then(d => {
+        if (d.codigo) setReferido(d);
+      }).catch(() => {});
     });
   }, []);
 
@@ -475,6 +482,37 @@ export default function Perfil() {
                 {arcaState === "validating" ? "Validando con ARCA…" : user.arca_configurado ? "Reconectar certificado" : "Validar y conectar con ARCA"}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-6">
+        <h2 className="text-sm font-semibold text-gray-400 mb-3">Programa de referidos</h2>
+        <p className="text-xs text-gray-500 mb-4">Invitá a un amigo y ganá $3.000 de crédito cada uno. Compartí tu código:</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm font-mono text-blue-400">{referido.codigo || "Cargando..."}</div>
+          <button onClick={() => { navigator.clipboard.writeText(referido.codigo); setMsg("Código copiado"); setTimeout(() => setMsg(""), 2000); }} className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-xl">Copiar</button>
+        </div>
+        {referido.total_referidos > 0 && (
+          <p className="text-xs text-green-400">✓ {referido.total_referidos} referido{referido.total_referidos > 1 ? "s" : ""} · ${referido.creditos_ganados.toLocaleString()} créditos ganados</p>
+        )}
+        <div className="mt-4 pt-4 border-t border-gray-800/40">
+          <p className="text-xs text-gray-500 mb-2">¿Tenés un código?</p>
+          <div className="flex items-center gap-3">
+            <input value={codigoInput} onChange={e => setCodigoInput(e.target.value.toUpperCase())} placeholder="CÓDIGO"
+              className="flex-1 px-4 py-2 bg-gray-900 border border-gray-800 rounded-xl text-sm font-mono" />
+            <button onClick={async () => {
+              if (!codigoInput) return;
+              const token = localStorage.getItem("token");
+              const res = await fetch(`${BASE_URL}/api/auth/referido/aplicar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ codigo: codigoInput }),
+              }).then(r => r.json());
+              if (res.ok) { setMsg("✓ Código aplicado. Recibiste $3.000 de crédito"); setCodigoInput(""); }
+              else { setMsg(`❌ ${res.detail || "Código inválido"}`); }
+              setTimeout(() => setMsg(""), 3000);
+            }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">Aplicar</button>
           </div>
         </div>
       </div>

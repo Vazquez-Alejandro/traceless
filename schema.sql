@@ -98,6 +98,10 @@ alter table facturas add column if not exists factura_original_id uuid reference
 -- Recordatorios de cobranza
 alter table facturas add column if not exists recordatorios_enviados text default '';
 
+-- Referidos
+alter table perfiles add column if not exists codigo_referido text default '';
+alter table perfiles add column if not exists referido_por uuid references auth.users(id);
+
 -- Indices
 create index if not exists idx_clientes_user on clientes(user_id);
 create index if not exists idx_facturas_user on facturas(user_id);
