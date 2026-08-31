@@ -1137,6 +1137,55 @@ def estadisticas(authorization: str = Header("")):
     por_cobrar = sum(1 for f in facturas if f["estado"] in ("emitida", "enviada", "vencida") and f["tipo"] not in _NC_TIPOS)
     return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar, "notas_credito": notas_credito}
 
+@router.get("/clientes-deuda")
+def clientes_con_deuda(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    _NC_TIPOS = {3, 8, 13, 21}
+    now = datetime.now()
+    res = supabase.table("facturas").select("total, estado, tipo, vencimiento, fecha, cliente_id, clientes!inner(nombre, apellido, telefono)").eq("user_id", uid).execute()
+    deudas = {}
+    for f in res.data:
+        if f["estado"] in ("emitida", "enviada", "vencida") and f["tipo"] not in _NC_TIPOS:
+            cid = f["cliente_id"]
+            cli = f.get("clientes") or {}
+            if cid not in deudas:
+                deudas[cid] = {"cliente_id": cid, "nombre": cli.get("nombre", ""), "apellido": cli.get("apellido", ""), "telefono": cli.get("telefono", ""), "total_debe": 0, "facturas_pendientes": 0, "dias_max_vencida": 0}
+            deudas[cid]["total_debe"] += f["total"]
+            deudas[cid]["facturas_pendientes"] += 1
+            venc = f.get("vencimiento") or f.get("fecha", "")
+            if venc:
+                dias = (now - datetime.strptime(venc, "%Y-%m-%d")).days
+                if dias > deudas[cid]["dias_max_vencida"]:
+                    deudas[cid]["dias_max_vencida"] = dias
+    resultado = sorted(deudas.values(), key=lambda x: x["total_debe"], reverse=True)
+    total_pendiente = sum(d["total_debe"] for d in resultado)
+    return {"clientes": resultado, "total_pendiente": total_pendiente}
+
+@router.post("/recordar-todos")
+async def recordar_todos(secret: str = "", authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    from app.whatsapp import enviar_recordatorio_whatsapp
+    import asyncio
+    _NC_TIPOS = {3, 8, 13, 21}
+    now = datetime.now()
+    res = supabase.table("facturas").select("*, clientes!inner(nombre, apellido, telefono)").eq("user_id", uid).in_("estado", ["enviada", "vencida"]).execute()
+    tasks = []
+    enviados = 0
+    for f in res.data:
+        if f["tipo"] in _NC_TIPOS:
+            continue
+        cli = f.get("clientes") or {}
+        tel = cli.get("telefono", "")
+        if not tel:
+            continue
+        venc = f.get("vencimiento") or f.get("fecha", "")
+        dias = (now - datetime.strptime(venc, "%Y-%m-%d")).days if venc else 0
+        tasks.append(enviar_recordatorio_whatsapp(tel, cli.get("nombre", ""), f["numero"], f["total"], max(0, dias)))
+        enviados += 1
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    return {"ok": True, "enviados": enviados}
+
 @router.get("/resumen")
 def resumen(authorization: str = Header("")):
     uid = get_user_id(authorization)

@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [me, setMe] = useState<any>(null);
   const [criticalLoaded, setCriticalLoaded] = useState(false);
   const [secondaryLoaded, setSecondaryLoaded] = useState(false);
+  const [deudas, setDeudas] = useState<{ clientes: any[]; total_pendiente: number } | null>(null);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
   useEffect(() => {
@@ -61,7 +62,8 @@ export default function Dashboard() {
       api.facturas.list(20, 0),
       fetch(`${BASE_URL}/api/facturas/analytics/clientes`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/whatsapp/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
-    ]).then(([c, f, a, wp]) => {
+      fetch(`${BASE_URL}/api/facturas/clientes-deuda`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+    ]).then(([c, f, a, wp, d]) => {
       const facturas = (f as any).facturas || [];
       setStats(s => ({
         ...s,
@@ -79,6 +81,7 @@ export default function Dashboard() {
         }
       });
       setMensual(Object.entries(mesesMap).map(([mes, total]) => ({ mes, total })).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-6));
+      if (d && d.clientes) setDeudas(d);
       setSecondaryLoaded(true);
     }).catch(() => setSecondaryLoaded(true));
   }, []);
@@ -248,6 +251,51 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+
+      {deudas && deudas.clientes.length > 0 && (
+        <div className="p-5 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-300">Quién te debe</h2>
+              <p className="text-xs text-gray-500">${deudas.total_pendiente.toLocaleString()} pendiente</p>
+            </div>
+            <button onClick={async () => {
+              if (!confirm(`¿Recordar a los ${deudas.clientes.length} clientes con deuda?`)) return;
+              const token = localStorage.getItem("token");
+              const res = await fetch(`${BASE_URL}/api/facturas/recordar-todos`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+              if (res.enviados > 0) setToast(`✅ Recordatorios enviados a ${res.enviados} clientes`);
+            }} className="px-3 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 text-xs font-semibold rounded-lg border border-yellow-600/30">
+              Recordar a todos
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-500 border-b border-gray-800/40">
+                  <th className="text-left py-2 font-medium">Cliente</th>
+                  <th className="text-right py-2 font-medium">Debe</th>
+                  <th className="text-right py-2 font-medium">Facturas</th>
+                  <th className="text-right py-2 font-medium">Días</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deudas.clientes.map((d, i) => (
+                  <tr key={i} className="border-b border-gray-800/20 hover:bg-gray-800/20">
+                    <td className="py-2 text-gray-300">{d.nombre} {d.apellido}</td>
+                    <td className="py-2 text-right text-white font-medium">${d.total_debe.toLocaleString()}</td>
+                    <td className="py-2 text-right text-gray-400">{d.facturas_pendientes}</td>
+                    <td className="py-2 text-right">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${d.dias_max_vencida <= 0 ? "bg-green-900/30 text-green-400" : d.dias_max_vencida <= 7 ? "bg-yellow-900/30 text-yellow-400" : "bg-red-900/30 text-red-400"}`}>
+                        {d.dias_max_vencida <= 0 ? "Al día" : `${d.dias_max_vencida}d`}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {!features.analytics && stats.facturas > 0 && (
         <div className="p-6 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8 border-dashed">
