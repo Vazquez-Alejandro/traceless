@@ -1138,11 +1138,12 @@ def resumen(authorization: str = Header("")):
                     mes_anterior_total += total
         except (ValueError, TypeError):
             pass
+    meses_es = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     return {
         "mes_actual": round(mes_actual_total, 2),
         "mes_anterior": round(mes_anterior_total, 2),
         "anio": round(anio_total, 2),
-        "mes_nombre": now.strftime("%B").capitalize(),
+        "mes_nombre": meses_es[now.month],
     }
 
 @router.get("/analytics/clientes")
