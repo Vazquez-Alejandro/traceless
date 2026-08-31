@@ -386,7 +386,7 @@ export default function Perfil() {
               <div className="mb-4 p-3 rounded-lg bg-blue-900/20 border border-blue-800/30 text-xs text-blue-300 leading-relaxed">
                 <p className="font-semibold mb-1">Cómo generar tu certificado digital:</p>
                 <ol className="list-decimal list-inside space-y-1 text-blue-200/80">
-                  <li>Ingresá al <a href="https://auth.afip.gob.ar/contribuyente_/login.xhtml" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">Portal de Certificados de ARCA</a> con tu clave fiscal</li>
+                  <li>Ingresá al <a href="https://auth.afip.gob.ar/contribuyente_/login.xhtml?action=SYSTEM&system=arfe_certificado" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">Administrador de Certificados Digitales de ARCA</a></li>
                   <li>Generá un certificado de WSAA (tipo "Aplicación")</li>
                   <li>Bajá los archivos <code className="bg-blue-900/40 px-1 rounded">cert.pem</code> y <code className="bg-blue-900/40 px-1 rounded">key.pem</code></li>
                   <li>Cargalos acá abajo</li>
