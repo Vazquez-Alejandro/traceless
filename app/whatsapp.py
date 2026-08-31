@@ -30,6 +30,12 @@ async def enviar_whatsapp(telefono: str, mensaje: str) -> dict:
         return res.json()
 
 
+TEMPLATE_PARAM_NAMES = {
+    "traceless_invoice": ["customer_name", "invoice_number", "amount", "payment_link"],
+    "traceless_reminder": ["customer_name", "invoice_number", "amount", "days_overdue"],
+    "traceless_monotributo": ["customer_name"],
+}
+
 async def enviar_whatsapp_template(telefono: str, template_name: str, variables: list[str], lang: str = "es_AR") -> dict:
     """Envía un mensaje template aprobado por Meta (requiere HSM)."""
     if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID or not template_name:
@@ -40,7 +46,11 @@ async def enviar_whatsapp_template(telefono: str, template_name: str, variables:
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json",
     }
-    body_params = [{"type": "text", "text": v} for v in variables]
+    param_names = TEMPLATE_PARAM_NAMES.get(template_name)
+    if param_names and len(param_names) == len(variables):
+        body_params = [{"type": "text", "parameter_name": n, "text": v} for n, v in zip(param_names, variables)]
+    else:
+        body_params = [{"type": "text", "text": v} for v in variables]
     payload = {
         "messaging_product": "whatsapp",
         "to": telefono,

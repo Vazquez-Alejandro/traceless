@@ -48,9 +48,13 @@ export default function Perfil() {
       setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: u.recordatorios_whatsapp !== false, recordatorio_monotributo: u.recordatorio_monotributo !== false, recordatorio_vencidas: u.recordatorio_vencidas !== false });
       setArca({ arca_cuit: u.arca_cuit || "", arca_cert: "", arca_key: "", arca_punto_venta: u.arca_punto_venta || 2, arca_env: u.arca_env || "produccion" });
       const storedLogo = u.logo_url || "";
-      if (storedLogo.startsWith("data:image/")) setLogoPreview(storedLogo);
+      if (storedLogo) setLogoPreview(storedLogo);
     });
   }, []);
+
+  useEffect(() => {
+    if (user.logo_url) setLogoPreview(user.logo_url);
+  }, [user.logo_url]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
