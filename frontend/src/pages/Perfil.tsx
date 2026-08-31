@@ -386,10 +386,11 @@ export default function Perfil() {
               <div className="mb-4 p-3 rounded-lg bg-blue-900/20 border border-blue-800/30 text-xs text-blue-300 leading-relaxed">
                 <p className="font-semibold mb-1">Cómo generar tu certificado digital:</p>
                 <ol className="list-decimal list-inside space-y-1 text-blue-200/80">
-                  <li>Generá tu clave privada y certificado con <a href="https://www.afip.gob.ar/ws/WSAA/WSAA.ObtenerCertificado.pdf" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">esta guía de ARCA</a></li>
+                  <li>Generá tu <a href="https://www.afip.gob.ar/ws/WSAA/WSAA.ObtenerCertificado.pdf" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">clave privada y certificado</a></li>
                   <li>Bajá los archivos <code className="bg-blue-900/40 px-1 rounded">cert.pem</code> y <code className="bg-blue-900/40 px-1 rounded">key.pem</code></li>
                   <li>Cargalos acá abajo</li>
                 </ol>
+                <p className="mt-2 text-blue-400/60">Para más info: <a href="https://www.afip.gob.ar/ws/WSAA/wsaa_obtener_certificado_produccion.pdf" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">Guía completa de ARCA</a></p>
               </div>
             )}
             {certWarning && (
