@@ -68,7 +68,7 @@ const FEATURES: Feature[] = [
     icon: "📱",
     title: "Envío por WhatsApp",
     shortDesc: "Llega al celular de tu cliente al instante. Sin adjuntar PDFs.",
-    longDesc: "La factura llega directo al chat de WhatsApp de tu cliente con un link público. No necesita descargar nada, se ve perfecto en el celular. Dos modos: <strong>wa.me (gratis, sin configuración)</strong> abre WhatsApp con el mensaje listo para enviar, o <strong>Meta Cloud API</strong> para envío 100% automático desde la app. Incluye link de pago MP y QR transferencia."
+    longDesc: "La factura llega directo al chat de WhatsApp de tu cliente con un link público. No necesita descargar nada, se ve perfecto en el celular. Dos modos: <strong>wa.me (gratis, sin configuración)</strong> abre WhatsApp con el mensaje listo para enviar, o <strong>Meta Cloud API</strong> para envío 100% automático desde la app. Incluye link de pago MP y QR con el link de pago para cobro presencial."
   },
   {
     icon: "📊",
