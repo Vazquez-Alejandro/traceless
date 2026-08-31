@@ -742,7 +742,25 @@ export default function Facturas() {
           )}
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div className="flex gap-2">
-              <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required
+              <select value={form.cliente_id} onChange={async e => {
+                const cid = e.target.value;
+                setForm({ ...form, cliente_id: cid });
+                if (cid && !editingId) {
+                  try {
+                    const BASE_URL = import.meta.env.VITE_API_URL || "";
+                    const token = localStorage.getItem("token");
+                    const res = await fetch(`${BASE_URL}/api/facturas/ultima-por-cliente/${cid}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+                    if (res.found) {
+                      setForm(prev => ({
+                        ...prev,
+                        cliente_id: cid,
+                        importe: prev.importe || String(res.total || ""),
+                        descripcion: prev.descripcion === "Honorarios" ? (res.descripcion || "Honorarios") : prev.descripcion,
+                      }));
+                    }
+                  } catch {}
+                }
+              }} required
                 className="flex-1 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-sm">
                 <option value="">Seleccionar cliente</option>
                 {clientes.map(c => (

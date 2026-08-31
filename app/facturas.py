@@ -1137,6 +1137,15 @@ def estadisticas(authorization: str = Header("")):
     por_cobrar = sum(1 for f in facturas if f["estado"] in ("emitida", "enviada", "vencida") and f["tipo"] not in _NC_TIPOS)
     return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar, "notas_credito": notas_credito}
 
+@router.get("/ultima-por-cliente/{cliente_id}")
+def ultima_factura_cliente(cliente_id: str, authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    res = supabase.table("facturas").select("total, descripcion, tipo").eq("user_id", uid).eq("cliente_id", cliente_id).order("created_at", desc=True).limit(1).execute()
+    if not res.data:
+        return {"found": False}
+    f = res.data[0]
+    return {"found": True, "total": f.get("total", 0), "descripcion": f.get("descripcion", ""), "tipo": f.get("tipo", 6)}
+
 @router.get("/clientes-deuda")
 def clientes_con_deuda(authorization: str = Header("")):
     uid = get_user_id(authorization)
