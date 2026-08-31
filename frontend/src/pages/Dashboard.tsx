@@ -134,7 +134,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {typeof me?.creditos === "number" && me.creditos < 10 && (
+      {typeof me?.creditos === "number" && me.creditos < 10 && whatsappStats.limit === 0 && (
         <div className="mb-6 p-4 rounded-xl bg-yellow-900/20 border border-yellow-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center flex-shrink-0">
