@@ -244,7 +244,17 @@ export default function Perfil() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-gray-500 text-xs">Logo</label>
-                <button onClick={() => setForm({ ...form, logo_url: "" })} className="text-[10px] text-red-400 hover:underline">Eliminar logo</button>
+                <button onClick={async () => {
+                  setForm({ ...form, logo_url: "" });
+                  setLogoPreview("");
+                  await fetch("/api/auth/me", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    body: JSON.stringify({ logo_url: "" }),
+                  });
+                  setUser({ ...user, logo_url: "" });
+                  setMsg("Logo eliminado");
+                }} className="text-[10px] text-red-400 hover:underline">Eliminar logo</button>
               </div>
               {logoPreview && (
                 <img src={logoPreview} alt="logo" className="mt-1 max-h-12 object-contain rounded" />
