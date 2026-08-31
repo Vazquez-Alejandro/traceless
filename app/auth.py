@@ -59,11 +59,7 @@ def rate_limit(request, action: str, max_per_window: int = 10, window_sec: int =
 def _arca_configurado(p: dict | None) -> bool:
     if not p:
         return False
-    # Si la columna arca_validado existe y es True -> conectada de verdad
-    if "arca_validado" in p:
-        return bool(p.get("arca_validado"))
-    # Migración pendiente: fallback al check de datos (aunque no fue validado)
-    return bool(p.get("arca_cert") and p.get("arca_key") and p.get("arca_cuit"))
+    return bool(p.get("arca_validado"))
 
 def _arca_decode_cert(p: dict | None) -> str:
     if not p:
@@ -668,7 +664,8 @@ def arca_connect(req: ArcaConnect, authorization: str = Header("")):
 @router.put("/me")
 def update_me(req: ProfileUpdate, authorization: str = Header("")):
     uid = get_user_id(authorization)
-    data = {k: v for k, v in req.model_dump().items() if v is not None and v != ""}
+    BLOCKED = {"arca_cuit", "arca_cert", "arca_key", "arca_punto_venta", "arca_env", "arca_validado", "arca_cert_expira"}
+    data = {k: v for k, v in req.model_dump().items() if v is not None and v != "" and k not in BLOCKED}
     if data:
         supabase.table("perfiles").update(data).eq("id", uid).execute()
     return {"ok": True, "mensaje": "Perfil actualizado"}
