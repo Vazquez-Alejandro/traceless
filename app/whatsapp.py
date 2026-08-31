@@ -73,9 +73,8 @@ MESES = [
 ]
 
 async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, total: float, pdf_url: str, fecha: str = "", mp_link: str = "", vencimiento: str = "") -> dict:
-    if WA_TEMPLATE_INVOICE:
-        link = mp_link if mp_link else pdf_url
-        return await enviar_whatsapp_template(telefono, WA_TEMPLATE_INVOICE, [cliente, numero, f"{total:,.2f}", link])
+    if WA_TEMPLATE_INVOICE and not mp_link:
+        return await enviar_whatsapp_template(telefono, WA_TEMPLATE_INVOICE, [cliente, numero, f"{total:,.2f}", pdf_url])
 
     mes = ""
     if fecha:
@@ -97,9 +96,10 @@ async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, tota
     )
     if vencimiento:
         mensaje += f"Vence: *{vencimiento}*\n\n"
-    mensaje += f"PDF: {pdf_url}"
     if mp_link:
-        mensaje += f"\n\n💳 *Pagá online:* {mp_link}"
+        mensaje += f"👁 *Mirala acá:* {pdf_url}\n\n💳 *Pagala acá:* {mp_link}"
+    else:
+        mensaje += f"👁 *Mirala acá:* {pdf_url}"
     return await enviar_whatsapp(telefono, mensaje)
 
 
