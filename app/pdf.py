@@ -6,12 +6,15 @@ import html as html_mod
 TMP = Path(tempfile.gettempdir()) / "traceless_facturas"
 FACTURAS_DIR = TMP
 
-def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: str) -> str:
-    if not cbu and not alias_banco:
-        return ""
-    try:
-        import qrcode
-        import qrcode.constants
+def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: str, mp_link: str = "", factura_id: str = "") -> str:
+    # QR útil: codifica el link de pago (MP) o el link público de la factura
+    url = (mp_link or "").strip()
+    if not url and factura_id:
+        url = f"https://www.traceless.com.ar/api/facturas/public/{factura_id}"
+    if not url:
+        # fallback al texto plano solo si no hay link (no recomendado)
+        if not cbu and not alias_banco:
+            return ""
         lineas = []
         if cbu:
             lineas.append(f"CBU: {cbu}")
@@ -19,16 +22,19 @@ def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: st
             lineas.append(f"Alias: {alias_banco}")
         lineas.append(f"Monto: ${monto:,.2f}")
         lineas.append(f"Beneficiario: {emisor_nombre}")
-        texto = "\n".join(lineas)
+        url = "\n".join(lineas)
+    try:
+        import qrcode
+        import qrcode.constants
         qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=6, border=2)
-        qr.add_data(texto)
+        qr.add_data(url)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
         import io
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         b64 = base64.b64encode(buf.getvalue()).decode()
-        return f'<img src="data:image/png;base64,{b64}" style="width:160px;height:160px" />'
+        return f'<div style="text-align:center;margin-top:16px"><img src="data:image/png;base64,{b64}" style="width:160px;height:160px" /><div style="font-size:10px;color:#666;margin-top:4px">Escaneá para pagar</div></div>'
     except Exception:
         return ""
 
@@ -56,6 +62,16 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
     condiciones_section = ""
     if condiciones_venta:
         condiciones_section = f'<div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9"><div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333">Condiciones de venta</div><div style="font-size:12px;color:#555">{html_mod.escape(condiciones_venta)}</div></div>'
+
+    # QR de pago (presencial / Rapipago vía MP)
+    qr_html = _generar_qr_pago(
+        monto=float(factura.get("total", 0) or 0),
+        cbu=emisor.get("cbu", "") or "",
+        alias_banco=emisor.get("alias_banco", "") or "",
+        emisor_nombre=nombre_emisor,
+        mp_link=mp_link,
+        factura_id=str(factura.get("id", "")),
+    )
 
     cae_section = ""
     if preview:
@@ -121,9 +137,10 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
     <tr><td>IVA</td><td style="text-align:right">${factura.get('iva', 0):,.2f}</td></tr>
     <tr class="final"><td>Total</td><td style="text-align:right">${factura['total']:,.2f}</td></tr>
   </table>
-  {mp_section}
-  {condiciones_section}
-  {cae_section}
+   {mp_section}
+   {qr_html}
+   {condiciones_section}
+   {cae_section}
   <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
 """
