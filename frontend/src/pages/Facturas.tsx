@@ -197,6 +197,7 @@ export default function Facturas() {
     // Planes pagos: intento Cloud API directo; Gratis o sin créditos: fallback wa.me
     const isFree = !userPlan.whatsapp_configurado || userPlan.whatsapp_limit === 0 || userPlan.whatsapp_limit === null;
     if (!isFree) {
+      if (!confirm(`¿Deseás enviar la factura ${f.numero} por WhatsApp a ${f.clientes?.nombre || ""} ${f.clientes?.apellido || ""}?`)) return;
       try {
         const res = await fetch(`/api/facturas/enviar-whatsapp`, {
           method: "POST",
@@ -461,6 +462,8 @@ export default function Facturas() {
   const handleBulkWhatsApp = async () => {
     const seleccionadas = facturas.filter(f => selected.has(f.id));
     if (seleccionadas.length === 0) return;
+    const canalLabel = bulkCanal === "email" ? "por Email" : bulkCanal === "both" ? "por WhatsApp y Email" : "por WhatsApp";
+    if (!confirm(`¿Deseás enviar ${seleccionadas.length} factura(s) ${canalLabel}?\n\n${seleccionadas.map(f => `• ${f.numero} — ${f.clientes?.nombre || ""} $${f.total.toLocaleString()}`).join("\n")}`)) return;
 
     try {
       const res = await fetch(`/api/facturas/enviar-whatsapp`, {
