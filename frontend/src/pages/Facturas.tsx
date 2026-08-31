@@ -194,6 +194,33 @@ export default function Facturas() {
   };
 
   const handleWhatsApp = async (f: Factura) => {
+    // Planes pagos: intento Cloud API directo; Gratis o sin créditos: fallback wa.me
+    const isFree = !userPlan.whatsapp_configurado || userPlan.whatsapp_limit === 0 || userPlan.whatsapp_limit === null;
+    if (!isFree) {
+      try {
+        const res = await fetch(`/api/facturas/enviar-whatsapp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+          body: JSON.stringify({ factura_ids: [f.id], canal: "whatsapp" }),
+        }).then(r => r.json());
+        if (res.enviados > 0 || res.enviados_email?.length > 0) {
+          setToast(`✅ Enviada por WhatsApp a ${f.clientes?.nombre || "cliente"}`);
+          load(true);
+          return;
+        }
+        if (res.fallback_wa_me_ids?.length > 0) {
+          // Sin créditos: ofrecer comprar o wa.me
+          if (confirm(`Te quedaste sin mensajes incluidos (${userPlan.whatsapp_used}/${userPlan.whatsapp_limit}). ¿Comprar más o enviar por wa.me gratis?`)) {
+            window.location.href = "/perfil";
+            return;
+          }
+        } else if (res.errores?.length > 0) {
+          setToast(`⚠️ ${res.errores[0]?.error || "Error al enviar"}`);
+          return;
+        }
+      } catch {}
+    }
+    // Fallback wa.me (Gratis o sin saldo)
     const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
     const url = `${window.location.origin}/api/facturas/public/${f.id}`;
     const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}\n\n⚡ Facturación automática con TraceLess`);
