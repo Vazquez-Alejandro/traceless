@@ -382,6 +382,18 @@ export default function Perfil() {
                 ? "Tu facturación fiscal está conectada y verificada. Emitís facturas con CAE válido ante AFIP."
                 : "Conectá tu CUIT y certificado digital para emitir facturas fiscales con CAE. Mientras tanto emitís comprobantes simples (sin CAE)."}
             </p>
+            {!user.arca_configurado && (
+              <div className="mb-4 p-3 rounded-lg bg-blue-900/20 border border-blue-800/30 text-xs text-blue-300 leading-relaxed">
+                <p className="font-semibold mb-1">Cómo generar tu certificado digital:</p>
+                <ol className="list-decimal list-inside space-y-1 text-blue-200/80">
+                  <li>Ingresá a <a href="https://auth.afip.gob.ar/contribuyente/widget/login.do" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">AFIP — Portal de Certificados</a></li>
+                  <li>Generá un certificado deWSAA (tipo "Aplicación")</li>
+                  <li>Bajá los archivos <code className="bg-blue-900/40 px-1 rounded">cert.pem</code> y <code className="bg-blue-900/40 px-1 rounded">key.pem</code></li>
+                  <li>Cargalos acá abajo</li>
+                </ol>
+                <p className="mt-2 text-blue-400/60">Si ya tenés point de venta habilitado en AFIP para facturación electrónica, usá ese número.</p>
+              </div>
+            )}
             {certWarning && (
               <div className={`mb-3 p-3 rounded-lg text-sm border ${certExpired ? "bg-red-900/30 border-red-700/40 text-red-300" : "bg-amber-900/30 border-amber-700/40 text-amber-200"}`}>
                 {certExpired
