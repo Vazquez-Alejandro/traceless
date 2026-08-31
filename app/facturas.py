@@ -722,7 +722,7 @@ async def importar_facturas(req: list[FacturaImportItem], authorization: str = H
     return {"ok": True, "exitosos": exitosos, "fallidos": fallidos, "resultados": resultados}
 
 
-@router.get("/public/{factura_id}")
+@router.get("/{factura_id}/public")
 def factura_publica(factura_id: str):
     try:
         f = supabase.table("facturas").select("*, clientes(nombre, apellido, cuit, direccion, condicion_iva, telefono)").eq("id", factura_id).single().execute()
