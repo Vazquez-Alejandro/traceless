@@ -12,7 +12,7 @@ const PLANS_LIST = [
 export default function Perfil() {
   const [user, setUser] = useState<any>({});
   const [edit, setEdit] = useState(false);
-  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: true, recordatorio_monotributo: true, recordatorio_vencidas: true });
+  const [form, setForm] = useState({ nombre: "", cuit: "", telefono: "", condicion_iva: "", cbu: "", alias_banco: "", direccion: "", empresa: "", logo_url: "", email_fiscal: "", condiciones_venta: "", recordatorios_whatsapp: false, recordatorio_monotributo: false, recordatorio_vencidas: false });
   const [arca, setArca] = useState({ arca_cuit: "", arca_cert: "", arca_key: "", arca_punto_venta: 2, arca_env: "produccion" });
   const [arcaMsg, setArcaMsg] = useState("");
   const [arcaState, setArcaState] = useState<"idle" | "validating" | "ok" | "error">("idle");
@@ -45,7 +45,7 @@ export default function Perfil() {
     }).then(r => r.json()).then(d => {
       const u = d.user || d;
       setUser(u);
-      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: u.recordatorios_whatsapp !== false, recordatorio_monotributo: u.recordatorio_monotributo !== false, recordatorio_vencidas: u.recordatorio_vencidas !== false });
+      setForm({ nombre: u.nombre || "", cuit: u.cuit || "", direccion: u.direccion || "", telefono: u.telefono || "", condicion_iva: u.condicion_iva || "Responsable Inscripto", cbu: u.cbu || "", alias_banco: u.alias_banco || "", empresa: u.empresa || "", logo_url: u.logo_url || "", email_fiscal: u.email_fiscal || "", condiciones_venta: u.condiciones_venta || "", recordatorios_whatsapp: !!u.recordatorios_whatsapp, recordatorio_monotributo: !!u.recordatorio_monotributo, recordatorio_vencidas: !!u.recordatorio_vencidas });
       setArca({ arca_cuit: u.arca_cuit || "", arca_cert: "", arca_key: "", arca_punto_venta: u.arca_punto_venta || 2, arca_env: u.arca_env || "produccion" });
       const storedLogo = u.logo_url || "";
       if (storedLogo) setLogoPreview(storedLogo);

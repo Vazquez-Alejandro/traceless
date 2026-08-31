@@ -567,9 +567,9 @@ def me(authorization: str = Header("")):
             "creditos": get_saldo(uid),
              "cbu": perfil_data.get("cbu", "") if perfil_data else "",
             "alias_banco": perfil_data.get("alias_banco", "") if perfil_data else "",
-            "recordatorios_whatsapp": perfil_data.get("recordatorios_whatsapp", True) if perfil_data else True,
-            "recordatorio_monotributo": perfil_data.get("recordatorio_monotributo", True) if perfil_data else True,
-            "recordatorio_vencidas": perfil_data.get("recordatorio_vencidas", True) if perfil_data else True,
+            "recordatorios_whatsapp": perfil_data.get("recordatorios_whatsapp", False) if perfil_data else False,
+            "recordatorio_monotributo": perfil_data.get("recordatorio_monotributo", False) if perfil_data else False,
+            "recordatorio_vencidas": perfil_data.get("recordatorio_vencidas", False) if perfil_data else False,
         }
     }
 

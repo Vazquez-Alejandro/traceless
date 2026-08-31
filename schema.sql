@@ -88,9 +88,9 @@ alter table perfiles add column if not exists empresa text default '';
 alter table perfiles add column if not exists logo_url text default '';
 alter table perfiles add column if not exists email_fiscal text default '';
 alter table perfiles add column if not exists condiciones_venta text default '';
-alter table perfiles add column if not exists recordatorios_whatsapp boolean default true;
-alter table perfiles add column if not exists recordatorio_monotributo boolean default true;
-alter table perfiles add column if not exists recordatorio_vencidas boolean default true;
+alter table perfiles add column if not exists recordatorios_whatsapp boolean default false;
+alter table perfiles add column if not exists recordatorio_monotributo boolean default false;
+alter table perfiles add column if not exists recordatorio_vencidas boolean default false;
 
 -- Notas de crédito: link a factura original
 alter table facturas add column if not exists factura_original_id uuid references facturas(id) on delete set null;

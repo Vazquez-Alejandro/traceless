@@ -781,7 +781,7 @@ async def enviar_recordatorios(secret: str = "", authorization: str = Header("")
             if dias_sin_enviar >= 3:
                 perfil = supabase.table("perfiles").select("recordatorios_whatsapp").eq("id", f["user_id"]).single().execute()
                 prefs = perfil.data or {}
-                if prefs.get("recordatorios_whatsapp", True):
+                if prefs.get("recordatorios_whatsapp", False):
                     crear_notificacion(f["user_id"], "factura_sin_enviar", f"Factura #{num} sin enviar hace {dias_sin_enviar} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} fue emitida pero no enviada", "/facturas")
 
     # Recordatorio y vencimiento para facturas enviadas
@@ -796,9 +796,9 @@ async def enviar_recordatorios(secret: str = "", authorization: str = Header("")
             continue
         perfil = supabase.table("perfiles").select("recordatorios_whatsapp, recordatorio_vencidas").eq("id", f["user_id"]).single().execute()
         prefs = perfil.data or {}
-        if not prefs.get("recordatorios_whatsapp", True):
+        if not prefs.get("recordatorios_whatsapp", False):
             continue
-        if not prefs.get("recordatorio_vencidas", True):
+        if not prefs.get("recordatorio_vencidas", False):
             continue
         total = f.get("total", 0)
         num = f.get("numero", "")
@@ -844,7 +844,7 @@ async def recordatorio_monotributo(secret: str = "", authorization: str = Header
             continue
         perfil_r = _sb.table("perfiles").select("telefono, nombre, recordatorio_monotributo").eq("id", u["id"]).execute()
         perfil = perfil_r.data[0] if perfil_r.data else {}
-        if not perfil.get("recordatorio_monotributo", True):
+        if not perfil.get("recordatorio_monotributo", False):
             continue
         tel = perfil.get("telefono", "")
         nombre = perfil.get("nombre", "")
