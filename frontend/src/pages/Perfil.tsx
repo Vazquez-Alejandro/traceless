@@ -245,6 +245,7 @@ export default function Perfil() {
               <div className="flex items-center justify-between">
                 <label className="text-gray-500 text-xs">Logo</label>
                 <button onClick={async () => {
+                  if (!confirm("¿Eliminar el logo?")) return;
                   setForm({ ...form, logo_url: "" });
                   setLogoPreview("");
                   await fetch("/api/auth/me", {
