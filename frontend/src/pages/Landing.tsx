@@ -96,6 +96,29 @@ const FEATURES: Feature[] = [
   },
 ];
 
+const FAQS = [
+  {
+    q: "¿Qué es TraceLess y cómo funciona con ARCA?",
+    a: "TraceLess se conecta a ARCA (ex AFIP) con tu CUIT y certificado digital y emite facturas A, B, C y E con CAE real en segundos. No reemplazás ARCA, lo automatizás: nosotros nos encargamos del CAE, la numeración y el PDF.",
+  },
+  {
+    q: "¿Puedo facturar como monotributista?",
+    a: "Sí. TraceLess es ideal para monotributistas: elegís tipo C o E, cargás el cliente una vez y emitís en 1 clic. También te avisa el vencimiento de la cuota del monotributo el día 20.",
+  },
+  {
+    q: "¿Cómo envío la factura por WhatsApp?",
+    a: "Al emitir, la factura se envía automáticamente por WhatsApp Cloud API a tu cliente con el link de pago. Si estás en plan Gratis, usamos wa.me gratis. El cliente la abre sin descargar nada.",
+  },
+  {
+    q: "¿Qué tipos de comprobantes puedo emitir?",
+    a: "Facturas A, B, C y E con CAE fiscal, y comprobantes simples sin CAE para presupuestos o notas de venta. Todo con QR, link de pago MercadoPago y tu logo.",
+  },
+  {
+    q: "¿TraceLess reemplaza a mi contador?",
+    a: "No, lo complementa. Exportás todo a Excel para tu contador en 1 clic, con CAE y numeración correlativa válida. Tu contador recibe todo ordenado por WhatsApp o mail.",
+  },
+];
+
 interface FeatureCardProps {
   feature: Feature;
   expanded: boolean;
@@ -319,6 +342,24 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <section className="py-12 sm:py-20">
+        <div className="max-w-3xl mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Preguntas frecuentes</h2>
+          <p className="text-gray-400 text-center mb-8 max-w-lg mx-auto text-sm">Todo lo que necesitás saber sobre facturación electrónica con TraceLess.</p>
+          <div className="space-y-4">
+            {FAQS.map((f, i) => (
+              <div key={i} className="p-5 rounded-2xl bg-gray-900/40 border border-gray-800/40">
+                <h3 className="text-sm font-semibold mb-1.5">{f.q}</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">{f.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": FAQS.map(f => ({ "@type": "Question", "name": f.q, "acceptedAnswer": { "@type": "Answer", "text": f.a } })) }) }}>
+      </script>
 
       <section className="py-12 sm:py-20 bg-gradient-to-b from-gray-900/20 to-gray-950">
         <div className="max-w-3xl mx-auto px-4 text-center">

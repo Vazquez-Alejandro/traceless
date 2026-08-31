@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 
 const SLIDES = [
-  { src: "/carousel/slide-1.png", alt: "TraceLess — Facturá y cobrá tranquilo" },
-  { src: "/carousel/slide-2.png", alt: "Ya no entrás a ARCA" },
-  { src: "/carousel/slide-3.png", alt: "Con TraceLess facturás y listo" },
-  { src: "/carousel/slide-4.png", alt: "Facturas recurrentes automáticas" },
-  { src: "/carousel/slide-5.png", alt: "Tu negocio en una mirada" },
-  { src: "/carousel/slide-6.png", alt: "Empezá gratis" },
+  { src: "/carousel/slide-1.webp", fallback: "/carousel/slide-1.png", alt: "TraceLess — Facturá y cobrá tranquilo" },
+  { src: "/carousel/slide-2.webp", fallback: "/carousel/slide-2.png", alt: "Ya no entrás a ARCA" },
+  { src: "/carousel/slide-3.webp", fallback: "/carousel/slide-3.png", alt: "Con TraceLess facturás y listo" },
+  { src: "/carousel/slide-4.webp", fallback: "/carousel/slide-4.png", alt: "Facturas recurrentes automáticas" },
+  { src: "/carousel/slide-5.webp", fallback: "/carousel/slide-5.png", alt: "Tu negocio en una mirada" },
+  { src: "/carousel/slide-6.webp", fallback: "/carousel/slide-6.png", alt: "Empezá gratis" },
 ];
 
 export default function Carousel() {
@@ -43,12 +43,16 @@ export default function Carousel() {
             >
               {SLIDES.map((slide, i) => (
                 <div key={i} className="w-full flex-shrink-0">
-                  <img
-                    src={slide.src}
-                    alt={slide.alt}
-                    className="w-full h-auto object-contain"
-                    loading={i === 0 ? "eager" : "lazy"}
-                  />
+                  <picture>
+                    <source srcSet={slide.src} type="image/webp" />
+                    <img
+                      src={slide.fallback}
+                      alt={slide.alt}
+                      className="w-full h-auto object-contain"
+                      loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                    />
+                  </picture>
                 </div>
               ))}
             </div>
