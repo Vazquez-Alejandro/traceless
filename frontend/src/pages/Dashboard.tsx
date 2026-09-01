@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const [deudas, setDeudas] = useState<{ clientes: any[]; total_pendiente: number } | null>(null);
   const [proyeccion, setProyeccion] = useState<{ cobrado: number; pendiente: number; vencido: number; proyectado: number; total_estimado: number } | null>(null);
+  const [impuestos, setImpuestos] = useState<any>(null);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
   useEffect(() => {
@@ -65,7 +66,8 @@ export default function Dashboard() {
       fetch(`${BASE_URL}/api/whatsapp/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/facturas/clientes-deuda`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/facturas/proyeccion`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
-    ]).then(([c, f, a, wp, d, p]) => {
+      fetch(`${BASE_URL}/api/facturas/asistente-impositivo`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+    ]).then(([c, f, a, wp, d, p, imp]) => {
       const facturas = (f as any).facturas || [];
       setStats(s => ({
         ...s,
@@ -85,6 +87,7 @@ export default function Dashboard() {
       setMensual(Object.entries(mesesMap).map(([mes, total]) => ({ mes, total })).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-6));
       if (d && d.clientes) setDeudas(d);
       if (p && typeof p.cobrado === "number") setProyeccion(p);
+      if (imp && imp.acumulado_anio) setImpuestos(imp);
       setSecondaryLoaded(true);
     }).catch(() => setSecondaryLoaded(true));
   }, []);
@@ -276,6 +279,34 @@ export default function Dashboard() {
               <div className="text-[10px] text-gray-500">Total estimado</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {impuestos && impuestos.categoria && (
+        <div className="p-5 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
+          <h2 className="text-sm font-semibold text-gray-300 mb-3">Asistente impositivo</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-3">
+            <div>
+              <div className="text-lg font-bold text-white">${impuestos.acumulado_anio.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Acumulado {new Date().getFullYear()}</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-blue-400">Cat. {impuestos.categoria.cat}</div>
+              <div className="text-[10px] text-gray-500">Categoría actual</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-green-400">${impuestos.categoria.cuota.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Cuota mensual</div>
+            </div>
+          </div>
+          {impuestos.categoria_siguiente && (
+            <div className="text-[10px] text-gray-500 mb-2">
+              Límite cat. {impuestos.categoria.cat}: ${impuestos.categoria.limite_anual.toLocaleString()} · Siguiente cat. {impuestos.categoria_siguiente.cat}: ${impuestos.categoria_siguiente.limite_anual.toLocaleString()}
+            </div>
+          )}
+          {impuestos.alertas && impuestos.alertas.map((a: string, i: number) => (
+            <div key={i} className="p-2 rounded-lg bg-yellow-900/20 border border-yellow-700/30 text-xs text-yellow-300 mt-2">{a}</div>
+          ))}
         </div>
       )}
 

@@ -1174,6 +1174,50 @@ def proyeccion_ingresos(authorization: str = Header("")):
     total_estimado = cobrado_mes + proyectado
     return {"cobrado": cobrado_mes, "pendiente": pendiente_mes, "vencido": vencido_mes, "proyectado": proyectado, "total_estimado": total_estimado}
 
+@router.get("/asistente-impositivo")
+def asistente_impositivo(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    now = datetime.now()
+    _NC_TIPOS = {3, 8, 13, 21}
+    anio = now.year
+    mes = now.month
+    mes_inicio = f"{anio}-{mes:02d}-01"
+    mes_fin = f"{anio}-{mes:02d}-{calendar.monthrange(anio, mes)[1]:02d}"
+    res = supabase.table("facturas").select("total, estado, tipo, fecha").eq("user_id", uid).execute()
+    facturas_anio = [f for f in res.data if f["tipo"] not in _NC_TIPOS and f["estado"] != "anulada" and f.get("fecha", "").startswith(str(anio))]
+    acumulado_anio = sum(f["total"] for f in facturas_anio)
+    facturas_mes = [f for f in facturas_anio if f.get("fecha", "") >= mes_inicio and f.get("fecha", "") <= mes_fin]
+    facturado_mes = sum(f["total"] for f in facturas_mes)
+    perfil = supabase.table("perfiles").select("condicion_iva").eq("id", uid).single().execute()
+    condicion = (perfil.data or {}).get("condicion_iva", "")
+    CATEGORIAS_MONOTRIBUTO = [
+        {"cat": "A", "limite_anual": 2103163.56, "cuota": 6462.97},
+        {"cat": "B", "limite_anual": 3143910.73, "cuota": 7185.39},
+        {"cat": "C", "limite_anual": 4374816.84, "cuota": 8230.83},
+        {"cat": "D", "limite_anual": 5648060.42, "cuota": 9785.73},
+        {"cat": "E", "limite_anual": 6696214.59, "cuota": 11298.99},
+        {"cat": "F", "limite_anual": 7936537.80, "cuota": 13479.62},
+    ]
+    cat_actual = None
+    cat_siguiente = None
+    alertas = []
+    if "monotributo" in condicion.lower():
+        for i, c in enumerate(CATEGORIAS_MONOTRIBUTO):
+            if acumulado_anio <= c["limite_anual"]:
+                cat_actual = c
+                if i + 1 < len(CATEGORIAS_MONOTRIBUTO):
+                    cat_siguiente = CATEGORIAS_MONOTRIBUTO[i + 1]
+                break
+        if not cat_actual:
+            cat_actual = CATEGORIAS_MONOTRIBUTO[-1]
+            alertas.append("Superaste el límite de monotributo. Evaluá pasar a Responsable Inscripto.")
+        elif cat_siguiente:
+            porcentaje = (acumulado_anio / cat_actual["limite_anual"]) * 100
+            if porcentaje > 80:
+                alertas.append(f"Estás al {porcentaje:.0f}% del límite de categoría {cat_actual['cat']}. Posible salto a categoría {cat_siguiente['cat']}.")
+    vto_monotributo = f"{anio}-{mes:02d}-20"
+    return {"acumulado_anio": acumulado_anio, "facturado_mes": facturado_mes, "condicion_iva": condicion, "categoria": cat_actual, "categoria_siguiente": cat_siguiente, "alertas": alertas, "vto_monotributo": vto_monotributo}
+
 @router.get("/ultima-por-cliente/{cliente_id}")
 def ultima_factura_cliente(cliente_id: str, authorization: str = Header("")):
     uid = get_user_id(authorization)
