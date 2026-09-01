@@ -256,7 +256,7 @@ async def _enviar_plan_actual(phone: str) -> None:
         "• Gratis: 20 facturas/mes\n"
         "• Profesional: USD 12/mes — facturas ilimitadas + 100 msgs WhatsApp\n"
         "• Equipo: USD 22/mes — todo lo anterior + facturá por WhatsApp\n\n"
-        "Mirá todos los planes y precios en 👉 https://www.traceless.com.ar/precios"
+        "Mirá todos los planes y precios en 👉 https://www.traceless.com.ar/#precios"
     ))
 
 
