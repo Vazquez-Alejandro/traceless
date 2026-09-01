@@ -59,6 +59,12 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
+    icon: "💬",
+    title: "Facturá por WhatsApp",
+    shortDesc: "Mandá un mensaje y listo. Sin abrir la app.",
+    longDesc: "Escribí 'facturale a Juan $50.000' y TraceLess crea la factura, la envía a Juan por WhatsApp con link para ver y pagar. <strong>No necesitás abrir la app, crear clientes manualmente ni llenar formularios.</strong> Todo desde tu WhatsApp. El cliente recibe la factura con tus datos bancarios para verificar antes de pagar."
+  },
+  {
     icon: "🧾",
     title: "Facturas A, B, C y E",
     shortDesc: "Con validez ARCA. Números correlativos automáticos.",
@@ -213,14 +219,14 @@ export default function Landing() {
             🇦🇷 Hecho para negocios argentinos
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-4">
-            Cobrá más rápido.{" "}
+            Facturá por WhatsApp.{" "}
             <span className="bg-gradient-to-r from-blue-300 to-blue-500 bg-clip-text text-transparent">
-              Facturá sin papel.
+              Cobrá más rápido.
             </span>
           </h1>
           <p className="text-sm sm:text-lg text-gray-400 leading-relaxed mb-6 max-w-xl mx-auto">
-            Emití facturas con validez ARCA, envialas por WhatsApp al instante y recibí alertas
-            cuando un cliente no paga.
+            Mandá un mensaje y TraceLess crea la factura, la envía a tu cliente con link de pago. 
+            Sin abrir la app. Sin formularios. Sin perseguir a nadie.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/register" className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-xl shadow-blue-600/25 text-sm">
@@ -238,9 +244,9 @@ export default function Landing() {
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10">Cómo funciona</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: "1", title: "Creá tu cliente", desc: "Cargá sus datos una vez. Nombre, CUIT, teléfono. Después facturás en segundos." },
-              { step: "2", title: "Emití la factura", desc: "Elegí tipo A, B o C. Los montos se calculan solos. Con items o sin items." },
-              { step: "3", title: "Cobrá sin perseguir", desc: "La factura llega por WhatsApp al instante. Nosotros te recordamos si no paga." },
+              { step: "1", title: "Mandá un mensaje", desc: "Escribí 'facturale a Juan $50.000' por WhatsApp. Sin abrir la app." },
+              { step: "2", title: "TraceLess hace todo", desc: "Crea la factura con CAE real, la envía a Juan con link para ver y pagar." },
+              { step: "3", title: "Cobrá sin perseguir", desc: "Juan paga con MercadoPago. Nosotros te recordamos si no paga." },
             ].map((f, i) => (
               <div key={i} className="text-center">
                 <div className="w-12 h-12 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4 text-lg font-bold text-blue-400">

@@ -97,9 +97,9 @@ async def enviar_factura_whatsapp(telefono: str, cliente: str, numero: str, tota
     if vencimiento:
         mensaje += f"Vence: *{vencimiento}*\n\n"
     if mp_link:
-        mensaje += f"👁 *Mirala acá:* {pdf_url}\n\n💳 *Pagala acá:* {mp_link}"
+        mensaje += f"👁 *Mirala acá:* {pdf_url}\n\n💳 *Pagala acá:* {mp_link}\n\n⚠️ *Verificá antes de pagar:*\n• Nombre del titular\n• Alias o CBU\n• Monto exacto"
     else:
-        mensaje += f"👁 *Mirala acá:* {pdf_url}"
+        mensaje += f"👁 *Mirala acá:* {pdf_url}\n\n⚠️ *Verificá antes de pagar:*\n• Nombre del titular\n• Alias o CBU\n• Monto exacto"
     return await enviar_whatsapp(telefono, mensaje)
 
 
@@ -112,7 +112,8 @@ async def enviar_recordatorio_whatsapp(telefono: str, cliente: str, numero: str,
             f"Hola {cliente} 👋\n\n"
             f"Te recordamos que la factura *{numero}* por *${total:,.2f}* "
             f"vence mañana.\n\n"
-            f"Podés abonarla desde acá 👉 [Pagar ahora]"
+            f"Podés abonarla desde acá 👉 [Pagar ahora]\n\n"
+            f"⚠️ Verificá antes de pagar: titular, alias y monto"
         )
     elif dias == 0:
         mensaje = (

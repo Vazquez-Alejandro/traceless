@@ -141,7 +141,17 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
    {qr_html}
    {condiciones_section}
    {cae_section}
-  <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
+   <div style="margin-top:24px;padding:16px;border:2px solid #f59e0b;border-radius:12px;background:#fffbeb">
+     <div style="font-weight:bold;color:#b45309;font-size:14px;margin-bottom:8px">⚠️ Verificá antes de transferir</div>
+     <div style="font-size:12px;color:#92400e;line-height:1.6">
+       <strong>Titular:</strong> {html_mod.escape(nombre_emisor)}<br>
+       {f"<strong>CBU:</strong> {html_mod.escape(emisor.get('cbu', ''))}<br>" if emisor.get('cbu') else ""}
+       {f"<strong>Alias:</strong> {html_mod.escape(emisor.get('alias_banco', ''))}<br>" if emisor.get('alias_banco') else ""}
+       <strong>Monto:</strong> ${factura['total']:,.2f}<br>
+       <strong>CUIT:</strong> {html_mod.escape(emisor.get('cuit', ''))}
+     </div>
+   </div>
+   <div style="margin-top:30px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px">⚡ Facturación automática con <strong>TraceLess</strong></div>
 </body></html>
 """
 
