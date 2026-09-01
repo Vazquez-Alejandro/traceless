@@ -1,7 +1,6 @@
 import os, logging, hmac, hashlib, re, json
 from fastapi import APIRouter, Request, Response, HTTPException
-from pathlib import Path
-import tempfile
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger("whatsapp_webhook")
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
@@ -11,21 +10,50 @@ WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
 OPT_OUT_KEYWORDS = {"alto", "parar", "stop", "cancelar", "no quiero", "basta"}
 
-PENDING_FILE = Path(tempfile.gettempdir()) / "traceless_wa_pending.json"
+PENDING_TTL_MINUTES = 60
 
-def _load_pending() -> dict:
+def _load_pending(phone: str) -> dict | None:
+    from app.db import supabase
     try:
-        return json.loads(PENDING_FILE.read_text()) if PENDING_FILE.exists() else {}
+        res = supabase.table("wa_pending").select("*").eq("phone", phone).single().execute()
     except Exception:
-        return {}
+        return None
+    row = res.data if res.data else None
+    if not row:
+        return None
+    expires_at = row.get("expires_at") or ""
+    if expires_at:
+        try:
+            exp = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+            if exp <= datetime.now(timezone.utc):
+                _clear_pending(phone)
+                return None
+        except Exception:
+            pass
+    data = row.get("data") or {}
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = {}
+    return data
 
-def _save_pending(data: dict):
-    PENDING_FILE.write_text(json.dumps(data))
+def _save_pending(phone: str, data: dict):
+    from app.db import supabase
+    row = {
+        "phone": phone,
+        "data": data,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=PENDING_TTL_MINUTES)).isoformat(),
+    }
+    res = supabase.table("wa_pending").upsert(row, on_conflict="phone").execute()
+    return res.data[0] if res.data else None
 
 def _clear_pending(phone: str):
-    data = _load_pending()
-    data.pop(phone, None)
-    _save_pending(data)
+    from app.db import supabase
+    try:
+        supabase.table("wa_pending").delete().eq("phone", phone).execute()
+    except Exception:
+        pass
 
 def _parsear_factura(text: str) -> dict | None:
     text = text.lower().strip()
@@ -183,24 +211,19 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
     if len(clientes) == 1:
         c = clientes[0]
         await enviar_whatsapp(phone, f"Cliente encontrado:\n\n*{c['nombre']}*\nCUIT: {c.get('cuit', '-')}\nIVA: {c.get('condicion_iva', '-')}\n\nMonto: *${parseo['monto']:,.2f}*\n\nRespondé *si* para facturar o *no* para cancelar.")
-        pending = _load_pending()
-        pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "confirmar"}
-        _save_pending(pending)
+        _save_pending(phone, {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "confirmar"})
         return
     lista = "\n".join([f"*{i+1}*. {c['nombre']}" for i, c in enumerate(clientes)])
     await enviar_whatsapp(phone, f"Encontré varios clientes:\n\n{lista}\n\nEscribí el *número* del que querés facturar.")
-    pending = _load_pending()
-    pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "seleccionar"}
-    _save_pending(pending)
+    _save_pending(phone, {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "seleccionar"})
     return
 
 
 async def _procesar_seleccion(phone: str, text: str) -> bool:
     from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
-    pending = _load_pending()
-    if phone not in pending:
+    data = _load_pending(phone)
+    if not data:
         return False
-    data = pending[phone]
     if not _tiene_facturador(data.get("uid", "")):
         _clear_pending(phone)
         await _msg_sin_facturador(phone)
@@ -210,7 +233,7 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
         if text_lower in ("si", "sí", "s", "ok", "dale", "confirmo", "confirmar"):
             cliente = data["clientes"][0]
             data["step"] = "tipo"
-            _save_pending(pending)
+            _save_pending(phone, data)
             await enviar_whatsapp(phone, f"*{cliente['nombre']}* confirmado ✔️\n\nAhora elegí el tipo de factura:\n\n*1*. Factura A (con CAE)\n*2*. Factura B (con CAE)\n*3*. Factura C (con CAE)\n*4*. Factura simple (sin CAE)\n\nEscribí *1*, *2*, *3* o *4*.")
             return True
         elif text_lower in ("no", "n", "cancelar", "cancelo"):
@@ -265,7 +288,7 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
         await enviar_whatsapp(phone, f"Cliente: *{cliente['nombre']}*\nMonto: *${data['monto']:,.2f}*\n\nRespondé *si* para confirmar o *no* para cancelar.")
         data["clientes"] = [cliente]
         data["step"] = "confirmar"
-        _save_pending(pending)
+        _save_pending(phone, data)
         return True
     return False
 
