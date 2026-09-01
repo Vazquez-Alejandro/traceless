@@ -28,7 +28,7 @@ TEMPLATES = {
         ],
         "variables": ["customer_name", "invoice_number", "amount", "payment_link"],
         "example": {
-            "body_text": [["Leonardo", "0002-00000001", "15000.00", "https://www.traceless.com.ar/api/facturas/public/xxxxx"]]
+            "body_text": [["Leonardo", "0002-00000001", "15000.00", "https://www.traceless.com.ar/api/facturas/xxxxx/public"]]
         }
     },
 
@@ -96,7 +96,7 @@ TEMPLATE 1 - Envío de factura:
   Cuerpo:
     Hola {{customer_name}}, te envío la factura *{{invoice_number}}* por *${{amount}}*.
     Podés verla y pagarla en el siguiente link: {{payment_link}} Gracias.
-  Ejemplos: customer_name=Leonardo, invoice_number=0002-00000001, amount=15000.00, payment_link=https://www.traceless.com.ar/api/facturas/public/xxxxx
+  Ejemplos: customer_name=Leonardo, invoice_number=0002-00000001, amount=15000.00, payment_link=https://www.traceless.com.ar/api/facturas/xxxxx/public
 
 TEMPLATE 2 - Recordatorio de cobro:
   Nombre: traceless_reminder

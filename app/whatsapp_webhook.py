@@ -62,11 +62,19 @@ def _buscar_o_crear_cliente(uid: str, nombre: str) -> dict:
     nuevo = supabase.table("clientes").insert({"user_id": uid, "nombre": nombre_limpio, "condicion_iva": "Consumidor Final"}).execute()
     return nuevo.data[0]
 
-def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> dict | None:
+_TIPO_OPTIONS = {
+    "a": 1, "1": 1,
+    "b": 6, "2": 6,
+    "c": 11, "3": 11,
+}
+
+def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float, tipo: int = 6, sin_cae: bool = False) -> dict | None:
     from app.db import supabase
+    from app.afip import generar_factura_afip
+    from app.facturas import _fiscal_cfg_emisor
     from datetime import datetime
     now = datetime.now()
-    res = supabase.table("facturas").select("numero").eq("user_id", uid).order("created_at", desc=True).limit(1).execute()
+    res = supabase.table("facturas").select("numero").eq("user_id", uid).neq("numero", "").order("created_at", desc=True).limit(1).execute()
     if res.data and res.data[0].get("numero"):
         num_str = str(res.data[0]["numero"])
         if "-" in num_str:
@@ -76,16 +84,49 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> di
             ultimo_numero = int(num_str)
     else:
         ultimo_numero = 0
-    nuevo_numero = ultimo_numero + 1
+    cliente = supabase.table("clientes").select("*").eq("id", cliente_id).eq("user_id", uid).single().execute()
+    perfil = supabase.table("perfiles").select("*").eq("id", uid).single().execute()
+    emisor = perfil.data or {"cuit": "", "condicion_iva": "Responsable Inscripto"}
+    try:
+        if sin_cae:
+            from app.afip import _simple_generate, _faecal
+            neto, iva = _faecal(monto, tipo)
+            pto = 2
+            prox = ultimo_numero + 1
+            afip_result = {
+                "cae": "",
+                "cae_vencimiento": "",
+                "numero": f"{pto:04d}-{prox:08d}",
+                "neto": neto,
+                "iva": iva,
+                "total": monto,
+                "tipo": tipo,
+                "es_fiscal": False,
+            }
+        else:
+            afip_result = generar_factura_afip(
+                cliente_cuit=(cliente.data or {}).get("cuit", ""),
+                cliente_nombre=f"{(cliente.data or {}).get('nombre', '')} {(cliente.data or {}).get('apellido', '')}",
+                tipo=tipo,
+                importe=monto,
+                condicion_iva=(cliente.data or {}).get("condicion_iva", "Consumidor Final"),
+                descripcion="Servicios",
+                ultimo_numero=ultimo_numero,
+                fiscal=None if not (emisor.get("arca_cert") and emisor.get("arca_key")) else _fiscal_cfg_emisor(emisor, "fiscal"),
+            )
+    except Exception:
+        from app.afip import _simple_generate
+        afip_result = _simple_generate({}, "", tipo, monto, "Servicios", ultimo_numero)
     factura = {
         "user_id": uid,
         "cliente_id": cliente_id,
-        "tipo": 6,
-        "numero": nuevo_numero,
-        "cae": "",
-        "total": monto,
-        "neto": monto,
-        "iva": 0,
+        "tipo": tipo,
+        "numero": afip_result["numero"],
+        "cae": afip_result.get("cae", ""),
+        "cae_vencimiento": afip_result.get("cae_vencimiento", ""),
+        "neto": afip_result.get("neto", monto),
+        "iva": afip_result.get("iva", 0),
+        "total": afip_result["total"],
         "descripcion": "Servicios",
         "fecha": now.strftime("%Y-%m-%d"),
         "estado": "emitida",
@@ -135,26 +176,9 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
     if data.get("step") == "confirmar":
         if text_lower in ("si", "sí", "s", "ok", "dale", "confirmo", "confirmar"):
             cliente = data["clientes"][0]
-            factura = _crear_factura_desde_whatsapp(data["uid"], cliente["id"], data["monto"])
-            _clear_pending(phone)
-            if not factura:
-                await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
-                return True
-            numero = str(factura['numero'])
-            telefono_cliente = re.sub(r'[^0-9]', '', (cliente.get("telefono") or ""))
-            if not telefono_cliente:
-                await enviar_whatsapp(phone, f"❌ *{cliente['nombre']}* no tiene teléfono cargado. La factura se creó pero no se pudo enviar.")
-                return True
-            await enviar_factura_whatsapp(
-                telefono=telefono_cliente,
-                cliente=cliente["nombre"],
-                numero=numero,
-                total=factura["total"],
-                pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
-                fecha=factura["fecha"],
-            )
-            await enviar_whatsapp(phone, f"✅ Factura *{numero}* creada y enviada a *{cliente['nombre']}* ({telefono_cliente}).")
-            logger.info(f"Factura {numero} creada (confirmada) y enviada por WhatsApp a {phone}")
+            data["step"] = "tipo"
+            _save_pending(pending)
+            await enviar_whatsapp(phone, f"*{cliente['nombre']}* confirmado ✔️\n\nAhora elegí el tipo de factura:\n\n*1*. Factura A (con CAE)\n*2*. Factura B (con CAE)\n*3*. Factura C (con CAE)\n*4*. Factura simple (sin CAE)\n\nEscribí *1*, *2*, *3* o *4*.")
             return True
         elif text_lower in ("no", "n", "cancelar", "cancelo"):
             _clear_pending(phone)
@@ -163,6 +187,39 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
         else:
             await enviar_whatsapp(phone, "Respondé *si* para facturar o *no* para cancelar.")
             return True
+    if data.get("step") == "tipo":
+        cliente_ref = data["clientes"][0]
+        opcion_raw = text_lower.strip()
+        if opcion_raw == "4":
+            tipo_sel = 6
+            factura = _crear_factura_desde_whatsapp(data["uid"], cliente_ref["id"], data["monto"], tipo=tipo_sel, sin_cae=True)
+        else:
+            tipo_sel = _TIPO_OPTIONS.get(opcion_raw)
+            if not tipo_sel:
+                await enviar_whatsapp(phone, "Escribí *1*, *2*, *3* o *4* para elegir el tipo de factura.")
+                return True
+            factura = _crear_factura_desde_whatsapp(data["uid"], cliente_ref["id"], data["monto"], tipo=tipo_sel, sin_cae=False)
+        _clear_pending(phone)
+        if not factura:
+            await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
+            return True
+        numero = str(factura['numero'])
+        tipo_nombre = {1: "A", 6: "B", 11: "C"}.get(tipo_sel, "B")
+        telefono_cliente = re.sub(r'[^0-9]', '', (cliente_ref.get("telefono") or ""))
+        if not telefono_cliente:
+            await enviar_whatsapp(phone, f"❌ *{cliente_ref['nombre']}* no tiene teléfono cargado. La factura se creó pero no se pudo enviar.")
+            return True
+        await enviar_factura_whatsapp(
+            telefono=telefono_cliente,
+            cliente=cliente_ref["nombre"],
+            numero=numero,
+            total=factura["total"],
+            pdf_url=f"https://www.traceless.com.ar/api/facturas/{factura['id']}/public",
+            fecha=factura["fecha"],
+        )
+        await enviar_whatsapp(phone, f"✅ Factura *{tipo_nombre} {numero}* creada y enviada a *{cliente_ref['nombre']}* ({telefono_cliente}).")
+        logger.info(f"Factura {tipo_nombre} {numero} creada (confirmada) y enviada por WhatsApp a {phone}")
+        return True
     if data.get("step") == "seleccionar":
         try:
             opcion = int(text.strip())

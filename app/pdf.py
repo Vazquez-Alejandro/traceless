@@ -10,7 +10,7 @@ def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: st
     # QR útil: codifica el link de pago (MP) o el link público de la factura
     url = (mp_link or "").strip()
     if not url and factura_id:
-        url = f"https://www.traceless.com.ar/api/facturas/public/{factura_id}"
+        url = f"https://www.traceless.com.ar/api/facturas/{factura_id}/public"
     if not url:
         # fallback al texto plano solo si no hay link (no recomendado)
         if not cbu and not alias_banco:

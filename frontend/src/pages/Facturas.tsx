@@ -186,7 +186,7 @@ export default function Facturas() {
   };
 
   const handleShare = async (facturaId: string) => {
-    const url = `${window.location.origin}/api/facturas/public/${facturaId}`;
+    const url = `${window.location.origin}/api/facturas/${facturaId}/public`;
     await navigator.clipboard.writeText(url);
     setCopiado(facturaId);
     setToast("Link de factura copiado al portapapeles");
@@ -223,7 +223,7 @@ export default function Facturas() {
     }
     // Fallback wa.me (Gratis o sin saldo)
     const telefono = f.clientes?.telefono?.replace(/[^0-9]/g, "") || "";
-    const url = `${window.location.origin}/api/facturas/public/${f.id}`;
+    const url = `${window.location.origin}/api/facturas/${f.id}/public`;
     const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, te envío la factura ${f.numero} por $${f.total.toLocaleString()}. Podés verla acá: ${url}\n\n⚡ Facturación automática con TraceLess`);
     const waUrl = telefono ? `https://wa.me/54${telefono}?text=${msg}` : `https://wa.me/?text=${msg}`;
     window.open(waUrl, "_blank");
@@ -577,7 +577,7 @@ export default function Facturas() {
       return;
     }
     const id = res?.factura?.id;
-    const link = id ? `${window.location.origin}/api/facturas/public/${id}` : "";
+    const link = id ? `${window.location.origin}/api/facturas/${id}/public` : "";
     setUltimoLink(link);
 
     if (res.fallback_wa_me) {
