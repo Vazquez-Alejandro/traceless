@@ -244,7 +244,7 @@ async def _procesar_menu_inicial(phone: str, text: str) -> None:
         await _enviar_plan_actual(phone)
         return
     if t in ("3", "soporte", "ayuda", "contacto", "contactar", "hablar con soporte"):
-        await enviar_whatsapp(phone, "📞 *Soporte TraceLess*\n\nEscribinos a: soporte@traceless.com.ar\n\nNormalmente respondemos en menos de 24 hs hábiles.")
+        await enviar_whatsapp(phone, "📞 *Soporte TraceLess*\n\nEscribinos a: soporte@traceless.com.ar\n\nTe respondemos de inmediato 😉")
         return
     await enviar_whatsapp(phone, MENU_TEXTO)
 
