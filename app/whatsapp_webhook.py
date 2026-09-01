@@ -123,19 +123,7 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
     pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "seleccionar"}
     _save_pending(pending)
     return
-    if not factura:
-        await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
-        return
-    numero = f"{factura['numero']:08d}"
-    await enviar_factura_whatsapp(
-        telefono=phone,
-        cliente=cliente["nombre"],
-        numero=numero,
-        total=factura["total"],
-        pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
-        fecha=factura["fecha"],
-    )
-    logger.info(f"Factura {numero} creada y enviada por WhatsApp a {phone}")
+
 
 async def _procesar_seleccion(phone: str, text: str) -> bool:
     from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
@@ -161,6 +149,7 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
                 pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
                 fecha=factura["fecha"],
             )
+            await enviar_whatsapp(phone, f"✅ Factura *{numero}* creada y enviada a *{cliente['nombre']}*.")
             logger.info(f"Factura {numero} creada (confirmada) y enviada por WhatsApp a {phone}")
             return True
         elif text_lower in ("no", "n", "cancelar", "cancelo"):
