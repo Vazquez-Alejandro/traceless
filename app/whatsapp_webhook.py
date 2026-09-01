@@ -147,6 +147,19 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float, tipo:
     res = supabase.table("facturas").insert(factura).execute()
     return res.data[0] if res.data else None
 
+def _tiene_facturador(uid: str) -> bool:
+    from app.lemon import get_user_plan
+    try:
+        return bool(get_user_plan(uid).get("whatsapp_facturador"))
+    except Exception:
+        return False
+
+
+async def _msg_sin_facturador(phone: str) -> None:
+    from app.whatsapp import enviar_whatsapp
+    await enviar_whatsapp(phone, "El *facturador por WhatsApp* está disponible en el plan *Equipo* (USD 22/mes).\n\nSubí tu plan para facturar desde WhatsApp: https://www.traceless.com.ar/perfil\n\nMientras tanto, podés facturar desde la app o el plan Gratis (20 facturas/mes).")
+
+
 async def _procesar_factura_whatsapp(phone: str, text: str):
     from app.db import supabase
     from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
@@ -156,6 +169,9 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
     if not perfil.data:
         return
     uid = perfil.data[0]["id"]
+    if not _tiene_facturador(uid):
+        await _msg_sin_facturador(phone)
+        return
     parseo = _parsear_factura(text)
     if not parseo:
         await enviar_whatsapp(phone, "No entendí. Escribí: *facturale a [nombre] $[monto]*")
@@ -185,6 +201,10 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
     if phone not in pending:
         return False
     data = pending[phone]
+    if not _tiene_facturador(data.get("uid", "")):
+        _clear_pending(phone)
+        await _msg_sin_facturador(phone)
+        return True
     text_lower = text.lower().strip()
     if data.get("step") == "confirmar":
         if text_lower in ("si", "sí", "s", "ok", "dale", "confirmo", "confirmar"):

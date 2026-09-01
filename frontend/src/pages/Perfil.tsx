@@ -6,7 +6,7 @@ const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 const PLANS_LIST = [
   { key: "free", name: "Gratis", price: "$0", desc: "20 facturas/mes, sin WhatsApp API" },
   { key: "pro", name: "Profesional", price: "price_pro", desc: "Ilimitado + 100 msg WhatsApp, $70/msg extra" },
-  { key: "team", name: "Equipo", price: "price_team", desc: "Ilimitado + 250 msg WhatsApp, $60/msg extra" },
+  { key: "team", name: "Equipo", price: "price_team", desc: "Ilimitado + 250 msg WhatsApp + Facturá por WhatsApp, $60/msg extra" },
 ];
 
 export default function Perfil() {

@@ -9,7 +9,7 @@ const BASE_URL = import.meta.env.DEV ? "http://localhost:8002" : "";
 const PLANES = [
   { key: "free", name: "Gratis", price: "$0", desc: "20 facturas/mes", color: "border-gray-600" },
   { key: "pro", name: "Profesional", price: "price_pro", desc: "Ilimitado + WhatsApp", color: "border-purple-500", highlighted: true },
-  { key: "team", name: "Equipo", price: "price_team", desc: "Hasta 5 usuarios", color: "border-yellow-500" },
+  { key: "team", name: "Equipo", price: "price_team", desc: "Hasta 5 usuarios + Facturá por WhatsApp", color: "border-yellow-500" },
 ];
 
 export default function Register() {

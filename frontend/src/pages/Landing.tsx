@@ -45,7 +45,7 @@ const PLANS = [
     name: "Equipo",
     price: "price_team",
     desc: "Para estudios, PyMEs y empresas.",
-    features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
+    features: ["Todo del plan Profesional", "250 msg WhatsApp incluidos", "Facturá por WhatsApp con un mensaje", "$60/msg extra", "Cola de reintentos ARCA", "Soporte prioritario"],
     highlighted: false,
   },
 ];
@@ -114,6 +114,10 @@ const FAQS = [
   {
     q: "¿Cómo envío la factura por WhatsApp?",
     a: "Al emitir, la factura se envía automáticamente por WhatsApp Cloud API a tu cliente con el link de pago. Si estás en plan Gratis, usamos wa.me gratis. El cliente la abre sin descargar nada.",
+  },
+  {
+    q: "¿Puedo facturar directamente desde mi WhatsApp?",
+    a: "Sí. Escribí 'facturale a Juan $50.000' al número de TraceLess y el sistema crea la factura, la envía a tu cliente y te confirma por WhatsApp. Incluido en el plan Equipo (USD 22/mes).",
   },
   {
     q: "¿Qué tipos de comprobantes puedo emitir?",

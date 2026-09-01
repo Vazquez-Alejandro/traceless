@@ -7,6 +7,7 @@ const SLIDES = [
   { src: "/carousel/slide-4.webp", fallback: "/carousel/slide-4.png", alt: "Facturas recurrentes automáticas" },
   { src: "/carousel/slide-5.webp", fallback: "/carousel/slide-5.png", alt: "Tu negocio en una mirada" },
   { src: "/carousel/slide-6.webp", fallback: "/carousel/slide-6.png", alt: "Empezá gratis" },
+  { src: "/carousel/slide-7.webp", fallback: "/carousel/slide-7.png", alt: "Facturá por WhatsApp con un mensaje" },
 ];
 
 export default function Carousel() {
