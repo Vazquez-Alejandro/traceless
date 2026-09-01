@@ -140,7 +140,7 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
             if not factura:
                 await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
                 return True
-            numero = f"{factura['numero']:08d}"
+            numero = str(factura['numero'])
             await enviar_factura_whatsapp(
                 telefono=phone,
                 cliente=cliente["nombre"],
