@@ -220,6 +220,46 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
     return
 
 
+MENU_TEXTO = (
+    "Hola 👋 Soy el asistente de TraceLess.\n\n"
+    "¿Qué querés hacer?\n\n"
+    "1️⃣ Facturar por WhatsApp\n"
+    "2️⃣ Ver planes y precios\n"
+    "3️⃣ Hablar con soporte\n\n"
+    "Escribí el *número* de la opción.\n"
+    "También podés escribir directo, por ejemplo:\n"
+    "• facturale a Ana $500\n"
+    "• planes\n"
+    "• soporte"
+)
+
+
+async def _procesar_menu_inicial(phone: str, text: str) -> None:
+    from app.whatsapp import enviar_whatsapp
+    t = text.lower().strip()
+    if t in ("1", "facturar", "factura", "facturacion", "facturar por whatsapp"):
+        await enviar_whatsapp(phone, "Perfecto 📄\n\nEscribí:\n*facturale a [nombre] $[monto]*\n\nEjemplo:\n*facturale a Ana $500*\n\nY te genero la factura automáticamente.")
+        return
+    if t in ("2", "planes", "precio", "precios", "plan"):
+        await _enviar_plan_actual(phone)
+        return
+    if t in ("3", "soporte", "ayuda", "contacto", "contactar", "hablar con soporte"):
+        await enviar_whatsapp(phone, "📞 *Soporte TraceLess*\n\nEscribinos a: soporte@traceless.com.ar\n\nNormalmente respondemos en menos de 24 hs hábiles.")
+        return
+    await enviar_whatsapp(phone, MENU_TEXTO)
+
+
+async def _enviar_plan_actual(phone: str) -> None:
+    from app.whatsapp import enviar_whatsapp
+    await enviar_whatsapp(phone, (
+        "💰 *Planes TraceLess*\n\n"
+        "• Gratis: 20 facturas/mes\n"
+        "• Profesional: USD 12/mes — facturas ilimitadas + 100 msgs WhatsApp\n"
+        "• Equipo: USD 22/mes — todo lo anterior + facturá por WhatsApp\n\n"
+        "Mirá todos los planes y precios en 👉 https://www.traceless.com.ar/precios"
+    ))
+
+
 async def _procesar_seleccion(phone: str, text: str) -> bool:
     from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
     data = _load_pending(phone)
@@ -363,12 +403,15 @@ async def receive_webhook(request: Request):
         text = msg.get("text", {}).get("body", "")
         logger.info(f"Mensaje entrante de {phone}: {text[:100]}")
         if text:
-            if not _handle_opt_out(phone, text):
-                if await _procesar_seleccion(phone, text):
-                    continue
-                text_lower = text.lower().strip()
-                if any(kw in text_lower for kw in ["factur", "cobr"]):
-                    await _procesar_factura_whatsapp(phone, text)
+            if _handle_opt_out(phone, text):
+                continue
+            if await _procesar_seleccion(phone, text):
+                continue
+            text_lower = text.lower().strip()
+            if any(kw in text_lower for kw in ["factur", "cobr", "comprobante"]):
+                await _procesar_factura_whatsapp(phone, text)
+            else:
+                await _procesar_menu_inicial(phone, text)
 
     for status in statuses:
         msg_id = status.get("id", "")
