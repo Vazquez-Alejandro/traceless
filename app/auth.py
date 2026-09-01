@@ -703,14 +703,25 @@ def change_plan(authorization: str = Header(""), plan: str = ""):
 @router.get("/referido")
 def get_referido(authorization: str = Header("")):
     uid = _get_user_id(authorization)
-    res = supabase.table("perfiles").select("codigo_referido").eq("id", uid).single().execute()
-    codigo = (res.data or {}).get("codigo_referido", "")
+    # Código personal del usuario: se guarda en la tabla referral_codes (created_by = uid)
+    res = supabase.table("referral_codes").select("id, code").eq("created_by", uid).execute()
+    codigo_id, codigo = (res.data[0]["id"], res.data[0].get("code", "")) if res.data else (None, "")
     if not codigo:
         import secrets
-        codigo = secrets.token_urlsafe(8).upper()
-        supabase.table("perfiles").update({"codigo_referido": codigo}).eq("id", uid).execute()
-    referidos_res = supabase.table("perfiles").select("id").eq("referido_por", uid).execute()
-    total_referidos = len(referidos_res.data or [])
+        codigo = "TR" + secrets.token_hex(3).upper()
+        ins = supabase.table("referral_codes").insert({
+            "code": codigo,
+            "created_by": uid,
+            "promo_days": 30,
+            "max_uses": 99999,
+            "used_count": 0,
+            "active": True,
+        }).execute()
+        codigo_id = ins.data[0]["id"] if ins.data else None
+    total_referidos = 0
+    if codigo_id:
+        uses = supabase.table("referral_uses").select("id").eq("code_id", codigo_id).execute()
+        total_referidos = len(uses.data or [])
     return {"codigo": codigo, "total_referidos": total_referidos, "creditos_ganados": total_referidos * 3000}
 
 @router.post("/referido/aplicar")
@@ -718,15 +729,26 @@ def aplicar_referido(codigo: str = "", authorization: str = Header("")):
     uid = _get_user_id(authorization)
     if not codigo:
         raise HTTPException(400, "Código de referido requerido")
-    res = supabase.table("perfiles").select("id").eq("codigo_referido", codigo.upper()).neq("id", uid).execute()
+    res = supabase.table("referral_codes").select("id, code, created_by, used_count, max_uses, active").eq("code", codigo.upper()).execute()
     if not res.data:
         raise HTTPException(404, "Código de referido inválido")
-    referido_por = res.data[0]["id"]
-    existing = supabase.table("perfiles").select("referido_por").eq("id", uid).single().execute()
-    if (existing.data or {}).get("referido_por"):
+    ref = res.data[0]
+    if ref["created_by"] == uid:
+        raise HTTPException(400, "No podés usar tu propio código")
+    if not ref.get("active", True):
+        raise HTTPException(400, "Código de referido inactivo")
+    if ref["used_count"] >= ref["max_uses"]:
+        raise HTTPException(400, "Este código ya fue utilizado")
+    existing = supabase.table("referral_uses").select("id").eq("user_id", uid).execute()
+    if existing.data:
         raise HTTPException(400, "Ya usaste un código de referido")
-    supabase.table("perfiles").update({"referido_por": referido_por}).eq("id", uid).execute()
+    supabase.table("referral_uses").insert({
+        "code_id": ref["id"],
+        "user_id": uid,
+    }).execute()
+    supabase.table("referral_codes").update({"used_count": ref["used_count"] + 1}).eq("id", ref["id"]).execute()
     from app.creditos import agregar_credito
     agregar_credito(uid, 3000, "Referido: 3000 créditos por registro")
-    agregar_credito(referido_por, 3000, "Referido: 3000 créditos por traer un usuario")
+    if ref["created_by"]:
+        agregar_credito(ref["created_by"], 3000, "Referido: 3000 créditos por traer un usuario")
     return {"ok": True, "mensaje": "Código aplicado. Recibiste 3000 créditos"}
