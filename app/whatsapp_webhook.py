@@ -42,6 +42,7 @@ def _save_pending(phone: str, data: dict):
     from app.db import supabase
     row = {
         "phone": phone,
+        "uid": data.get("uid", ""),
         "data": data,
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=PENDING_TTL_MINUTES)).isoformat(),
     }
