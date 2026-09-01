@@ -1033,7 +1033,7 @@ export default function Facturas() {
               {!userPlan.cbu && !userPlan.alias_banco && (
                 <Link to="/perfil" className="px-2 py-1 text-[10px] text-yellow-500 hover:text-yellow-400 bg-yellow-900/20 rounded-lg">⚙️ CBU</Link>
               )}
-              {(f.estado === "emitida" || f.estado === "enviada" || f.estado === "vencida") && (
+              {(f.estado === "emitida" || f.estado === "enviada" || f.estado === "vencida") && ![3, 8, 13, 21].includes(f.tipo) && (
                 <>
                   <button onClick={() => handlePay(f.id)} className="px-2 py-1 text-[11px] text-green-400 hover:underline">Pagada</button>
                   <button onClick={() => handleCancel(f.id)} className="px-2 py-1 text-[11px] text-red-400 hover:underline">Anular</button>

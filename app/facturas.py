@@ -302,12 +302,15 @@ async def _crear_factura_interna(uid: str, req: FacturaCreate) -> dict:
     return {"factura": {**factura, "pdf_url": html_url, "mp_link": mp_link}, "enviado_por": "", "fallback_wa_me": False}
 
 @router.get("")
-def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), cliente_id: Optional[str] = None, estado: Optional[str] = None):
+def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), cliente_id: Optional[str] = None, estado: Optional[str] = None, por_cobrar: Optional[bool] = None):
     uid = get_user_id(authorization)
     q = supabase.table("facturas").select("*, clientes!inner(id, nombre, apellido, telefono)", count="exact").eq("user_id", uid)
     if cliente_id:
         q = q.eq("cliente_id", cliente_id)
-    if estado:
+    if por_cobrar:
+        q = q.in_("estado", ["emitida", "enviada", "vencida"])
+        q = q.not_.in_("tipo", [3, 8, 13, 21])
+    elif estado:
         q = q.eq("estado", estado)
     else:
         q = q.neq("estado", "anulada")
