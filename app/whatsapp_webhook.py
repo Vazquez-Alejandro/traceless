@@ -141,15 +141,19 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
                 await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
                 return True
             numero = str(factura['numero'])
+            telefono_cliente = re.sub(r'[^0-9]', '', (cliente.get("telefono") or ""))
+            if not telefono_cliente:
+                await enviar_whatsapp(phone, f"❌ *{cliente['nombre']}* no tiene teléfono cargado. La factura se creó pero no se pudo enviar.")
+                return True
             await enviar_factura_whatsapp(
-                telefono=phone,
+                telefono=telefono_cliente,
                 cliente=cliente["nombre"],
                 numero=numero,
                 total=factura["total"],
                 pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
                 fecha=factura["fecha"],
             )
-            await enviar_whatsapp(phone, f"✅ Factura *{numero}* creada y enviada a *{cliente['nombre']}*.")
+            await enviar_whatsapp(phone, f"✅ Factura *{numero}* creada y enviada a *{cliente['nombre']}* ({telefono_cliente}).")
             logger.info(f"Factura {numero} creada (confirmada) y enviada por WhatsApp a {phone}")
             return True
         elif text_lower in ("no", "n", "cancelar", "cancelo"):
