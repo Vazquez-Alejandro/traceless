@@ -309,6 +309,8 @@ def listar_facturas(authorization: str = Header(""), limit: int = Query(20, ge=1
         q = q.eq("cliente_id", cliente_id)
     if estado:
         q = q.eq("estado", estado)
+    else:
+        q = q.neq("estado", "anulada")
     total = q.execute().count
     res = q.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return {"facturas": res.data, "total": total}

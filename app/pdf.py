@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile
 import base64
 import html as html_mod
+import os
 
 TMP = Path(tempfile.gettempdir()) / "traceless_facturas"
 FACTURAS_DIR = TMP
@@ -39,6 +40,7 @@ def _generar_qr_pago(monto: float, cbu: str, alias_banco: str, emisor_nombre: st
         return ""
 
 def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bool = False) -> str:
+    base_url = (os.getenv("BASE_URL", "https://www.traceless.com.ar").rstrip("/"))
     mp_link = factura.get("mp_link", "")
     mp_section = ""
     if mp_link:
@@ -108,7 +110,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
   .final {{ font-weight: bold; font-size: 16px; border-top: 2px solid #111; }}
   .cae {{ font-size: 11px; color: #888; text-align: center; margin-top: 40px; }}
 </style></head><body>
-  <a href="/" class="back-btn">
+  <a href="{html_mod.escape(base_url)}" class="back-btn" onclick="try{{ if (window.opener) {{ window.close(); return false; }} }}catch(e){{}}">
     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     Volver
   </a>
