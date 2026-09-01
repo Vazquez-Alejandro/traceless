@@ -37,17 +37,17 @@ export default function Carousel() {
       <div className="max-w-5xl mx-auto px-4">
         <div className="relative group">
           {/* Slides */}
-          <div className="overflow-hidden rounded-2xl border border-gray-800/50 bg-gray-900/40 shadow-2xl shadow-black/30">
+          <div className="overflow-hidden rounded-2xl border border-gray-800/50 shadow-2xl shadow-black/30">
             <div
               className="flex transition-transform duration-700 ease-in-out"
               style={{ transform: `translateX(-${current * 100}%)` }}
             >
               {SLIDES.map((slide, i) => (
-                <div key={i} className="w-full flex-shrink-0">
+                <div key={i} className="w-full flex-shrink-0 aspect-[2/1] overflow-hidden">
                   <img
                     src={slide.src}
                     alt={slide.alt}
-                    className="w-full h-auto object-contain"
+                    className="block w-full h-full object-cover"
                     loading={i === 0 ? "eager" : "lazy"}
                     decoding="async"
                   />
