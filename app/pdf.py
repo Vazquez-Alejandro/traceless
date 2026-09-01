@@ -90,6 +90,10 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
                        '<div style="color:#dc2626;font-size:12px;margin-top:4px">Este documento NO es una factura electrónica válida ante AFIP: '
                        'no posee CAE ni constancia de la autoridad fiscal. Se entrega como comprobante de la operación.</div></div>')
 
+    # Etiqueta según tipo de comprobante
+    tipo_nombre = factura.get("tipo_nombre", "B")
+    label = f"<h1>Nota de crédito {tipo_nombre}</h1>" if tipo_nombre.startswith("NC") else f"<h1>Factura {tipo_nombre}</h1>"
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8">
@@ -121,7 +125,7 @@ def generar_html_factura(factura: dict, cliente: dict, emisor: dict, preview: bo
       <div class="datos">CUIT: {html_mod.escape(emisor.get('cuit', ''))}<br>{html_mod.escape(emisor.get('condicion_iva', 'Responsable Inscripto'))}<br>{html_mod.escape(emisor.get('direccion', ''))}{email_section}</div>
     </div>
     <div style="text-align:right">
-      <h1>Factura {html_mod.escape(factura.get('tipo_nombre', 'B'))}</h1>
+      {label}
       <div class="datos">N° {html_mod.escape(str(factura['numero']))}<br>{html_mod.escape(str(factura['fecha']))}</div>
     </div>
   </div>
