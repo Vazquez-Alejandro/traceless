@@ -80,18 +80,15 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> di
     factura = {
         "user_id": uid,
         "cliente_id": cliente_id,
-        "numero": nuevo_numero,
         "tipo": 6,
-        "tipo_nombre": "B",
-        "descripcion": "Servicios",
+        "numero": nuevo_numero,
+        "cae": "",
         "total": monto,
         "neto": monto,
         "iva": 0,
-        "cae": "",
-        "cae_vencimiento": "",
-        "estado": "emitida",
+        "descripcion": "Servicios",
         "fecha": now.strftime("%Y-%m-%d"),
-        "vencimiento": now.strftime("%Y-%m-%d"),
+        "estado": "emitida",
     }
     res = supabase.table("facturas").insert(factura).execute()
     return res.data[0] if res.data else None
