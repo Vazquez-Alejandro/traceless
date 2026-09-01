@@ -137,7 +137,7 @@ interface FeatureCardProps {
 
 function FeatureCard({ feature, expanded, onToggle }: FeatureCardProps) {
   return (
-    <div className={`relative ${expanded ? 'z-30' : ''}`}>
+    <div className={`relative h-full ${expanded ? 'z-30' : ''}`}>
       <button
         onClick={onToggle}
         className={`w-full h-full p-6 bg-gray-900/40 border transition-all text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 flex flex-col ${
@@ -272,12 +272,13 @@ export default function Landing() {
           </p>
           <div className="grid md:grid-cols-3 gap-6 items-stretch md:auto-rows-fr">
             {FEATURES.map((f, i) => (
-              <FeatureCard
-                key={i}
-                feature={f}
-                expanded={openFeature === i}
-                onToggle={() => setOpenFeature(openFeature === i ? null : i)}
-              />
+              <div key={i} className={`${i === FEATURES.length - 1 && FEATURES.length % 3 === 1 ? "md:col-start-2" : ""} h-full`}>
+                <FeatureCard
+                  feature={f}
+                  expanded={openFeature === i}
+                  onToggle={() => setOpenFeature(openFeature === i ? null : i)}
+                />
+              </div>
             ))}
           </div>
         </div>
