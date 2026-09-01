@@ -1201,7 +1201,7 @@ def asistente_impositivo(authorization: str = Header("")):
     cat_actual = None
     cat_siguiente = None
     alertas = []
-    if "monotributo" in condicion.lower():
+    if "monotribut" in condicion.lower():
         for i, c in enumerate(CATEGORIAS_MONOTRIBUTO):
             if acumulado_anio <= c["limite_anual"]:
                 cat_actual = c
