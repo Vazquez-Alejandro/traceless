@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [criticalLoaded, setCriticalLoaded] = useState(false);
   const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const [deudas, setDeudas] = useState<{ clientes: any[]; total_pendiente: number } | null>(null);
+  const [proyeccion, setProyeccion] = useState<{ cobrado: number; pendiente: number; vencido: number; proyectado: number; total_estimado: number } | null>(null);
   const maxTotal = Math.max(...mensual.map(m => m.total), 1);
 
   useEffect(() => {
@@ -63,7 +64,8 @@ export default function Dashboard() {
       fetch(`${BASE_URL}/api/facturas/analytics/clientes`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/whatsapp/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
       fetch(`${BASE_URL}/api/facturas/clientes-deuda`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
-    ]).then(([c, f, a, wp, d]) => {
+      fetch(`${BASE_URL}/api/facturas/proyeccion`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
+    ]).then(([c, f, a, wp, d, p]) => {
       const facturas = (f as any).facturas || [];
       setStats(s => ({
         ...s,
@@ -82,6 +84,7 @@ export default function Dashboard() {
       });
       setMensual(Object.entries(mesesMap).map(([mes, total]) => ({ mes, total })).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-6));
       if (d && d.clientes) setDeudas(d);
+      if (p && typeof p.cobrado === "number") setProyeccion(p);
       setSecondaryLoaded(true);
     }).catch(() => setSecondaryLoaded(true));
   }, []);
@@ -251,6 +254,30 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+
+      {proyeccion && proyeccion.total_estimado > 0 && (
+        <div className="p-5 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">
+          <h2 className="text-sm font-semibold text-gray-300 mb-3">Proyección de ingresos</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <div className="text-lg font-bold text-green-400">${proyeccion.cobrado.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Ya cobrado</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-yellow-400">${proyeccion.pendiente.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Pendiente</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-blue-400">${proyeccion.proyectado.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Proyectado (realista)</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-white">${proyeccion.total_estimado.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">Total estimado</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deudas && deudas.clientes.length > 0 && (
         <div className="p-5 rounded-2xl bg-gray-900/40 border border-gray-800/40 mb-8">

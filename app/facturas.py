@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+import calendar
 from app.db import supabase, _URL, _SERVICE_KEY, get_user_id
 from app.afip import generar_factura_afip
 from app.pdf import generar_pdf_factura, guardar_factura_html
@@ -1136,6 +1137,42 @@ def estadisticas(authorization: str = Header("")):
     notas_credito = sum(1 for f in facturas if f["tipo"] in _NC_TIPOS)
     por_cobrar = sum(1 for f in facturas if f["estado"] in ("emitida", "enviada", "vencida") and f["tipo"] not in _NC_TIPOS)
     return {"totales": totales, "emitidas": emitidas, "enviadas": enviadas, "vencidas": vencidas, "pagadas": pagadas, "anuladas": anuladas, "por_cobrar": por_cobrar, "notas_credito": notas_credito}
+
+@router.get("/proyeccion")
+def proyeccion_ingresos(authorization: str = Header("")):
+    uid = get_user_id(authorization)
+    now = datetime.now()
+    mes_inicio = now.strftime("%Y-%m-01")
+    mes_fin = now.strftime(f"%Y-%m-{calendar.monthrange(now.year, now.month)[1]:02d}")
+    _NC_TIPOS = {3, 8, 13, 21}
+    res = supabase.table("facturas").select("total, estado, tipo, vencimiento, fecha, mp_link").eq("user_id", uid).execute()
+    cobrado_mes = 0
+    pendiente_mes = 0
+    vencido_mes = 0
+    proyectado = 0
+    for f in res.data:
+        if f["tipo"] in _NC_TIPOS or f["estado"] == "anulada":
+            continue
+        venc = f.get("vencimiento") or f.get("fecha", "")
+        if not venc:
+            continue
+        if venc < mes_inicio:
+            continue
+        if venc > mes_fin:
+            continue
+        if f["estado"] == "pagada":
+            cobrado_mes += f["total"]
+        elif f["estado"] in ("enviada", "emitida"):
+            pendiente_mes += f["total"]
+            if f.get("mp_link"):
+                proyectado += f["total"] * 0.7
+            else:
+                proyectado += f["total"] * 0.4
+        elif f["estado"] == "vencida":
+            vencido_mes += f["total"]
+            proyectado += f["total"] * 0.2
+    total_estimado = cobrado_mes + proyectado
+    return {"cobrado": cobrado_mes, "pendiente": pendiente_mes, "vencido": vencido_mes, "proyectado": proyectado, "total_estimado": total_estimado}
 
 @router.get("/ultima-por-cliente/{cliente_id}")
 def ultima_factura_cliente(cliente_id: str, authorization: str = Header("")):
