@@ -38,7 +38,20 @@ def _parsear_factura(text: str) -> dict | None:
         match = re.search(patron, text)
         if match:
             cliente = match.group(1).strip()
-            monto_str = match.group(2).replace(".", "").replace(",", ".")
+            monto_str = match.group(2).strip()
+            # Argentina usa coma como decimal, pero el usuario pudo escribir punto.
+            if "," in monto_str:
+                monto_str = monto_str.replace(".", "").replace(",", ".")
+            elif "." in monto_str:
+                # Si hay UN solo punto y quedan exactamente 2 decimales, es decimal.
+                # Ej: 350.99 -> 350.99 | 1.500 -> 1500 | 1.500,50 ya cubierto arriba
+                partes = monto_str.split(".")
+                if len(partes) == 2 and len(partes[1]) == 2:
+                    monto_str = monto_str.replace(",", "")
+                else:
+                    monto_str = monto_str.replace(".", "")
+            else:
+                monto_str = monto_str.replace(",", "")
             try:
                 monto = float(monto_str)
                 if monto > 0:
