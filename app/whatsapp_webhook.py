@@ -1,5 +1,7 @@
-import os, logging, hmac, hashlib, re
+import os, logging, hmac, hashlib, re, json
 from fastapi import APIRouter, Request, Response, HTTPException
+from pathlib import Path
+import tempfile
 
 logger = logging.getLogger("whatsapp_webhook")
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
@@ -9,8 +11,23 @@ WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
 OPT_OUT_KEYWORDS = {"alto", "parar", "stop", "cancelar", "no quiero", "basta"}
 
+PENDING_FILE = Path(tempfile.gettempdir()) / "traceless_wa_pending.json"
+
+def _load_pending() -> dict:
+    try:
+        return json.loads(PENDING_FILE.read_text()) if PENDING_FILE.exists() else {}
+    except Exception:
+        return {}
+
+def _save_pending(data: dict):
+    PENDING_FILE.write_text(json.dumps(data))
+
+def _clear_pending(phone: str):
+    data = _load_pending()
+    data.pop(phone, None)
+    _save_pending(data)
+
 def _parsear_factura(text: str) -> dict | None:
-    """Parsea mensajes como 'facturale a Juan $50.000' o 'factura Juan 50000'"""
     text = text.lower().strip()
     patrones = [
         r"factur(?:ale|a|ar)\s+(?:a\s+)?(.+?)\s+\$?([\d.,]+)",
@@ -30,18 +47,22 @@ def _parsear_factura(text: str) -> dict | None:
                 continue
     return None
 
-def _buscar_o_crear_cliente(uid: str, nombre: str) -> dict:
-    """Busca cliente por nombre, si no existe lo crea"""
+def _buscar_clientes(uid: str, nombre: str) -> list:
     from app.db import supabase
     nombre_limpio = nombre.strip().title()
     res = supabase.table("clientes").select("*").eq("user_id", uid).ilike("nombre", f"%{nombre_limpio}%").execute()
-    if res.data:
-        return res.data[0]
+    return res.data or []
+
+def _buscar_o_crear_cliente(uid: str, nombre: str) -> dict:
+    from app.db import supabase
+    clientes = _buscar_clientes(uid, nombre)
+    if len(clientes) == 1:
+        return clientes[0]
+    nombre_limpio = nombre.strip().title()
     nuevo = supabase.table("clientes").insert({"user_id": uid, "nombre": nombre_limpio, "condicion_iva": "Consumidor Final"}).execute()
     return nuevo.data[0]
 
 def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> dict | None:
-    """Crea una factura simple desde WhatsApp"""
     from app.db import supabase
     from datetime import datetime
     now = datetime.now()
@@ -64,7 +85,6 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> di
     return res.data[0] if res.data else None
 
 async def _procesar_factura_whatsapp(phone: str, text: str):
-    """Procesa un mensaje que pide facturar"""
     from app.db import supabase
     from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
     import re
@@ -77,7 +97,18 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
     if not parseo:
         await enviar_whatsapp(phone, "No entendí. Escribí: *facturale a [nombre] $[monto]*")
         return
-    cliente = _buscar_o_crear_cliente(uid, parseo["cliente"])
+    clientes = _buscar_clientes(uid, parseo["cliente"])
+    if len(clientes) > 1:
+        lista = "\n".join([f"*{i+1}*. {c['nombre']}" for i, c in enumerate(clientes)])
+        await enviar_whatsapp(phone, f"Encontré varios clientes:\n\n{lista}\n\nEscribí el *número* del que querés facturar.")
+        pending = _load_pending()
+        pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"]}
+        _save_pending(pending)
+        return
+    if len(clientes) == 1:
+        cliente = clientes[0]
+    else:
+        cliente = _buscar_o_crear_cliente(uid, parseo["cliente"])
     factura = _crear_factura_desde_whatsapp(uid, cliente["id"], parseo["monto"])
     if not factura:
         await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
@@ -92,6 +123,37 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
         fecha=factura["fecha"],
     )
     logger.info(f"Factura {numero} creada y enviada por WhatsApp a {phone}")
+
+async def _procesar_seleccion(phone: str, text: str) -> bool:
+    from app.whatsapp import enviar_factura_whatsapp, enviar_whatsapp
+    pending = _load_pending()
+    if phone not in pending:
+        return False
+    data = pending[phone]
+    try:
+        opcion = int(text.strip())
+        if opcion < 1 or opcion > len(data["clientes"]):
+            await enviar_whatsapp(phone, f"Ingresá un número del 1 al {len(data['clientes'])}.")
+            return True
+    except ValueError:
+        return False
+    cliente = data["clientes"][opcion - 1]
+    factura = _crear_factura_desde_whatsapp(data["uid"], cliente["id"], data["monto"])
+    _clear_pending(phone)
+    if not factura:
+        await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
+        return True
+    numero = f"{factura['numero']:08d}"
+    await enviar_factura_whatsapp(
+        telefono=phone,
+        cliente=cliente["nombre"],
+        numero=numero,
+        total=factura["total"],
+        pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
+        fecha=factura["fecha"],
+    )
+    logger.info(f"Factura {numero} creada (seleccion) y enviada por WhatsApp a {phone}")
+    return True
 
 
 def _handle_opt_out(phone: str, text: str):
@@ -164,6 +226,8 @@ async def receive_webhook(request: Request):
         logger.info(f"Mensaje entrante de {phone}: {text[:100]}")
         if text:
             if not _handle_opt_out(phone, text):
+                if await _procesar_seleccion(phone, text):
+                    continue
                 text_lower = text.lower().strip()
                 if any(kw in text_lower for kw in ["factur", "cobr"]):
                     await _procesar_factura_whatsapp(phone, text)
