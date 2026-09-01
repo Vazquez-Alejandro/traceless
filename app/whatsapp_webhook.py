@@ -67,7 +67,7 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> di
     from datetime import datetime
     now = datetime.now()
     res = supabase.table("facturas").select("numero").eq("user_id", uid).order("numero", desc=True).limit(1).execute()
-    ultimo_numero = res.data[0]["numero"] if res.data else 0
+    ultimo_numero = int(res.data[0]["numero"]) if res.data else 0
     nuevo_numero = ultimo_numero + 1
     factura = {
         "user_id": uid,
