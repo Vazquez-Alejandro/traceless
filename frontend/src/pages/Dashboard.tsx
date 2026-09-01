@@ -158,7 +158,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <Link to="/calendario" className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl">📅 Calendario</Link>
+      </div>
 
       {stats.facturas === 0 && criticalLoaded && (
         <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 mb-8">
