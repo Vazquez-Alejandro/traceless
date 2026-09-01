@@ -98,18 +98,22 @@ async def _procesar_factura_whatsapp(phone: str, text: str):
         await enviar_whatsapp(phone, "No entendí. Escribí: *facturale a [nombre] $[monto]*")
         return
     clientes = _buscar_clientes(uid, parseo["cliente"])
-    if len(clientes) > 1:
-        lista = "\n".join([f"*{i+1}*. {c['nombre']}" for i, c in enumerate(clientes)])
-        await enviar_whatsapp(phone, f"Encontré varios clientes:\n\n{lista}\n\nEscribí el *número* del que querés facturar.")
-        pending = _load_pending()
-        pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"]}
-        _save_pending(pending)
+    if len(clientes) == 0:
+        await enviar_whatsapp(phone, f"No encontré ningún cliente con el nombre '{parseo['cliente']}'. Escribí *facturale a [nombre] $[monto]* para crearlo automáticamente.")
         return
     if len(clientes) == 1:
-        cliente = clientes[0]
-    else:
-        cliente = _buscar_o_crear_cliente(uid, parseo["cliente"])
-    factura = _crear_factura_desde_whatsapp(uid, cliente["id"], parseo["monto"])
+        c = clientes[0]
+        await enviar_whatsapp(phone, f"Cliente encontrado:\n\n*{c['nombre']}*\nCUIT: {c.get('cuit', '-')}\nIVA: {c.get('condicion_iva', '-')}\n\nMonto: *${parseo['monto']:,.2f}*\n\nRespondé *si* para facturar o *no* para cancelar.")
+        pending = _load_pending()
+        pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "confirmar"}
+        _save_pending(pending)
+        return
+    lista = "\n".join([f"*{i+1}*. {c['nombre']}" for i, c in enumerate(clientes)])
+    await enviar_whatsapp(phone, f"Encontré varios clientes:\n\n{lista}\n\nEscribí el *número* del que querés facturar.")
+    pending = _load_pending()
+    pending[phone] = {"uid": uid, "clientes": clientes, "monto": parseo["monto"], "step": "seleccionar"}
+    _save_pending(pending)
+    return
     if not factura:
         await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
         return
@@ -130,30 +134,48 @@ async def _procesar_seleccion(phone: str, text: str) -> bool:
     if phone not in pending:
         return False
     data = pending[phone]
-    try:
-        opcion = int(text.strip())
-        if opcion < 1 or opcion > len(data["clientes"]):
-            await enviar_whatsapp(phone, f"Ingresá un número del 1 al {len(data['clientes'])}.")
+    text_lower = text.lower().strip()
+    if data.get("step") == "confirmar":
+        if text_lower in ("si", "sí", "s", "ok", "dale", "confirmo", "confirmar"):
+            cliente = data["clientes"][0]
+            factura = _crear_factura_desde_whatsapp(data["uid"], cliente["id"], data["monto"])
+            _clear_pending(phone)
+            if not factura:
+                await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
+                return True
+            numero = f"{factura['numero']:08d}"
+            await enviar_factura_whatsapp(
+                telefono=phone,
+                cliente=cliente["nombre"],
+                numero=numero,
+                total=factura["total"],
+                pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
+                fecha=factura["fecha"],
+            )
+            logger.info(f"Factura {numero} creada (confirmada) y enviada por WhatsApp a {phone}")
             return True
-    except ValueError:
-        return False
-    cliente = data["clientes"][opcion - 1]
-    factura = _crear_factura_desde_whatsapp(data["uid"], cliente["id"], data["monto"])
-    _clear_pending(phone)
-    if not factura:
-        await enviar_whatsapp(phone, "Hubo un error al crear la factura. Intentá de nuevo.")
+        elif text_lower in ("no", "n", "cancelar", "cancelo"):
+            _clear_pending(phone)
+            await enviar_whatsapp(phone, "Listo, cancelado.")
+            return True
+        else:
+            await enviar_whatsapp(phone, "Respondé *si* para facturar o *no* para cancelar.")
+            return True
+    if data.get("step") == "seleccionar":
+        try:
+            opcion = int(text.strip())
+            if opcion < 1 or opcion > len(data["clientes"]):
+                await enviar_whatsapp(phone, f"Ingresá un número del 1 al {len(data['clientes'])}.")
+                return True
+        except ValueError:
+            return False
+        cliente = data["clientes"][opcion - 1]
+        await enviar_whatsapp(phone, f"Cliente: *{cliente['nombre']}*\nMonto: *${data['monto']:,.2f}*\n\nRespondé *si* para confirmar o *no* para cancelar.")
+        data["clientes"] = [cliente]
+        data["step"] = "confirmar"
+        _save_pending(pending)
         return True
-    numero = f"{factura['numero']:08d}"
-    await enviar_factura_whatsapp(
-        telefono=phone,
-        cliente=cliente["nombre"],
-        numero=numero,
-        total=factura["total"],
-        pdf_url=f"https://www.traceless.com.ar/{factura['id']}/public",
-        fecha=factura["fecha"],
-    )
-    logger.info(f"Factura {numero} creada (seleccion) y enviada por WhatsApp a {phone}")
-    return True
+    return False
 
 
 def _handle_opt_out(phone: str, text: str):
