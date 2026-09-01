@@ -82,7 +82,6 @@ def _crear_factura_desde_whatsapp(uid: str, cliente_id: str, monto: float) -> di
         "cliente_id": cliente_id,
         "numero": nuevo_numero,
         "tipo": 6,
-        "tipo_nombre": "B",
         "descripcion": "Servicios",
         "total": monto,
         "estado": "emitida",
