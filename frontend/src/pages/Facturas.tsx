@@ -984,6 +984,9 @@ export default function Facturas() {
                     }`}>
                       {f.estado === "pagada" ? "Pagada" : f.estado === "anulada" ? "Anulada" : f.estado === "vencida" ? "Vencida" : f.estado === "enviada" ? "Enviada" : f.estado === "programada" ? "Programada" : "Emitida"}
                     </span>
+                    {[3, 8, 13, 21].includes(f.tipo) && (
+                      <span className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-400 border border-orange-700/40">Nota de crédito</span>
+                    )}
                     {f.es_fiscal === false && (
                       <span className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Sin CAE</span>
                     )}
