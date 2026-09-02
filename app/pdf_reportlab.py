@@ -196,9 +196,9 @@ def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     tipo_nombre = factura.get("tipo_nombre", "B")
     es_nc = _es_nota_credito(tipo_nombre)
     label_titulo = f"Nota de crédito {tipo_nombre}" if es_nc else f"Factura {tipo_nombre}"
-    # nombre_emisor: usar empresa si existe y no está vacía, sino nombre
+    # nombre_emisor: empresa si existe y no vacía, sino "TraceLess" (no el nombre personal)
     empresa = emisor.get("empresa", "")
-    nombre_emisor = empresa.strip() if empresa and empresa.strip() else emisor.get("nombre", "TraceLess")
+    nombre_emisor = empresa.strip() if empresa and empresa.strip() else "TraceLess"
     logo_url = emisor.get("logo_url", "")
     email_fiscal = emisor.get("email_fiscal", "")
     condiciones_venta = emisor.get("condiciones_venta", "")
