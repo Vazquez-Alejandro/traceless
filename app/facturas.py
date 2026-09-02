@@ -754,11 +754,13 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
         raise HTTPException(404, "Factura no encontrada")
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
     emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
-    from app.pdf import generar_html_factura
-    html = generar_html_factura({**f.data, "tipo_nombre": _tipo_nombre(f.data.get("tipo", 6))}, f.data.get("clientes") or {}, emisor)
+    from app.pdf_reportlab import generar_pdf_factura
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html).write_pdf()
+        pdf_bytes = generar_pdf_factura(
+            {**f.data, "tipo_nombre": _tipo_nombre(f.data.get("tipo", 6))},
+            f.data.get("clientes") or {},
+            emisor
+        )
         from fastapi.responses import Response
         return Response(content=pdf_bytes, media_type="application/pdf",
                        headers={"Content-Disposition": f"attachment; filename=factura-{f.data.get('numero', 'sin-numero')}.pdf"})
