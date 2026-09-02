@@ -757,11 +757,11 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
     emisor_raw = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
     exclude_emisor_fields = {
         "arca_cert", "arca_key", "arca_cuit", "arca_env", "arca_validado", "arca_punto_venta",
-        "empresa", "logo_url", "email_fiscal", "condiciones_venta", "cbu", "alias_banco"
+        "logo_url", "email_fiscal", "condiciones_venta", "cbu", "alias_banco"
     }
     emisor = {k: v for k, v in (perfil.data or {}).items() if k not in {
         "arca_cert", "arca_key", "arca_cuit", "arca_env", "arca_validado", "arca_punto_venta",
-        "empresa", "logo_url", "email_fiscal", "condiciones_venta", "cbu", "alias_banco"
+        "logo_url", "email_fiscal", "condiciones_venta", "cbu", "alias_banco"
     }}
     if not emisor:
         emisor = {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
