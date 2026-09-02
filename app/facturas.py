@@ -764,8 +764,7 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
                        headers={"Content-Disposition": f"attachment; filename=factura-{f.data.get('numero', 'sin-numero')}.pdf"})
     except Exception as e:
         logger.error(f"Error generando PDF: {e}")
-        from fastapi.responses import HTMLResponse
-        return HTMLResponse(html)
+        raise HTTPException(500, "Error generando PDF (weasyprint no disponible en este entorno)")
 
 @router.get("/recordatorios")
 async def enviar_recordatorios(secret: str = "", authorization: str = Header("")):
