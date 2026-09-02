@@ -11,6 +11,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/facturas/recordatorios-alejandro",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/facturas/recurrentes",
       "schedule": "0 10 * * *"
     },

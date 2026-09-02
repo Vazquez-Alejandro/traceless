@@ -849,6 +849,87 @@ async def enviar_recordatorios(secret: str = "", authorization: str = Header("")
         await asyncio.gather(*tasks, return_exceptions=True)
     return {"ok": True, "recordatorios_enviados": enviados}
 
+@router.get("/recordatorios-alejandro")
+async def enviar_recordatorios_alejandro(secret: str = "", authorization: str = Header("")):
+    """Recordatorios solo para Alejandro (c193a8b9-32f0-45c8-9ce3-db47e66ba44d) a las 9 AM ART."""
+    _validar_cron(secret, authorization)
+    from app.whatsapp import enviar_recordatorio_whatsapp
+    import asyncio
+    now = datetime.now()
+    hoy = now.strftime("%Y-%m-%d")
+    UID_ALEJANDRO = "c193a8b9-32f0-45c8-9ce3-db47e66ba44d"
+
+    # Recordatorio para facturas emitidas sin enviar (3+ días)
+    emitidas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "emitida").eq("user_id", UID_ALEJANDRO).execute()
+    for f in emitidas.data:
+        cli = f.get("clientes") or {}
+        total = f.get("total", 0)
+        num = f.get("numero", "")
+        fecha = f.get("fecha", "")
+        if fecha:
+            dias_sin_enviar = (now - datetime.strptime(fecha, "%Y-%m-%d")).days
+            if dias_sin_enviar >= 3:
+                perfil = supabase.table("perfiles").select("recordatorios_whatsapp").eq("id", f["user_id"]).single().execute()
+                prefs = perfil.data or {}
+                if prefs.get("recordatorios_whatsapp", False):
+                    crear_notificacion(f["user_id"], "factura_sin_enviar", f"Factura #{num} sin enviar hace {dias_sin_enviar} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} fue emitida pero no enviada", "/facturas")
+
+    # Recordatorios automáticos de cobranza para facturas enviadas
+    enviadas = supabase.table("facturas").select("*, clientes!inner(telefono, nombre, apellido)").eq("estado", "enviada").eq("user_id", UID_ALEJANDRO).execute()
+    facturas_pendientes = enviadas.data
+    enviados = 0
+    tasks = []
+    for f in facturas_pendientes:
+        cli = f.get("clientes") or {}
+        telefono = cli.get("telefono", "")
+        if not telefono:
+            continue
+        perfil = supabase.table("perfiles").select("recordatorios_whatsapp, recordatorio_vencidas").eq("id", f["user_id"]).single().execute()
+        prefs = perfil.data or {}
+        if not prefs.get("recordatorios_whatsapp", False):
+            continue
+        if not prefs.get("recordatorio_vencidas", False):
+            continue
+        total = f.get("total", 0)
+        num = f.get("numero", "")
+        vencimiento = f.get("vencimiento", "")
+        fecha = f.get("fecha", "")
+        enviado_str = f.get("recordatorios_enviados", "") or ""
+        enviados_set = set(enviado_str.split(",")) if enviado_str else set()
+
+        if vencimiento:
+            dias_vencida = (now - datetime.strptime(vencimiento, "%Y-%m-%d")).days
+        elif fecha:
+            dias_vencida = (now - datetime.strptime(fecha, "%Y-%m-%d")).days - 30
+        else:
+            continue
+
+        recordatorio_tipo = None
+        if dias_vencida == -1:
+            recordatorio_tipo = "pre_1"
+        elif dias_vencida == 0:
+            recordatorio_tipo = "dia_0"
+        elif dias_vencida == 3:
+            recordatorio_tipo = "dia_3"
+        elif dias_vencida == 7:
+            recordatorio_tipo = "dia_7"
+        elif dias_vencida == 15:
+            recordatorio_tipo = "dia_15"
+
+        if dias_vencida > 0 and f["estado"] != "vencida":
+            supabase.table("facturas").update({"estado": "vencida"}).eq("id", f["id"]).execute()
+            crear_notificacion(f["user_id"], "factura_vencida", f"Factura #{num} vencida hace {dias_vencida} días", f"La factura de ${total:,.2f} a {cli.get('nombre', '')} lleva {dias_vencida} días sin pagar", "/facturas")
+
+        if recordatorio_tipo and recordatorio_tipo not in enviados_set:
+            tasks.append(enviar_recordatorio_whatsapp(telefono, cli.get("nombre", ""), num, total, dias_vencida))
+            enviados_set.add(recordatorio_tipo)
+            supabase.table("facturas").update({"recordatorios_enviados": ",".join(sorted(enviados_set))}).eq("id", f["id"]).execute()
+            enviados += 1
+
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    return {"ok": True, "recordatorios_enviados": enviados}
+
 @router.get("/recordatorio-monotributo")
 async def recordatorio_monotributo(secret: str = "", authorization: str = Header("")):
     _validar_cron(secret, authorization)
