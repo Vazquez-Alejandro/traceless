@@ -1021,7 +1021,10 @@ export default function Facturas() {
                 <button onClick={async () => {
                   const t = localStorage.getItem("token");
                   const res = await fetch(`/api/facturas/${f.id}/pdf`, { headers: { Authorization: `Bearer ${t}` } });
-                  if (!res.ok) { alert("Error generando PDF"); return; }
+                  if (!res.ok) {
+                    setToast("Error generando PDF: weasyprint no disponible en servidor");
+                    return;
+                  }
                   const blob = await res.blob();
                   const url = URL.createObjectURL(blob);
                   window.open(url, "_blank");
