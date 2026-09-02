@@ -753,7 +753,9 @@ def factura_pdf(factura_id: str, authorization: str = Header("")):
     if not f.data:
         raise HTTPException(404, "Factura no encontrada")
     perfil = supabase.table("perfiles").select("*").eq("id", f.data["user_id"]).single().execute()
-    emisor = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
+    # Filtrar campos sensibles/grandes del emisor para el PDF
+    emisor_raw = perfil.data or {"nombre": "Usuario", "cuit": "", "direccion": "", "condicion_iva": "Responsable Inscripto"}
+    emisor = {k: v for k, v in emisor_raw.items() if k not in ("arca_cert", "arca_key")}
     from app.pdf_reportlab import generar_pdf_factura
     try:
         pdf_bytes = generar_pdf_factura(
