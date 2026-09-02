@@ -196,7 +196,9 @@ def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     tipo_nombre = factura.get("tipo_nombre", "B")
     es_nc = _es_nota_credito(tipo_nombre)
     label_titulo = f"Nota de crédito {tipo_nombre}" if es_nc else f"Factura {tipo_nombre}"
-    nombre_emisor = emisor.get("empresa") or emisor.get("nombre", "TraceLess")
+    # nombre_emisor: usar empresa si existe y no está vacía, sino nombre
+    empresa = emisor.get("empresa", "")
+    nombre_emisor = empresa.strip() if empresa and empresa.strip() else emisor.get("nombre", "TraceLess")
     logo_url = emisor.get("logo_url", "")
     email_fiscal = emisor.get("email_fiscal", "")
     condiciones_venta = emisor.get("condiciones_venta", "")
@@ -210,9 +212,9 @@ def generar_pdf_factura(factura: dict, cliente: dict, emisor: dict) -> bytes:
     
     # Columna izquierda: logo + emisor
     left_elems = []
-    if logo_url:
+    if logo_url and logo_url.strip():
         try:
-            left_elems.append(Image(logo_url, width=50*mm, height=20*mm))
+            left_elems.append(Image(logo_url.strip(), width=50*mm, height=20*mm))
         except Exception:
             pass
     left_elems.append(Paragraph(html_mod.escape(nombre_emisor), styles['TL_Title']))
