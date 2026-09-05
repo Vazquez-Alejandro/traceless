@@ -37,8 +37,8 @@ PLANS = {
     },
     "team": {
         "name": "Equipo",
-        "price_usd": float(os.getenv("PRICE_TEAM_USD", "22")),
-        "price_label": "USD 22",
+        "price_usd": float(os.getenv("PRICE_TEAM_USD", "18")),
+        "price_label": "USD 18",
         "invoices_per_month": None,
         "whatsapp": True,
         "whatsapp_monthly_limit": 250,

@@ -29,7 +29,7 @@ export default function Register() {
   const priceFor = (key: string) => {
     if (key === "free") return "$0";
     const ref = pricing[key === "pro" ? "pro" : "team"];
-    if (!ref) return key === "pro" ? "USD 12" : "USD 22";
+    if (!ref) return key === "pro" ? "USD 12" : "USD 18";
     return `${ref.label}/mes`;
   };
   const [referralValid, setReferralValid] = useState<boolean | null>(null);

@@ -117,7 +117,7 @@ const FAQS = [
   },
   {
     q: "¿Puedo facturar directamente desde mi WhatsApp?",
-    a: "Sí. Escribí 'facturale a Juan $50.000' al número de TraceLess y el sistema crea la factura, la envía a tu cliente y te confirma por WhatsApp. Incluido en el plan Equipo (USD 22/mes).",
+    a: "Sí. Escribí 'facturale a Juan $50.000' al número de TraceLess y el sistema crea la factura, la envía a tu cliente y te confirma por WhatsApp. Incluido en el plan Equipo (USD 18/mes).",
   },
   {
     q: "¿Qué tipos de comprobantes puedo emitir?",
@@ -191,7 +191,7 @@ export default function Landing() {
   const priceText = (p: (typeof PLANS)[number]) => {
     if (p.key === "free") return "Gratis";
     const ref = p.price === "price_pro" ? pricing.pro : pricing.team;
-    if (!ref) return p.price === "price_pro" ? "USD 12" : "USD 22";
+    if (!ref) return p.price === "price_pro" ? "USD 12" : "USD 18";
     return `${ref.label}/mes`;
   };
 

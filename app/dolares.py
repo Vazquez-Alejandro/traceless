@@ -5,7 +5,7 @@ import httpx
 # Precios en USD (base de todo; override opcional por env)
 PRICES_USD = {
     "pro": {"usd": float(os.getenv("PRICE_PRO_USD", "12")), "name": "Profesional"},
-    "team": {"usd": float(os.getenv("PRICE_TEAM_USD", "22")), "name": "Equipo"},
+    "team": {"usd": float(os.getenv("PRICE_TEAM_USD", "18")), "name": "Equipo"},
 }
 
 # Modo de cotización: oficial | blue | mep
